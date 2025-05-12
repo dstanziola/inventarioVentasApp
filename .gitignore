@@ -1,0 +1,44 @@
+# .gitignore
+# Entorno virtual
+venv/
+env/
+tests/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Base de datos
+*.db
+*.sqlite3
+
+# Archivos de ambiente
+.env
+
+# Archivos de IDE
+.vscode/
+.idea/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos generados
+reports/
+logs/
+dist/
+build/
+
+# .gitignore additions
+"""
+# Logging
+logs/
+*.log
+"""
+
+# Archivos de respaldo
+*.bk
+*.bak
+# /src
+*.bk

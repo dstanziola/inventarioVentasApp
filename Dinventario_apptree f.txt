@@ -1,0 +1,36 @@
+D:\inventario_app>tree /f
+Listado de rutas de carpetas para el volumen desarrollo
+El número de serie del volumen es E4F5-F162
+D:.
+│   .env
+│   .gitattributes
+│   .gitignore
+│   config.py
+│   main.py
+│   ReqSisInv4.docx
+│   requirements.txt
+│   run.bat
+│   styles.py
+│   _activar_env.bat
+│   __init__.py
+│
+├───db
+│       __init__.py
+│
+├───models
+│       __init__.py
+│
+├───reports
+│       __init__.py
+│
+├───services
+│       __init__.py
+│
+├───ui
+│       __init__.py
+│
+└───utils
+        __init__.py
+
+
+D:\inventario_app>
