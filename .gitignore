@@ -3,6 +3,7 @@
 venv/
 env/
 tests/
+temp/
 
 # Archivos de Python
 __pycache__/
