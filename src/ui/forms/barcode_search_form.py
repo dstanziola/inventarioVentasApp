@@ -29,7 +29,7 @@ from models.categoria import Categoria
 from services.product_service import ProductService
 from services.barcode_service import BarcodeService
 from services.category_service import CategoryService
-from utils.barcode_utils import BarcodeUtils, validate_barcode
+from src.utils.barcode_utils import BarcodeUtils, validate_barcode
 from ui.utils.window_manager import WindowManager
 
 # Configurar logging

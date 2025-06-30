@@ -6,7 +6,7 @@ Servicio de lógica de negocio para manejo de códigos de barras
 en el sistema de inventario.
 
 Autor: Sistema de Inventario
-Versión: 1.0.0
+Versión: 1.0.1 - CORREGIDO
 Fecha: Junio 2025
 """
 
@@ -15,8 +15,6 @@ import re
 from typing import List, Dict, Optional, Any, Union
 
 from hardware.device_manager import DeviceManager, DeviceManagerError
-from services.product_service import ProductService
-from models.producto import Producto
 
 
 class BarcodeService:
@@ -28,6 +26,11 @@ class BarcodeService:
     - Lectura y validación de códigos
     - Búsqueda de productos por código
     - Formateo y normalización de códigos
+    
+    CORRECCIÓN CRÍTICA v1.0.1:
+    - Eliminada dependencia circular con ProductService
+    - ProductService ahora se inyecta cuando es necesario
+    - Constructor sin dependencias obligatorias
     """
     
     # Patrón para validación de códigos de barras
@@ -37,15 +40,109 @@ class BarcodeService:
     # Longitud máxima para códigos de barras
     MAX_BARCODE_LENGTH = 100
     
-    def __init__(self):
+    def __init__(self, product_service=None):
         """
         Inicializa el servicio de códigos de barras.
+        
+        CORRECCIÓN CRÍTICA:
+        - product_service ahora es opcional para evitar dependencia circular
+        - Se puede inyectar después si es necesario
+        
+        Args:
+            product_service: Servicio de productos (opcional)
         """
         self.logger = logging.getLogger(__name__)
         self.device_manager = DeviceManager()
-        self.product_service = ProductService()
+        self.product_service = product_service  # CORREGIDO: ahora opcional
         
-        self.logger.info("BarcodeService inicializado")
+        self.logger.info("BarcodeService inicializado correctamente")
+    
+    def set_product_service(self, product_service):
+        """
+        Establece el servicio de productos después de la inicialización.
+        
+        NUEVO MÉTODO para evitar dependencias circulares.
+        
+        Args:
+            product_service: Instancia de ProductService
+        """
+        self.product_service = product_service
+        self.logger.debug("ProductService configurado en BarcodeService")
+    
+    def is_connected(self) -> bool:
+        """
+        Verifica si hay algún dispositivo de códigos de barras conectado.
+        
+        Returns:
+            bool: True si hay al menos un dispositivo conectado
+        """
+        try:
+            connected_devices = self.get_connected_devices()
+            return len(connected_devices) > 0
+        except Exception as e:
+            self.logger.error(f"Error verificando conexión: {e}")
+            return False
+    
+    def read_code(self, timeout: float = 0.1) -> Optional[str]:
+        """
+        Intenta leer un código desde cualquier dispositivo conectado.
+        
+        MÉTODO SIMPLIFICADO para lectura rápida.
+        
+        Args:
+            timeout: Tiempo de espera en segundos
+            
+        Returns:
+            str: Código leído o None si no hay lectura
+        """
+        try:
+            connected_devices = self.get_connected_devices()
+            
+            if not connected_devices:
+                return None
+            
+            # Intentar leer desde el primer dispositivo disponible
+            device_id = connected_devices[0].get('device_id', 'default')
+            timeout_ms = int(timeout * 1000)
+            
+            return self.read_barcode(device_id, timeout_ms)
+            
+        except Exception as e:
+            # No es crítico si no se puede leer, simplemente retornar None
+            self.logger.debug(f"No se pudo leer código: {e}")
+            return None
+    
+    def search_product_by_code(self, code: str):
+        """
+        Busca un producto por código de barras.
+        
+        MÉTODO CORREGIDO con validación de dependencias.
+        
+        Args:
+            code: Código de barras o ID del producto
+            
+        Returns:
+            Producto encontrado o None si no existe
+        """
+        if not self.product_service:
+            self.logger.warning("ProductService no está configurado")
+            return None
+        
+        try:
+            # Formatear el código
+            formatted_code = self.format_barcode(code)
+            
+            # Intentar convertir a ID numérico
+            if formatted_code.isdigit():
+                product_id = int(formatted_code)
+                return self.product_service.get_product_by_id(product_id)
+            else:
+                self.logger.debug(f"Código no numérico: {formatted_code}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error buscando producto por código {code}: {e}")
+            return None
     
     def scan_barcode_devices(self) -> List[Dict[str, Any]]:
         """
@@ -220,7 +317,7 @@ class BarcodeService:
             if not barcode:
                 return None
             
-            product = self.lookup_product_by_barcode(barcode)
+            product = self.search_product_by_code(barcode)
             
             result = {
                 'barcode': barcode,
@@ -238,7 +335,7 @@ class BarcodeService:
             self.logger.error(f"Error al leer y buscar producto: {e}")
             return None
     
-    def lookup_product_by_barcode(self, barcode: str) -> Optional[Producto]:
+    def lookup_product_by_barcode(self, barcode: str):
         """
         Busca un producto por su código de barras.
         
@@ -248,30 +345,7 @@ class BarcodeService:
         Returns:
             Producto: Instancia del producto, None si no se encuentra
         """
-        try:
-            # Formatear el código antes de buscar
-            formatted_barcode = self.format_barcode(barcode)
-            
-            # En nuestro sistema, el ID del producto es su código de barras
-            try:
-                product_id = int(formatted_barcode)
-                product = self.product_service.find_by_id(product_id)
-                
-                if product:
-                    self.logger.debug(f"Producto encontrado: ID {product_id}")
-                else:
-                    self.logger.debug(f"Producto no encontrado para ID: {product_id}")
-                
-                return product
-                
-            except ValueError:
-                # El código no es numérico, buscar por otros criterios si es necesario
-                self.logger.warning(f"Código de barras no numérico: {formatted_barcode}")
-                return None
-                
-        except Exception as e:
-            self.logger.error(f"Error al buscar producto por código {barcode}: {e}")
-            return None
+        return self.search_product_by_code(barcode)
     
     def validate_barcode(self, barcode: Union[str, None]) -> bool:
         """
@@ -337,9 +411,10 @@ class BarcodeService:
             # Agregar estadísticas específicas del servicio
             service_stats = {
                 'devices': device_stats,
-                'service_version': '1.0.0',
+                'service_version': '1.0.1',
                 'validation_pattern': self.VALID_BARCODE_PATTERN.pattern,
-                'max_barcode_length': self.MAX_BARCODE_LENGTH
+                'max_barcode_length': self.MAX_BARCODE_LENGTH,
+                'product_service_configured': self.product_service is not None
             }
             
             return service_stats

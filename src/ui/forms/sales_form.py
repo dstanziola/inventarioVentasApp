@@ -29,7 +29,7 @@ from services.sales_service import SalesService
 from services.product_service import ProductService
 from services.client_service import ClientService
 from services.barcode_service import BarcodeService  # NUEVO
-from utils.barcode_utils import validate_barcode, BarcodeUtils  # NUEVO
+from src.utils.barcode_utils import validate_barcode, BarcodeUtils  # NUEVO
 
 
 class SalesWindow:
@@ -47,6 +47,9 @@ class SalesWindow:
         self.product_service = ProductService(get_database_connection())
         self.client_service = ClientService(get_database_connection())
         self.barcode_service = BarcodeService()  # NUEVO
+        
+        # CORRECCIÓN CRÍTICA: Configurar ProductService en BarcodeService
+        self.barcode_service.set_product_service(self.product_service)
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)

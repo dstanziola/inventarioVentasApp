@@ -9,12 +9,17 @@ FUNCIONALIDADES:
 - Validación en tiempo real
 - Integración con servicio de usuarios
 - Manejo de errores de autenticación
-- Redirección a ventana principal tras login exitoso
+- Retorna resultado de autenticación para flujo principal
+
+CAMBIOS v1.1:
+- Eliminado callback, ahora retorna resultado del login
+- Simplificación del flujo de autenticación
+- Mejor integración con main.py
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from typing import Callable, Optional
+from typing import Optional
 import logging
 
 from db.database import get_database_connection
@@ -25,15 +30,12 @@ from .session_manager import session_manager
 class LoginWindow:
     """Ventana de autenticación de usuarios."""
     
-    def __init__(self, on_login_success: Callable[[], None]):
+    def __init__(self):
         """
         Inicializa la ventana de login.
-        
-        Args:
-            on_login_success: Callback a ejecutar tras login exitoso
         """
-        self.on_login_success = on_login_success
         self.user_service = UserService(get_database_connection())
+        self.login_successful = False
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)
@@ -114,13 +116,25 @@ class LoginWindow:
         )
         self.password_entry.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 20))
         
+        # Frame de botones
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=6, column=0, columnspan=2, pady=(0, 10))
+        
         # Botón login
         self.login_button = ttk.Button(
-            main_frame,
+            button_frame,
             text="Iniciar Sesión",
             command=self._handle_login
         )
-        self.login_button.grid(row=6, column=0, columnspan=2, pady=(0, 10))
+        self.login_button.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Botón cancelar
+        self.cancel_button = ttk.Button(
+            button_frame,
+            text="Cancelar",
+            command=self._handle_cancel
+        )
+        self.cancel_button.pack(side=tk.LEFT)
         
         # Mensaje de estado
         self.status_label = ttk.Label(
@@ -144,12 +158,18 @@ class LoginWindow:
         # Enter key para login
         self.root.bind('<Return>', lambda event: self._handle_login())
         
+        # Escape key para cancelar
+        self.root.bind('<Escape>', lambda event: self._handle_cancel())
+        
         # Focus inicial en campo usuario
         self.username_entry.focus()
         
         # Validación en tiempo real
         self.username_var.trace('w', self._validate_form)
         self.password_var.trace('w', self._validate_form)
+        
+        # Protocolo de cierre de ventana
+        self.root.protocol("WM_DELETE_WINDOW", self._handle_cancel)
         
     def _validate_form(self, *args):
         """Valida el formulario en tiempo real."""
@@ -176,6 +196,7 @@ class LoginWindow:
         try:
             # Deshabilitar botón durante procesamiento
             self.login_button.config(state='disabled', text="Verificando...")
+            self.cancel_button.config(state='disabled')
             self.root.update()
             
             # Intentar autenticación
@@ -186,11 +207,9 @@ class LoginWindow:
                 session_manager.login(user)
                 self.logger.info(f"Usuario {username} autenticado exitosamente")
                 
-                # Cerrar ventana de login
-                self.root.destroy()
-                
-                # Ejecutar callback de éxito
-                self.on_login_success()
+                # Marcar como exitoso y cerrar
+                self.login_successful = True
+                self.root.quit()
                 
             else:
                 # Credenciales inválidas
@@ -203,12 +222,31 @@ class LoginWindow:
             self.status_label.config(text="Error de conexión. Intente nuevamente.")
             
         finally:
-            # Rehabilitar botón
+            # Rehabilitar botones
             self.login_button.config(state='normal', text="Iniciar Sesión")
+            self.cancel_button.config(state='normal')
             
+    def _handle_cancel(self):
+        """Maneja la cancelación del login."""
+        self.login_successful = False
+        self.root.quit()
+        
     def show(self):
-        """Muestra la ventana de login."""
-        self.root.mainloop()
+        """
+        Muestra la ventana de login y retorna el resultado.
+        
+        Returns:
+            bool: True si login exitoso, False si cancelado
+        """
+        try:
+            self.root.mainloop()
+            return self.login_successful
+        finally:
+            # Asegurar que la ventana se destruya
+            try:
+                self.root.destroy()
+            except:
+                pass
         
     def destroy(self):
         """Destruye la ventana de login."""
