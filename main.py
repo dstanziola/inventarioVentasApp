@@ -104,7 +104,6 @@ def main():
         logger.info("Configuración cargada")
         
         # Inicializar conexión a la base de datos
-        # db_connection = DatabaseConnection()
         db_connection = get_database_connection(db_config['db_name'])
 
         db_connection.connect()

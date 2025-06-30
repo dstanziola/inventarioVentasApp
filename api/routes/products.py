@@ -33,7 +33,7 @@ router = APIRouter(
 
 def get_product_service() -> ProductService:
     """Obtener instancia del servicio de productos."""
-    db_connection = DatabaseConnection("inventario.db")
+    db_connection = get_database_connection("inventario.db")
     return ProductService(db_connection)
 
 
