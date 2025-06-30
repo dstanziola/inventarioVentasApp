@@ -5,11 +5,8 @@ title Sistema de Inventario - Launcher Simple
 echo Iniciando Sistema de Inventario v2.0
 echo(
 
-:: Cambiar al directorio donde está el script
-cd /d "%~dp0"
-
-echo Directorio actual: %CD%
-echo(
+:: Configurar PYTHONPATH
+set PYTHONPATH=%CD%;%PYTHONPATH%
 
 :: Verificar si Python está disponible
 where python >nul 2>nul
@@ -19,12 +16,18 @@ if errorlevel 1 (
     exit
 )
 
-:: Intentar activar entorno virtual si existe
-if exist "venv\Scripts\activate.bat" (
-    call venv\Scripts\activate.bat
-    echo Entorno virtual activado
+:: Verificar si existe el entorno virtual
+if not exist "venv" (
+    echo Creando entorno virtual...
+    python -m venv venv
+    call venv\Scripts\activate
+    echo Instalando dependencias...
+    python -m pip install --upgrade pip
+    pip install sqlalchemy
+    py -m pip install pandas
+    pip install -r requirements.txt
 ) else (
-    echo No se encontró entorno virtual, usando Python del sistema
+    call venv\Scripts\activate
 )
 
 echo(

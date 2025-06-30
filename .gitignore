@@ -41,5 +41,4 @@ logs/
 # Archivos de respaldo
 *.bk
 *.bak
-# /src
 *.bk

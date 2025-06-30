@@ -16,12 +16,12 @@ Fecha: 2025-06-25
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
+from db.database import DatabaseConnection
+from db.database import get_database_connection
 
-from db.database import Database
 from models.ticket import Ticket, TicketNumberGenerator
 from services.sales_service import SalesService
 from services.movement_service import MovementService
-
 
 class TicketService:
     """

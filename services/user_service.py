@@ -16,7 +16,8 @@ Fecha de corrección: 30/05/2025
 import hashlib
 import re
 from typing import Optional, List
-from db.database import DatabaseConnection
+from db.database import get_database_connection
+
 from models.usuario import Usuario
 
 

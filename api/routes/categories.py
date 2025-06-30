@@ -23,7 +23,8 @@ from api.schemas import (
 
 # Importar servicios de negocio
 from services import CategoryService
-from db.database import DatabaseConnection
+from db.database import get_database_connection
+
 
 # Configurar logging
 logger = logging.getLogger(__name__)

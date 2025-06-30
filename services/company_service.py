@@ -17,9 +17,9 @@ from typing import Optional, List, Dict, Any, Tuple
 from decimal import Decimal
 import threading
 
-from db.database import Database
-from models.company_config import CompanyConfig
+from db.database import get_database_connection
 
+from models.company_config import CompanyConfig
 
 class CompanyService:
     """
