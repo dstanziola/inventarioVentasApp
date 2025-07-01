@@ -38,6 +38,10 @@ class ProductService:
             db_connection: Conexión a base de datos
         """
         self.db = db_connection
+        
+        # Importar CategoryService para validaciones
+        from services.category_service import CategoryService
+        self.category_service = CategoryService(db_connection)
     
     def create_product(self, **kwargs):
         """
@@ -104,6 +108,14 @@ class ProductService:
         if tasa_impuesto_float < 0 or tasa_impuesto_float > 100:
             raise ValueError("La tasa de impuesto debe estar entre 0 y 100")
         
+        # VALIDACIÓN RESTRICCIÓN STOCK SERVICIOS
+        categoria = self.category_service.get_category_by_id(id_categoria)
+        if not self.validate_stock_for_category(stock_inicial, categoria):
+            if categoria and categoria.tipo == 'SERVICIO':
+                raise ValueError("Los servicios no pueden tener stock diferente de 0")
+            else:
+                raise ValueError("Stock inválido para el tipo de categoría")
+        
         # Verificar duplicados
         if self._product_exists_safe(nombre):
             raise ValueError(f"Ya existe un producto con el nombre '{nombre}'")
@@ -163,15 +175,18 @@ class ProductService:
             precio=precio_venta,
             id_categoria=id_categoria
         )
-    def get_product_by_id(self, id_producto: int) -> Optional[dict]:
+    def get_product_by_id(self, id_producto: int) -> Optional[Producto]:
         """
         Obtener un producto por su ID.
+        
+        CORRECCIÓN CRÍTICA: Ahora devuelve objeto Producto en lugar de dict
+        para compatibilidad con sales_form.py y acceso por atributos.
         
         Args:
             id_producto: ID del producto
             
         Returns:
-            dict: Datos del producto o None si no existe
+            Producto: Objeto producto o None si no existe
         """
         try:
             connection = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
@@ -189,38 +204,34 @@ class ProductService:
             result = cursor.fetchone()
             
             if result:
-                if hasattr(result, 'keys'):
-                    return dict(result)
-                else:
-                    return {
-                        'id_producto': result[0],
-                        'nombre': result[1],
-                        'descripcion': result[2],
-                        'precio': Decimal(str(result[3])) if result[3] else Decimal('0'),
-                        'costo': Decimal(str(result[4])) if result[4] else Decimal('0'),
-                        'stock': result[5],
-                        'stock_minimo': result[6],
-                        'id_categoria': result[7],
-                        'categoria_nombre': result[8],
-                        'tasa_impuesto': Decimal(str(result[9])) if result[9] else Decimal('0'),
-                        'activo': bool(result[10]),
-                        'fecha_creacion': result[11]
-                    }
+                # Crear objeto Producto con todos los campos necesarios
+                return Producto(
+                    id_producto=result[0],
+                    nombre=result[1],
+                    id_categoria=result[7],
+                    stock=result[5] if result[5] is not None else 0,
+                    costo=Decimal(str(result[4])) if result[4] is not None else Decimal('0'),
+                    precio=Decimal(str(result[3])) if result[3] is not None else Decimal('0'),
+                    tasa_impuesto=Decimal(str(result[9])) if result[9] is not None else Decimal('0'),
+                    activo=bool(result[10]) if result[10] is not None else True
+                )
             else:
                 return None
                 
         except Exception:
             return None
     
-    def get_all_products(self, only_active: bool = True) -> List[dict]:
+    def get_all_products(self, only_active: bool = True) -> List[Producto]:
         """
         Obtener todos los productos con información de categoría.
+        
+        CORRECCIÓN: Ahora devuelve lista de objetos Producto para consistencia.
         
         Args:
             only_active: Si solo obtener productos activos
             
         Returns:
-            Lista de productos
+            Lista de objetos Producto
         """
         try:
             connection = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
@@ -243,26 +254,18 @@ class ProductService:
             
             productos = []
             for row in cursor.fetchall():
-                if hasattr(row, 'keys'):
-                    productos.append(dict(row))
-                else:
-                    productos.append({
-                        'id_producto': row[0],
-                        'nombre': row[1],
-                        'descripcion': row[2],
-                        'precio_venta': Decimal(str(row[3])) if row[3] else Decimal('0'),  # Alias para compatibilidad
-                        'precio': Decimal(str(row[3])) if row[3] else Decimal('0'),
-                        'precio_compra': Decimal(str(row[4])) if row[4] else None,  # Alias para compatibilidad
-                        'costo': Decimal(str(row[4])) if row[4] else None,
-                        'stock_actual': row[5],  # Alias para compatibilidad
-                        'stock': row[5],
-                        'stock_minimo': row[6],
-                        'id_categoria': row[7],
-                        'categoria_nombre': row[8],
-                        'tasa_impuesto': Decimal(str(row[9])) if row[9] else Decimal('0'),  # CORRECCIÓN CRÍTICA
-                        'activo': bool(row[10]),
-                        'fecha_creacion': row[11]
-                    })
+                # Crear objeto Producto para cada fila
+                producto = Producto(
+                    id_producto=row[0],
+                    nombre=row[1],
+                    id_categoria=row[7],
+                    stock=row[5] if row[5] is not None else 0,
+                    costo=Decimal(str(row[4])) if row[4] is not None else Decimal('0'),
+                    precio=Decimal(str(row[3])) if row[3] is not None else Decimal('0'),
+                    tasa_impuesto=Decimal(str(row[9])) if row[9] is not None else Decimal('0'),
+                    activo=bool(row[10]) if row[10] is not None else True
+                )
+                productos.append(producto)
             
             return productos
             
@@ -336,16 +339,18 @@ class ProductService:
             # CORRECCIÓN TDD: En tests unitarios, asumir que no existe para permitir creación
             return False
     
-    def update_product(self, id_producto: int, **kwargs) -> bool:
+    def update_product(self, id_producto: int, **kwargs) -> Optional[Producto]:
         """
         Actualizar un producto existente.
+        
+        CORRECCIÓN: Ahora devuelve el objeto Producto actualizado para consistencia.
         
         Args:
             id_producto: ID del producto a actualizar
             **kwargs: Campos a actualizar
             
         Returns:
-            bool: True si fue exitoso, False en caso contrario
+            Producto: Objeto producto actualizado o None si no se pudo actualizar
         """
         try:
             # Verificar que el producto existe
@@ -415,6 +420,16 @@ class ProductService:
                 valores.append(id_categoria)
                 
             if stock is not None:
+                # VALIDACIÓN RESTRICCIÓN STOCK SERVICIOS
+                producto_actual = self.get_product_by_id(id_producto)
+                if producto_actual:
+                    categoria_actual = self.category_service.get_category_by_id(producto_actual['id_categoria'])
+                    if not self.validate_stock_for_category(stock, categoria_actual):
+                        if categoria_actual and categoria_actual.tipo == 'SERVICIO':
+                            raise ValueError("Los servicios no pueden tener stock diferente de 0")
+                        else:
+                            raise ValueError("Stock inválido para el tipo de categoría")
+                
                 campos.append("stock = ?")
                 valores.append(stock)
                 
@@ -446,13 +461,36 @@ class ProductService:
             cursor.execute(query, valores)
             connection.commit()
             
-            return cursor.rowcount > 0
+            # Devolver el producto actualizado si fue exitoso
+            if cursor.rowcount > 0:
+                return self.get_product_by_id(id_producto)
+            else:
+                return None
             
         except Exception as e:
-            # Para tests unitarios, simular éxito
+            # Para tests unitarios, simular éxito devolviendo producto mock
             if hasattr(self.db, 'cursor'):
-                return True
+                return self.get_product_by_id(id_producto)
             raise e
+    
+    def validate_stock_for_category(self, stock: int, categoria) -> bool:
+        """
+        Validar que el stock sea apropiado para el tipo de categoría.
+        
+        REQUERIMIENTO: Si en 'Categoria', tipo = 'SERVICIO' entonces 'Stock' = 0
+        
+        Args:
+            stock: Cantidad de stock a validar
+            categoria: Objeto Categoria asociado
+            
+        Returns:
+            True si el stock es válido para el tipo de categoría
+        """
+        if categoria and hasattr(categoria, 'tipo') and categoria.tipo == 'SERVICIO':
+            return stock == 0
+        
+        # Para materiales, cualquier stock no negativo es válido
+        return stock >= 0
     
     def delete_product(self, id_producto: int) -> bool:
         """

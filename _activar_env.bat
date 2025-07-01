@@ -18,7 +18,8 @@ if not exist "venv" (
 )
 
 :: Configurar PYTHONPATH
-set PYTHONPATH=%CD%;%PYTHONPATH%
+:: set PYTHONPATH=%CD%;%PYTHONPATH%
+set PYTHONPATH=%CD%\src;%PYTHONPATH%
 
 :: Cambiar al directorio del proyecto
 cd /d "D:\inventario_app"

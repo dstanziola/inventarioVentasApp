@@ -34,7 +34,7 @@ from services.barcode_service import BarcodeService
 from services.ticket_service import TicketService
 from ui.auth.session_manager import session_manager
 from ui.widgets.decimal_entry import DecimalEntry
-from src.utils.barcode_utils import BarcodeUtils
+from utils.barcode_utils import BarcodeUtils
 
 # Configurar logging
 logger = logging.getLogger(__name__)

@@ -28,7 +28,7 @@ from services.product_service import ProductService
 from services.category_service import CategoryService
 from services.label_service import LabelService  # NUEVO
 from services.barcode_service import BarcodeService  # NUEVO
-from src.utils.barcode_utils import validate_barcode, BarcodeUtils, generate_product_code  # NUEVO
+from utils.barcode_utils import validate_barcode, BarcodeUtils, generate_product_code  # NUEVO
 from models.producto import Producto
 
 class ProductWindow:

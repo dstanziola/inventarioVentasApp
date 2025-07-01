@@ -29,7 +29,7 @@ from services.sales_service import SalesService
 from services.product_service import ProductService
 from services.client_service import ClientService
 from services.barcode_service import BarcodeService  # NUEVO
-from src.utils.barcode_utils import validate_barcode, BarcodeUtils  # NUEVO
+from utils.barcode_utils import validate_barcode, BarcodeUtils  # NUEVO
 
 
 class SalesWindow:

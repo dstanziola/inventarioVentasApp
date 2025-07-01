@@ -20,7 +20,7 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 # Importaciones del sistema
-from src.utils.hardware_detector import get_hardware_detector, DeviceInfo
+from utils.hardware_detector import get_hardware_detector, DeviceInfo
 from services.label_service import get_label_service
 from ui.utils.window_manager import center_window
 

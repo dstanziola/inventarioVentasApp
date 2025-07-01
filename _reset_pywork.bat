@@ -1,4 +1,8 @@
 @echo off
+chcp 65001
+echo Iniciando limpieza del entorno de desarrollo Python...
+echo ¿Estas seguro que quieres borrar todo? (S/N)
+set /p confirm=Confirmar (S/N):
 echo Eliminando archivos y carpetas generados por el entorno de desarrollo Python...
 
 REM Eliminar carpeta venv

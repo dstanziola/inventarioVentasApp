@@ -299,7 +299,6 @@ async def delete_category(
             }
         )
 
-
 # Endpoint adicional para estadísticas
 @router.get("/stats/summary")
 async def get_category_stats(

@@ -14,6 +14,7 @@ Fecha: Junio 2025
 """
 
 import logging
+import os
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from typing import List, Dict, Optional, Any
@@ -29,7 +30,7 @@ from models.categoria import Categoria
 from services.product_service import ProductService
 from services.barcode_service import BarcodeService
 from services.category_service import CategoryService
-from src.utils.barcode_utils import BarcodeUtils, validate_barcode
+from utils.barcode_utils import BarcodeUtils, validate_barcode
 from ui.utils.window_manager import WindowManager
 
 # Configurar logging

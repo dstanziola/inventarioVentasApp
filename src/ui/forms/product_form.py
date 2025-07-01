@@ -427,27 +427,10 @@ class ProductWindow:
             self.category_combo['values'] = category_names
             self.logger.info(f"Cargadas {len(self.categories)} categorías")
             
-            # Cargar productos
-            product_dicts = self.product_service.get_all_products()
-            self.products = []
+            # Cargar productos - CORREGIDO: ahora get_all_products() devuelve objetos Producto
+            self.products = self.product_service.get_all_products()
             
-            for prod_dict in product_dicts:
-                id_categoria = (
-                    prod_dict.get('id_categoria') or
-                    prod_dict.get('categoria_id') or
-                    0
-                )
-                
-                producto = Producto(
-                    nombre=prod_dict.get('nombre', ''),
-                    id_categoria=id_categoria,
-                    stock=prod_dict.get('stock_actual', prod_dict.get('stock', 0)),
-                    costo=prod_dict.get('precio_compra', prod_dict.get('costo', 0)) or 0,
-                    precio=prod_dict.get('precio_venta', prod_dict.get('precio', 0)),
-                    tasa_impuesto=prod_dict.get('tasa_impuesto', 0),
-                    id_producto=prod_dict.get('id_producto')
-                )
-                self.products.append(producto)
+            # Los productos ya son objetos Producto, no necesitan conversión
                 
             self.logger.info(f"Cargados {len(self.products)} productos")
             self._update_product_list()
@@ -609,7 +592,7 @@ class ProductWindow:
                     messagebox.showerror("Error", "No se pudo crear el producto")
                     
             else:
-                success = self.product_service.update_product(
+                updated_product = self.product_service.update_product(
                     id_producto=self.editing_product.id_producto,
                     nombre=name,
                     id_categoria=selected_category.id_categoria,
@@ -619,7 +602,7 @@ class ProductWindow:
                     tasa_impuesto=tax_rate
                 )
                 
-                if success:
+                if updated_product:
                     messagebox.showinfo("Éxito", "Producto actualizado exitosamente")
                     self._load_initial_data()
                     self._cancel_edit()

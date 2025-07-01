@@ -1,12 +1,13 @@
 @echo off
-chcp 65001 >nul
+chcp 65001
 title Sistema de Inventario - Launcher Simple
 
 echo Iniciando Sistema de Inventario v2.0
 echo(
 
 :: Configurar PYTHONPATH
-set PYTHONPATH=%CD%;%PYTHONPATH%
+:: set PYTHONPATH=%CD%;%PYTHONPATH%
+set PYTHONPATH=%CD%\src;%PYTHONPATH%
 
 :: Verificar si Python está disponible
 where python >nul 2>nul

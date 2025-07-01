@@ -91,6 +91,7 @@
 - Cálculo automático de impuestos basado en `tasa_impuesto`
 - Discriminación automática de ítems gravados y exentos
 - Asociación opcional de clientes para facturación
+- Si en 'Categoria', `tipo` = 'SERVICIO' entonces 'Stock' = 0 
 
 ## **5. Reportes - Configurables**
 

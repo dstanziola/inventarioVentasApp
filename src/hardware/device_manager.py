@@ -15,8 +15,7 @@ import hashlib
 from typing import List, Dict, Optional, Any
 from threading import Lock
 
-from .barcode_reader import BarcodeReader, BarcodeReaderError
-
+from hardware.barcode_reader import BarcodeReader, BarcodeReaderError
 
 class DeviceManager:
     """
