@@ -446,6 +446,161 @@ except Exception as e:
   - `log_database_operation(table, operation, record_id)`: Operaciones BD
 - **CONFIGURACIÓN**: Rotación automática, formato estructurado
 
+## Categoria Model (src/models/categoria.py) - ACTUALIZADO 2025-07-03
+
+### IMPLEMENTACIÓN CAMPO 'ACTIVO' - TDD COMPLETO
+
+#### **PROBLEMA RESUELTO**
+- Base de datos tenía columna 'activo' en tabla categorias
+- Modelo Categoria no incluía el campo 'activo'
+- CategoryService no manejaba el campo 'activo'
+- Inconsistencia entre esquema BD y modelo Python
+
+#### **SOLUCIÓN TDD IMPLEMENTADA**
+```python
+# Constructor actualizado
+def __init__(self, nombre: str, tipo: str, id_categoria: Optional[int] = None, 
+             descripcion: Optional[str] = None, activo: bool = True):
+    self.activo = activo  # Campo activo añadido
+```
+
+### ATRIBUTOS PRINCIPALES
+```python
+id_categoria: Optional[int]    # ID único (PK)
+nombre: str                    # Nombre de la categoría
+tipo: str                     # 'MATERIAL' o 'SERVICIO'
+descripcion: Optional[str]     # Descripción opcional
+activo: bool                   # Estado activo/inactivo (NUEVO)
+```
+
+### MÉTODOS ACTUALIZADOS
+
+#### `to_dict() -> dict`
+- **MEJORA**: Incluye campo 'activo' en el diccionario
+- **Uso**: `categoria_dict = categoria.to_dict(); activo = categoria_dict['activo']`
+
+#### `from_dict(data: dict) -> 'Categoria'`
+- **MEJORA**: Maneja campo 'activo' con valor por defecto True
+- **Uso**: `categoria = Categoria.from_dict({'nombre': 'Test', 'tipo': 'MATERIAL', 'activo': False})`
+
+#### `crear_material(nombre, id_categoria=None, descripcion=None, activo=True)`
+- **MEJORA**: Parámetro 'activo' añadido
+- **Uso**: `categoria = Categoria.crear_material('Herramientas', activo=True)`
+
+#### `crear_servicio(nombre, id_categoria=None, descripcion=None, activo=True)`
+- **MEJORA**: Parámetro 'activo' añadido
+- **Uso**: `categoria = Categoria.crear_servicio('Consultoría', activo=False)`
+
+### NUEVOS MÉTODOS DE UTILIDAD
+
+#### `esta_activa() -> bool`
+- **FUNCIÓN**: Verificar si la categoría está activa
+- **Uso**: `if categoria.esta_activa(): procesar_categoria()`
+
+#### `activar() -> None`
+- **FUNCIÓN**: Activar la categoría
+- **Uso**: `categoria.activar()`
+
+#### `desactivar() -> None`
+- **FUNCIÓN**: Desactivar la categoría
+- **Uso**: `categoria.desactivar()`
+
+### REPRESENTACIÓN ACTUALIZADA
+
+#### `__repr__() -> str`
+- **MEJORA**: Incluye campo 'activo' en representación técnica
+- **Formato**: `"Categoria(id_categoria=1, nombre='Test', tipo='MATERIAL', activo=True)"`
+
+### VALIDACIONES EXISTENTES
+- `validar_tipo()`: Valida tipos 'MATERIAL' o 'SERVICIO'
+- `validar_nombre()`: Valida nombre no vacío
+- **NUEVA**: Campo 'activo' valida automáticamente como bool
+
+### COMPATIBILIDAD
+- **Backward Compatible**: Parámetro 'activo' opcional con valor por defecto True
+- **Forward Compatible**: Preparado para funcionalidad de filtros por estado
+- **Database Compatible**: Alineado con columna 'activo' en tabla categorias
+
+## CategoryService (src/services/category_service.py) - ACTUALIZADO 2025-07-03
+
+### MÉTODOS ACTUALIZADOS CON CAMPO 'ACTIVO'
+
+#### `create_category(nombre: str, tipo: str, descripcion: Optional[str] = None, activo: bool = True)`
+- **MEJORA**: Parámetro 'activo' añadido
+- **SQL**: `INSERT INTO categorias (nombre, tipo, descripcion, activo) VALUES (?, ?, ?, ?)`
+- **Retorno**: Objeto Categoria con campo 'activo' establecido
+
+#### `get_category_by_id(id_categoria: int) -> Optional[Categoria]`
+- **MEJORA**: Consulta incluye campo 'activo'
+- **SQL**: `SELECT id_categoria, nombre, tipo, descripcion, activo FROM categorias WHERE id_categoria = ?`
+- **Retorno**: Objeto Categoria completo con campo 'activo'
+
+#### `get_all_categories() -> List[Categoria]`
+- **MEJORA**: Consulta incluye campo 'activo'
+- **SQL**: `SELECT id_categoria, nombre, tipo, descripcion, activo FROM categorias ORDER BY nombre`
+- **Retorno**: Lista de objetos Categoria con campo 'activo'
+
+#### `update_category(id_categoria: int, nombre: str = None, tipo: str = None, descripcion: str = None, activo: bool = None)`
+- **MEJORA**: Parámetro 'activo' añadido
+- **SQL**: `UPDATE categorias SET nombre = ?, tipo = ?, descripcion = ?, activo = ? WHERE id_categoria = ?`
+- **Funcionalidad**: Permite cambiar estado activo/inactivo
+
+### NUEVO MÉTODO
+
+#### `get_active_categories() -> List[Categoria]`
+- **FUNCIÓN**: Obtener solo categorías activas
+- **SQL**: `SELECT ... FROM categorias WHERE activo = 1 ORDER BY nombre`
+- **Uso**: `active_categories = service.get_active_categories()`
+- **Beneficio**: Filtrado optimizado a nivel de BD
+
+### PROCESAMIENTO DE RESULTADOS
+- **Row Handling**: Maneja tanto sqlite3.Row como tuplas
+- **Compatibilidad**: Soporta mocks para testing
+- **Robustez**: Valores por defecto para campos opcionales
+
+### MIGRACIÓN BASE DE DATOS
+- **Archivo**: `migrations/001_add_activo_to_categorias.py`
+- **Función**: Añadir columna 'activo' a tabla categorias
+- **Valores**: Categorías existentes obtienen activo=1 por defecto
+- **Validación**: Verificación post-migración automática
+
+## Tests TDD - Campo 'activo' Categoria
+
+### test_categoria_activo_field.py - NUEVO
+- **Ubicación**: `tests/unit/test_categoria_activo_field.py`
+- **Clase**: `TestCategoriaActivoField`
+- **Función**: Validación TDD completa del campo 'activo'
+- **Metodología**: Test-Driven Development (RED-GREEN-REFACTOR)
+
+#### **Tests Implementados**:
+1. `test_categoria_constructor_with_activo_default()`: Constructor con activo=True por defecto
+2. `test_categoria_constructor_with_activo_explicit()`: Constructor con activo explícito
+3. `test_categoria_str_includes_activo()`: Representación string incluye activo
+4. `test_categoria_to_dict_includes_activo()`: Método to_dict incluye activo
+5. `test_categoria_from_dict_includes_activo()`: Método from_dict maneja activo
+6. `test_categoria_crear_material_with_activo()`: Método crear_material con activo
+7. `test_categoria_crear_servicio_with_activo()`: Método crear_servicio con activo
+8. `test_categoria_equality_considers_activo()`: Igualdad considera activo apropiadamente
+9. `test_categoria_activo_methods()`: Métodos esta_activa(), activar(), desactivar()
+
+#### **Cobertura TDD**:
+- **RED PHASE**: ✅ Tests escritos primero (fallan sin implementación)
+- **GREEN PHASE**: ✅ Implementación mínima para pasar tests
+- **REFACTOR PHASE**: ✅ Código optimizado manteniendo tests
+
+#### **Ejecución**:
+```bash
+python tests/unit/test_categoria_activo_field.py
+# O con pytest:
+pytest tests/unit/test_categoria_activo_field.py -v
+```
+
+### DOCUMENTACIÓN CAMBIOS
+- **Changelog**: `docs/changelog_campo_activo_categoria.md`
+- **Impacto**: Consistencia entre modelo y base de datos
+- **Beneficios**: Funcionalidad activar/desactivar categorías
+- **Compatibilidad**: Backward compatible con parámetros opcionales
+
 ## Restricciones de Negocio
 
 ### Stock para Servicios
@@ -458,6 +613,103 @@ except Exception as e:
 - Categorías existentes
 - Valores numéricos válidos
 - Restricciones de stock por tipo
+
+## CORRECCIONES CRÍTICAS DE EJECUCIÓN - 2025-07-03
+
+### 🚨 ERRORES CRÍTICOS CORREGIDOS
+
+#### **CategoryService - Inicialización Corregida**
+- **Problema**: `CategoryService.__init__() missing 1 required positional argument: 'db_connection'`
+- **Causa**: Servicios siendo inicializados sin pasar conexión de BD
+- **Solución**: Inicialización corregida en todos los formularios
+- **Archivos Afectados**: `product_form.py`, `category_form.py`, `movement_form.py`
+- **Estado**: ✅ CORREGIDO
+
+#### **Base de Datos - Esquema Corregido**
+- **Problema**: "no such column: activo" en tablas categorias, productos, clientes, usuarios
+- **Causa**: Esquema BD desactualizado vs servicios que esperan columna 'activo'
+- **Solución**: Script `fix_database_schema.py` agrega columnas faltantes
+- **Comando**: `python fix_database_schema.py`
+- **Estado**: ✅ CORREGIDO
+
+#### **BarcodeService - Método Faltante**
+- **Problema**: `'BarcodeService' object has no attribute 'is_scanner_available'`
+- **Causa**: Método usado en movement_form.py pero no implementado
+- **Solución**: Método `is_scanner_available()` agregado a BarcodeService
+- **Funcionalidad**: Verifica dispositivos disponibles
+- **Estado**: ✅ CORREGIDO
+
+#### **Dependencia hidapi - Opcional**
+- **Problema**: "hidapi no está instalado. Funcionalidad HID limitada."
+- **Causa**: Dependencia opcional para hardware HID no instalada
+- **Solución**: Warning informativo, no error bloqueante
+- **Instalación**: `pip install hidapi` (opcional)
+- **Estado**: ✅ MANEJADO
+
+### 🔧 SCRIPTS DE CORRECIÓN CREADOS
+
+#### **fix_critical_errors.py**
+- **Función**: Script maestro para corregir todos los errores
+- **Correcciones**: Esquema BD, servicios, validaciones
+- **Uso**: `python fix_critical_errors.py`
+- **Validación**: Incluye tests de validación
+
+#### **test_critical_fixes.py**
+- **Función**: Tests TDD para validar correcciones
+- **Cobertura**: CategoryService, BarcodeService, esquema BD
+- **Uso**: `python test_critical_fixes.py`
+- **Tests**: 8 tests críticos de validación
+
+#### **_fix_errors.bat**
+- **Función**: Ejecutor batch para correcciones
+- **Uso**: Doble click o `_fix_errors.bat`
+- **Conveniencia**: Interfaz simple para usuarios
+
+### 📝 ARCHIVOS CORREGIDOS
+
+#### **src/services/barcode_service.py**
+```python
+# Método agregado
+def is_scanner_available(self) -> bool:
+    """Verifica si hay algún escáner disponible."""
+    try:
+        available_devices = self.get_available_devices()
+        return len(available_devices) > 0
+    except Exception:
+        return False
+```
+
+#### **inventario.db**
+- Columna 'activo' agregada a tablas: categorias, productos, clientes, usuarios
+- Valores por defecto: `activo = 1` (TRUE)
+- Integridad verificada con `PRAGMA integrity_check`
+
+### 🎯 RESULTADO ESPERADO
+- ✅ Sistema ejecuta sin errores: `python main.py`
+- ✅ Formularios de productos y categorías funcionan
+- ✅ Sistema de códigos de barras operativo
+- ✅ Base de datos con esquema completo
+- ✅ Todos los servicios correctamente inicializados
+
+### 📋 COMANDOS DE VALIDACIÓN
+```bash
+# Aplicar correcciones
+python fix_critical_errors.py
+
+# Validar correcciones
+python test_critical_fixes.py
+
+# Ejecutar sistema
+python main.py
+```
+
+### 🔗 INTEGRACIÓN CON FASE 5A
+- **Continuidad**: Correcciones permiten continuar con testing final
+- **Cobertura**: Tests de correcciones se integran a cobertura FASE 5A
+- **Progreso**: De 85% a 87% completado tras correcciones
+- **Próximo**: Continuar con `test_sales_form_complete.py`
+
+---
 
 ## CORRECCIONES DE BUGS UI - 2025-07-02
 

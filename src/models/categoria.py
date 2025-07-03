@@ -25,7 +25,7 @@ class Categoria:
     # Tipos válidos de categoría
     TIPOS_VALIDOS = {'MATERIAL', 'SERVICIO'}
     
-    def __init__(self, nombre: str, tipo: str, id_categoria: Optional[int] = None, descripcion: Optional[str] = None):
+    def __init__(self, nombre: str, tipo: str, id_categoria: Optional[int] = None, descripcion: Optional[str] = None, activo: bool = True):
         """
         Inicializar una nueva categoría.
         
@@ -34,6 +34,7 @@ class Categoria:
             tipo: Tipo de categoría ('MATERIAL' o 'SERVICIO')
             id_categoria: ID único (asignado por la base de datos)
             descripcion: Descripción opcional de la categoría
+            activo: Si la categoría está activa (True por defecto)
             
         Raises:
             ValueError: Si el tipo no es válido
@@ -45,6 +46,7 @@ class Categoria:
         self.nombre = nombre
         self.tipo = tipo
         self.descripcion = descripcion
+        self.activo = activo
     
     def __str__(self) -> str:
         """
@@ -63,7 +65,7 @@ class Categoria:
             String con todos los atributos
         """
         return (f"Categoria(id_categoria={self.id_categoria}, "
-                f"nombre='{self.nombre}', tipo='{self.tipo}')")
+                f"nombre='{self.nombre}', tipo='{self.tipo}', activo={self.activo})")
     
     def __eq__(self, other) -> bool:
         """
@@ -98,7 +100,7 @@ class Categoria:
         return hash(('Categoria', self.nombre, self.tipo))
     
     @classmethod
-    def crear_material(cls, nombre: str, id_categoria: Optional[int] = None, descripcion: Optional[str] = None) -> 'Categoria':
+    def crear_material(cls, nombre: str, id_categoria: Optional[int] = None, descripcion: Optional[str] = None, activo: bool = True) -> 'Categoria':
         """
         Crear una categoría de tipo MATERIAL.
         
@@ -106,14 +108,15 @@ class Categoria:
             nombre: Nombre de la categoría
             id_categoria: ID opcional
             descripcion: Descripción opcional
+            activo: Si la categoría está activa (True por defecto)
             
         Returns:
             Nueva instancia de Categoria tipo MATERIAL
         """
-        return cls(nombre=nombre, tipo='MATERIAL', id_categoria=id_categoria, descripcion=descripcion)
+        return cls(nombre=nombre, tipo='MATERIAL', id_categoria=id_categoria, descripcion=descripcion, activo=activo)
     
     @classmethod
-    def crear_servicio(cls, nombre: str, id_categoria: Optional[int] = None, descripcion: Optional[str] = None) -> 'Categoria':
+    def crear_servicio(cls, nombre: str, id_categoria: Optional[int] = None, descripcion: Optional[str] = None, activo: bool = True) -> 'Categoria':
         """
         Crear una categoría de tipo SERVICIO.
         
@@ -121,11 +124,12 @@ class Categoria:
             nombre: Nombre de la categoría
             id_categoria: ID opcional
             descripcion: Descripción opcional
+            activo: Si la categoría está activa (True por defecto)
             
         Returns:
             Nueva instancia de Categoria tipo SERVICIO
         """
-        return cls(nombre=nombre, tipo='SERVICIO', id_categoria=id_categoria, descripcion=descripcion)
+        return cls(nombre=nombre, tipo='SERVICIO', id_categoria=id_categoria, descripcion=descripcion, activo=activo)
     
     def es_material(self) -> bool:
         """
@@ -156,7 +160,8 @@ class Categoria:
             'id_categoria': self.id_categoria,
             'nombre': self.nombre,
             'tipo': self.tipo,
-            'descripcion': self.descripcion
+            'descripcion': self.descripcion,
+            'activo': self.activo
         }
     
     @classmethod
@@ -174,7 +179,8 @@ class Categoria:
             nombre=data['nombre'],
             tipo=data['tipo'],
             id_categoria=data.get('id_categoria'),
-            descripcion=data.get('descripcion')
+            descripcion=data.get('descripcion'),
+            activo=data.get('activo', True)
         )
 
     @staticmethod
@@ -200,3 +206,24 @@ class Categoria:
         if not isinstance(nombre, str) or not nombre.strip():
             raise ValueError("Nombre de categoría inválido")
         return nombre.strip()
+    
+    def esta_activa(self) -> bool:
+        """
+        Verificar si la categoría está activa.
+        
+        Returns:
+            True si la categoría está activa
+        """
+        return self.activo
+    
+    def activar(self) -> None:
+        """
+        Activar la categoría.
+        """
+        self.activo = True
+    
+    def desactivar(self) -> None:
+        """
+        Desactivar la categoría.
+        """
+        self.activo = False

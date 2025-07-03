@@ -197,18 +197,19 @@ class MainWindow:
         
         # Botones de administración (solo para administradores)
         if session_manager.has_permission('admin'):
-            ttk.Button(
-                toolbar,
-                text="📦 Productos",
-                command=self._open_products
-            ).pack(side=tk.LEFT, padx=5)
-            
+
             ttk.Button(
                 toolbar,
                 text="🏷️ Categorías",
                 command=self._open_categories
             ).pack(side=tk.LEFT, padx=5)
-            
+
+            ttk.Button(
+                toolbar,
+                text="📦 Productos",
+                command=self._open_products
+            ).pack(side=tk.LEFT, padx=5)
+                    
             ttk.Button(
                 toolbar,
                 text="📋 Movimientos",

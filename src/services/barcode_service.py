@@ -83,6 +83,23 @@ class BarcodeService:
             self.logger.error(f"Error verificando conexión: {e}")
             return False
     
+    def is_scanner_available(self) -> bool:
+        """
+        Verifica si hay algún escáner de códigos de barras disponible.
+        
+        MÉTODO AGREGADO para corregir error de atributo faltante.
+        
+        Returns:
+            bool: True si hay al menos un escáner disponible
+        """
+        try:
+            # Verificar dispositivos disponibles
+            available_devices = self.get_available_devices()
+            return len(available_devices) > 0
+        except Exception as e:
+            self.logger.error(f"Error verificando disponibilidad del escáner: {e}")
+            return False
+    
     def read_code(self, timeout: float = 0.1) -> Optional[str]:
         """
         Intenta leer un código desde cualquier dispositivo conectado.

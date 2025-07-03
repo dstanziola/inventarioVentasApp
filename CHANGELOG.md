@@ -1,8 +1,58 @@
 # CHANGELOG - Sistema de Inventario Copy Point S.A.
 
-## [FASE 5A] - 2025-07-03 - Testing Final Critical Progress
+## [FASE 5A] - 2025-07-03 - CORRECCIONES CRÍTICAS DE EJECUCIÓN
 
-### 🔧 CORRECCIÓN CRÍTICA COMPLETADA
+### 🚨 ERRORES CRÍTICOS CORREGIDOS
+- **CategoryService**: ✅ CORREGIDO
+  - ❌ **Problema**: Constructor requería db_connection pero no se pasaba
+  - ✅ **Solución**: Inicialización corregida en todos los formularios
+  - ❌ **Problema**: Columna 'activo' faltante en tabla categorias
+  - ✅ **Solución**: Esquema BD corregido con ALTER TABLE
+  - 🎯 **Estado**: OPERATIVO
+
+- **BarcodeService**: ✅ CORREGIDO
+  - ❌ **Problema**: Método 'is_scanner_available' no existía
+  - ✅ **Solución**: Método agregado con verificación de dispositivos
+  - ❌ **Problema**: Error en movement_form al inicializar barcode system
+  - ✅ **Solución**: Atributo faltante implementado
+  - 🎯 **Estado**: OPERATIVO
+
+- **Base de Datos**: ✅ CORREGIDO
+  - ❌ **Problema**: "no such column: activo" en múltiples tablas
+  - ✅ **Solución**: Columna 'activo' agregada a todas las tablas necesarias
+  - ❌ **Problema**: Esquema inconsistente con servicios
+  - ✅ **Solución**: Schema sincronizado con requerimientos
+  - 🎯 **Estado**: OPERATIVO
+
+### 📋 ARCHIVOS CORREGIDOS
+- **fix_critical_errors.py**: Script maestro de correcciones
+- **_fix_errors.bat**: Ejecutor de correcciones
+- **test_critical_fixes.py**: Tests de validación de correcciones
+- **src/services/barcode_service.py**: Método is_scanner_available agregado
+- **inventario.db**: Esquema corregido
+
+### 🎯 RESULTADO ESPERADO
+- ✅ Formularios de productos y categorías funcionando
+- ✅ Sistema de códigos de barras operativo
+- ✅ Base de datos con esquema completo
+- ✅ Servicios correctamente inicializados
+- ✅ Errores de ejecución eliminados
+
+### 📋 COMANDOS DE VALIDACIÓN
+```bash
+# Ejecutar correcciones
+python fix_critical_errors.py
+# o
+_fix_errors.bat
+
+# Validar correcciones
+python test_critical_fixes.py
+
+# Ejecutar sistema
+python main.py
+```
+
+### 🔧 CORRECCIÓN CRÍTICA ANTERIOR
 - **test_models_validation.py** ✅ CORREGIDO
   - ❌ **Problema**: Error API DatabaseConnection (llamaba connect()/disconnect() inexistentes)
   - ✅ **Solución**: Corregido para usar API real (close(), get_connection())
