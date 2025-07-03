@@ -81,6 +81,7 @@ class DatabaseConnection:
             nombre VARCHAR(60) NOT NULL,
             tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('MATERIAL', 'SERVICIO')),
             descripcion TEXT,
+            activo BOOLEAN DEFAULT 1,
             fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 

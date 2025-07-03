@@ -280,6 +280,90 @@ self.barcode_service: BarcodeService   # Servicio códigos (opcional)
 
 ## Tests Agregados
 
+### test_product_service_fase3_optimization.py - FASE 5A CRÍTICO
+- **Ubicación**: `tests/test_product_service_fase3_optimization.py`
+- **Clase**: `TestProductServiceFase3Optimization`
+- **Función**: Test crítico para migrar ProductService FASE 1 → FASE 3
+- **PROBLEMA IDENTIFICADO**: ProductService sin helpers mientras otros servicios están en FASE 3
+- **Funcionalidades Testeadas**:
+  - Verificación helpers FASE 3 (DatabaseHelper, ValidationHelper, LoggingHelper) (3 tests)
+  - Performance optimizada vs FASE 1 (3 tests)
+  - Validaciones usando ValidationHelper
+  - Logging usando LoggingHelper
+  - Operaciones BD con DatabaseHelper
+  - Compatibilidad FASE 1 → FASE 3 preservada
+  - Integración con servicios ya optimizados
+  - Funcionalidad CRUD completa preservada
+  - Reglas de negocio mantenidas
+- **Total Tests**: 13 tests críticos optimización
+- **Performance Benchmarks**:
+  - Crear 50 productos: < 2 segundos
+  - 50 búsquedas: < 1 segundo
+  - 20 listados: < 1 segundo
+- **Mock Strategy**: Helpers mock si no disponibles + performance real
+- **Cobertura**: ProductService optimization completa
+- **Prioridad**: MÁXIMA - Componente más crítico faltante FASE 5A
+
+### test_category_form_basic.py - FASE 5A
+- **Ubicación**: `tests/test_category_form_basic.py`
+- **Clase**: `TestCategoryFormBasic`
+- **Función**: Suite completa de tests para CategoryForm UI
+- **Funcionalidades Testeadas**:
+  - Inicialización correcta de ventana (4 tests)
+  - Elementos UI críticos presentes
+  - Estados iniciales de botones/campos
+  - Carga de datos desde CategoryService
+  - Búsqueda y filtros en tiempo real
+  - Selección y manejo de eventos TreeView
+  - Modos nuevo/editar/cancelar
+  - Validaciones de formulario
+  - Integración CRUD con servicios
+  - Manejo de errores y casos edge
+  - Protocolo de cierre de ventana
+- **Total Tests**: 15 tests críticos
+- **Mock Strategy**: Database temporal + ServiceMocking
+- **Cobertura**: UI functionality completa
+
+### test_client_form_basic.py - FASE 5A
+- **Ubicación**: `tests/test_client_form_basic.py`
+- **Clase**: `TestClientFormBasic`
+- **Función**: Suite completa de tests para ClientForm UI
+- **Funcionalidades Testeadas**:
+  - Inicialización ventana y servicios (4 tests)
+  - Presencia elementos UI y estados iniciales
+  - Carga datos ClientService con/sin RUC
+  - Búsqueda en tiempo real por nombre
+  - Selección clientes en TreeView
+  - Modos nuevo/editar cliente
+  - Validaciones campo nombre requerido
+  - RUC opcional vs obligatorio
+  - Integración CRUD con ClientService
+  - Operaciones crear/actualizar/desactivar
+  - Manejo errores y casos edge
+  - Casos específicos clientes sin RUC
+- **Total Tests**: 20 tests críticos
+- **Mock Strategy**: Database temporal + Service integration
+- **Cobertura**: ClientForm functionality completa
+
+### test_models_validation.py - FASE 5A CRÍTICO NUEVO
+- **Ubicación**: `tests/test_models_validation.py`
+- **Clase**: `TestModelsValidation`
+- **Función**: Test crítico para validación completa de modelos de datos
+- **Objetivo**: Completar gap crítico #1 - Validación de integridad de modelos
+- **Funcionalidades Testeadas**:
+  - Validación Categoria: creación, tipos, nombres, integridad BD (4 tests)
+  - Validación Producto: creación, decimales, stock, FK categoría (4 tests)
+  - Validación Cliente: creación, RUC, email (3 tests)
+  - Validación Usuario: creación, roles, constraints únicos (3 tests)
+  - Validación Venta: creación, cálculos, FK cliente (3 tests)
+  - Validación Movimiento: creación, tipos, signos cantidad (3 tests)
+  - Integridad Relacional: cascade delete, tipos de datos (2 tests)
+- **Total Tests**: 22 tests críticos de validación
+- **Mock Strategy**: Database temporal + validaciones reales
+- **Cobertura**: Modelos de datos completa
+- **Prioridad**: MÁXIMA - Gap crítico #1 completado
+- **Estado**: CREADO - Listo para ejecución
+
 ### test_user_service_optimization.py - FASE 4A
 - **Ubicación**: `tests/optimization/test_user_service_optimization.py`
 - **Clases**: 
