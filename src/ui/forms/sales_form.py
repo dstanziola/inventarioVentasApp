@@ -43,9 +43,16 @@ class SalesWindow:
             parent: Ventana padre
         """
         self.parent = parent
-        self.sales_service = SalesService(get_database_connection())
-        self.product_service = ProductService(get_database_connection())
-        self.client_service = ClientService(get_database_connection())
+        # CORRECCIÓN: Configurar servicios con dependencias correctas
+        self.db_connection = get_database_connection()
+        self.product_service = ProductService(self.db_connection)
+        self.client_service = ClientService(self.db_connection)
+        # Configurar SalesService con sus dependencias
+        self.sales_service = SalesService(
+            self.db_connection, 
+            product_service=self.product_service,
+            client_service=self.client_service
+        )
         self.barcode_service = BarcodeService()  # NUEVO
         
         # CORRECCIÓN CRÍTICA: Configurar ProductService en BarcodeService
@@ -827,14 +834,48 @@ class SalesWindow:
             if not messagebox.askyesno("Confirmar Venta", confirm_msg):
                 return
             
-            # TODO: Implementar procesamiento real de venta
-            # Por ahora mostrar mensaje de éxito
-            messagebox.showinfo(
-                "Venta Procesada", 
-                f"Venta procesada exitosamente\n"
-                f"Total: B/. {total_amount:.2f}\n\n"
-                f"Funcionalidad completa en desarrollo"
-            )
+            # CORRECCIÓN: Implementar procesamiento real de venta
+            # Crear venta usando SalesService
+            try:
+                # Obtener usuario actual para responsable
+                from ui.auth.session_manager import session_manager
+                current_user = session_manager.get_current_user()
+                responsable = current_user.get('nombre_usuario', 'vendedor') if current_user else 'vendedor'
+                
+                # Crear venta
+                cliente_id = self.selected_client.id_cliente if self.selected_client else None
+                venta = self.sales_service.create_sale(responsable=responsable, id_cliente=cliente_id)
+                
+                # Agregar productos a la venta
+                for sale_item in self.sale_items:
+                    producto = sale_item['product']
+                    cantidad = sale_item['quantity']
+                    precio = float(sale_item['precio_unitario'])
+                    
+                    # Agregar producto (esto actualizará stock automáticamente)
+                    self.sales_service.add_product_to_sale(
+                        id_venta=venta.id_venta,
+                        id_producto=producto.id_producto,
+                        cantidad=cantidad,
+                        precio_unitario=precio
+                    )
+                
+                # Mostrar mensaje de éxito con ID real de venta
+                messagebox.showinfo(
+                    "Venta Procesada", 
+                    f"Venta procesada exitosamente\n"
+                    f"ID Venta: {venta.id_venta}\n"
+                    f"Total: B/. {total_amount:.2f}\n"
+                    f"Stock actualizado automáticamente"
+                )
+                
+            except Exception as venta_error:
+                messagebox.showerror(
+                    "Error en Venta",
+                    f"Error procesando venta: {venta_error}\n\n"
+                    f"La venta no se pudo completar."
+                )
+                return  # No limpiar si hay error
             
             # Limpiar venta
             self._clear_all_items()

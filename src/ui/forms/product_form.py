@@ -77,8 +77,8 @@ class ProductWindow:
         # Crear ventana
         self.root = tk.Toplevel(parent)
         self.root.title("Gestión de Productos")
-        window_width = 1200 if self.barcode_support else 1000
-        self.root.geometry(f"{window_width}x800")
+        window_width = 900 if self.barcode_support else 750
+        self.root.geometry(f"{window_width}x600")
         self.root.transient(parent)
         self.root.grab_set()
         
@@ -200,9 +200,10 @@ class ProductWindow:
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Configurar grid
-        main_frame.columnconfigure(0, weight=2)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=0)  # Botones
+        main_frame.rowconfigure(2, weight=1)  # Formulario
+        main_frame.rowconfigure(3, weight=2)  # Lista de productos
         
         # Título
         title_text = "Gestión de Productos"
@@ -215,21 +216,50 @@ class ProductWindow:
             font=("Arial", 16, "bold"),
             foreground="darkblue"
         )
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        title_label.grid(row=0, column=0, pady=(0, 10))
         
-        # Panel izquierdo - Lista de productos
-        self._create_product_list_panel(main_frame)
-        
-        # Panel derecho - Formulario
-        self._create_form_panel(main_frame)
-        
-        # Panel inferior - Botones
+        # Panel de Botones
         self._create_button_panel(main_frame)
         
+        # Panel Formulario
+        self._create_form_panel(main_frame)
+
+        # Panel Lista de productos
+        self._create_product_list_panel(main_frame)
+
+    def _create_button_panel(self, parent):
+        """Crea el panel de botones."""
+        button_frame = ttk.Frame(parent)
+        button_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), padx=(20, 0), pady=(20, 0))
+        
+        # Botones principales
+        self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_product)
+        self.new_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.save_button = ttk.Button(button_frame, text="Guardar", command=self._save_product, state='disabled')
+        self.save_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.edit_button = ttk.Button(button_frame, text="Editar", command=self._edit_product, state='disabled')
+        self.edit_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.delete_button = ttk.Button(button_frame, text="Eliminar", command=self._delete_product, state='disabled')
+        self.delete_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
+        self.cancel_button.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Botones de códigos de barras (si están disponibles)
+        if self.barcode_support:
+            ttk.Separator(button_frame, orient='vertical').pack(side=tk.LEFT, fill='y', padx=10)
+            ttk.Button(button_frame, text="Escanear", command=self._scan_barcode).pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Botón cerrar
+        ttk.Button(button_frame, text="Cerrar", command=self._close_window).pack(side=tk.LEFT)
+
     def _create_product_list_panel(self, parent):
         """Crea el panel de lista de productos."""
         list_frame = ttk.LabelFrame(parent, text="Lista de Productos", padding=10)
-        list_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
+        list_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5), pady=(15, 0))
         
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(1, weight=1)
@@ -249,7 +279,7 @@ class ProductWindow:
         else:
             columns = ('ID', 'Nombre', 'Categoría', 'Stock', 'Precio', 'Impuesto')
             
-        self.product_tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=15)
+        self.product_tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=10)
         
         # Configurar columnas
         for col in columns:
@@ -281,7 +311,7 @@ class ProductWindow:
     def _create_form_panel(self, parent):
         """Crea el panel del formulario."""
         form_frame = ttk.LabelFrame(parent, text="Datos del Producto", padding=10)
-        form_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
+        form_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=(15, 0))
         
         form_frame.columnconfigure(1, weight=1)
         
@@ -375,34 +405,6 @@ class ProductWindow:
         self.validation_label = ttk.Label(barcode_frame, text="Sin código", foreground='gray')
         self.validation_label.grid(row=2, column=0, columnspan=2, pady=5)
         
-    def _create_button_panel(self, parent):
-        """Crea el panel de botones."""
-        button_frame = ttk.Frame(parent)
-        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
-        
-        # Botones principales
-        self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_product)
-        self.new_button.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.save_button = ttk.Button(button_frame, text="Guardar", command=self._save_product, state='disabled')
-        self.save_button.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.edit_button = ttk.Button(button_frame, text="Editar", command=self._edit_product, state='disabled')
-        self.edit_button.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.delete_button = ttk.Button(button_frame, text="Eliminar", command=self._delete_product, state='disabled')
-        self.delete_button.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
-        self.cancel_button.pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Botones de códigos de barras (si están disponibles)
-        if self.barcode_support:
-            ttk.Separator(button_frame, orient='vertical').pack(side=tk.LEFT, fill='y', padx=10)
-            ttk.Button(button_frame, text="Escanear", command=self._scan_barcode).pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Botón cerrar
-        ttk.Button(button_frame, text="Cerrar", command=self._close_window).pack(side=tk.RIGHT)
         
     def _setup_event_handlers(self):
         """Configura los manejadores de eventos."""

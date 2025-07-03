@@ -837,7 +837,8 @@ class MovementForm:
             # Crear lista para combobox
             producto_items = []
             for producto in productos:
-                item = f"{producto['id_producto']} - {producto['nombre']}"
+                # CORRECCIÓN: Usar atributos de objeto en lugar de subscript
+                item = f"{producto.id_producto} - {producto.nombre}"
                 producto_items.append(item)
             
             # Actualizar comboboxes
@@ -865,19 +866,19 @@ class MovementForm:
             # Buscar producto en la lista
             self.producto_seleccionado = None
             for producto in self.productos_disponibles:
-                if producto['id_producto'] == id_producto:
+                # CORRECCIÓN: Usar atributo de objeto
+                if producto.id_producto == id_producto:
                     self.producto_seleccionado = producto
                     break
             
             if self.producto_seleccionado:
-                # Actualizar información de stock
-                stock_actual = self.producto_seleccionado.get('stock_actual', 
-                                                            self.producto_seleccionado.get('stock', 0))
+                # CORRECCIÓN: Usar atributos de objeto para acceso a stock
+                stock_actual = getattr(self.producto_seleccionado, 'stock', 0)
                 self.stock_actual_label.config(text=f"Stock: {stock_actual}")
                 
                 # FASE 4: Actualizar código de barras si tiene
-                if self.producto_seleccionado.get('barcode'):
-                    self.barcode_var.set(self.producto_seleccionado['barcode'])
+                if hasattr(self.producto_seleccionado, 'barcode') and self.producto_seleccionado.barcode:
+                    self.barcode_var.set(self.producto_seleccionado.barcode)
                 
                 # Validar formulario
                 self.validate_form_data()
@@ -942,8 +943,8 @@ class MovementForm:
             
             # Validar stock suficiente para ventas
             if tipo == 'VENTA':
-                stock_actual = self.producto_seleccionado.get('stock_actual', 
-                                                            self.producto_seleccionado.get('stock', 0))
+                # CORRECCIÓN: Usar atributos de objeto
+                stock_actual = getattr(self.producto_seleccionado, 'stock', 0)
                 if cantidad > stock_actual:
                     self.validation_label.config(
                         text=f"Stock insuficiente. Disponible: {stock_actual}, Solicitado: {cantidad}"
@@ -999,7 +1000,8 @@ class MovementForm:
             
             # Confirmar acción
             tipo = movement_data['tipo_movimiento']
-            producto_nombre = self.producto_seleccionado['nombre']
+            # CORRECCIÓN: Usar atributo de objeto
+            producto_nombre = self.producto_seleccionado.nombre
             cantidad = movement_data['cantidad']
             
             mensaje = f"¿Confirma crear {tipo.lower()} de {abs(cantidad)} unidades del producto '{producto_nombre}'?"
@@ -1066,7 +1068,8 @@ class MovementForm:
             responsable = current_user.get('nombre_usuario', 'usuario') if current_user else 'usuario'
             
             return {
-                'id_producto': self.producto_seleccionado['id_producto'],
+                # CORRECCIÓN: Usar atributo de objeto
+                'id_producto': self.producto_seleccionado.id_producto,
                 'tipo_movimiento': self.tipo_movimiento_var.get(),
                 'cantidad': cantidad,
                 'responsable': responsable,

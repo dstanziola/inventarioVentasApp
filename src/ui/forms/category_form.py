@@ -15,7 +15,6 @@ from services.category_service import CategoryService
 from models.categoria import Categoria
 from ui.utils.window_manager import window_manager, safe_widget_state, validate_widget_exists
 
-
 class CategoryWindow:
     """Ventana de gestión de categorías con gestión mejorada."""
     
@@ -75,9 +74,9 @@ class CategoryWindow:
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Configurar grid principal
-        main_frame.columnconfigure(0, weight=2)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
+        # main_frame.columnconfigure(1, weight=1)
+        main_frame.rowconfigure(3, weight=1)
         
         # Título
         title_label = ttk.Label(
@@ -85,22 +84,92 @@ class CategoryWindow:
             text="Gestión de Categorías",
             font=("Arial", 16, "bold")
         )
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        title_label.grid(row=1, column=0, pady=(0, 10))
+
+        """Crea el panel de botones."""
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=2, column=0, sticky=tk.W, pady=(0, 10))
+
+        # Botones de acción
+        self.widgets['new_button'] = ttk.Button(button_frame, text="Nuevo", command=self._new_category)
+        self.widgets['new_button'].pack(side=tk.LEFT, padx=(0, 5))
         
-        # Panel izquierdo - Lista de categorías
-        self._create_list_panel(main_frame)
+        self.widgets['save_button'] = ttk.Button(button_frame, text="Guardar", command=self._save_category, state='disabled')
+        self.widgets['save_button'].pack(side=tk.LEFT, padx=(0, 5))
         
-        # Panel derecho - Formulario
+        self.widgets['edit_button'] = ttk.Button(button_frame, text="Editar", command=self._edit_category, state='disabled')
+        self.widgets['edit_button'].pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.widgets['delete_button'] = ttk.Button(button_frame, text="Eliminar", command=self._delete_category, state='disabled')
+        self.widgets['delete_button'].pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.widgets['cancel_button'] = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
+        self.widgets['cancel_button'].pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Botón cerrar
+        self.widgets['close_button'] = ttk.Button(button_frame, text="Cerrar", command=self._close_window)
+        self.widgets['close_button'].pack(side=tk.LEFT, padx=(0, 5))
+
+        # Panel superior - Formulario
         self._create_form_panel(main_frame)
+
+        # Panel inferior - Lista de categorías
+        self._create_list_panel(main_frame)
+
+    def _create_form_panel(self, parent):
+        """Crea el panel de formulario."""
+        # Frame de formulario
+        form_frame = ttk.LabelFrame(parent, text="Datos de Categoría", padding=10)
+        form_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=(5, 0))
         
-        # Panel inferior - Botones
-        self._create_button_panel(main_frame)
+        # Configurar grid
+        form_frame.columnconfigure(1, weight=1)
         
+        row = 0
+        
+        # Campo nombre
+        ttk.Label(form_frame, text="Nombre:").grid(row=row, column=0, sticky=tk.W, pady=(0, 5))
+        self.name_entry = ttk.Entry(form_frame, textvariable=self.category_name_var, width=30)
+        self.name_entry.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
+        row += 1
+        
+        # Campo tipo
+        ttk.Label(form_frame, text="Tipo:").grid(row=row, column=0, sticky=tk.W, pady=(0, 5))
+        self.type_combo = ttk.Combobox(
+            form_frame, 
+            textvariable=self.category_type_var,
+            values=["MATERIAL", "SERVICIO"],
+            state='readonly',
+            width=27
+        )
+        self.type_combo.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
+        row += 1
+        
+        # Campo descripción
+        # ttk.Label(form_frame, text="Descripción:").grid(row=row, column=0, sticky=(tk.W, tk.N), pady=(0, 5))
+        # description_frame = ttk.Frame(form_frame)
+        # description_frame.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
+        # description_frame.columnconfigure(0, weight=1)
+        
+        # self.description_text = tk.Text(description_frame, height=1, width=30, wrap=tk.WORD)
+        # desc_scrollbar = ttk.Scrollbar(description_frame, orient=tk.VERTICAL, command=self.description_text.yview)
+        # self.description_text.configure(yscrollcommand=desc_scrollbar.set)
+        
+        # self.description_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
+        # desc_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        # row += 1
+ 
+        # Campo descripción
+        ttk.Label(form_frame, text="Descripción:").grid(row=row, column=0, sticky=tk.W, pady=(0, 5))
+        self.description_entry = ttk.Entry(form_frame, textvariable=self.description_var, width=30)
+        self.description_entry.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
+        row += 1
+
     def _create_list_panel(self, parent):
         """Crea el panel de lista de categorías."""
         # Frame de lista
         list_frame = ttk.LabelFrame(parent, text="Categorías Existentes", padding=10)
-        list_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
+        list_frame.grid(row=4, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 15))
         
         # Configurar grid
         list_frame.columnconfigure(0, weight=1)
@@ -151,95 +220,7 @@ class CategoryWindow:
         self.category_tree.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         scrollbar.grid(row=2, column=1, sticky=(tk.N, tk.S))
         
-    def _create_form_panel(self, parent):
-        """Crea el panel de formulario."""
-        # Frame de formulario
-        form_frame = ttk.LabelFrame(parent, text="Datos de Categoría", padding=10)
-        form_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
-        
-        # Configurar grid
-        form_frame.columnconfigure(1, weight=1)
-        
-        row = 0
-        
-        # Campo nombre
-        ttk.Label(form_frame, text="Nombre:").grid(row=row, column=0, sticky=tk.W, pady=(0, 5))
-        self.name_entry = ttk.Entry(form_frame, textvariable=self.category_name_var, width=30)
-        self.name_entry.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
-        row += 1
-        
-        # Campo tipo
-        ttk.Label(form_frame, text="Tipo:").grid(row=row, column=0, sticky=tk.W, pady=(0, 5))
-        self.type_combo = ttk.Combobox(
-            form_frame, 
-            textvariable=self.category_type_var,
-            values=["MATERIAL", "SERVICIO"],
-            state='readonly',
-            width=27
-        )
-        self.type_combo.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
-        row += 1
-        
-        # Campo descripción
-        ttk.Label(form_frame, text="Descripción:").grid(row=row, column=0, sticky=(tk.W, tk.N), pady=(0, 5))
-        description_frame = ttk.Frame(form_frame)
-        description_frame.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=(0, 5))
-        description_frame.columnconfigure(0, weight=1)
-        
-        self.description_text = tk.Text(description_frame, height=4, width=30, wrap=tk.WORD)
-        desc_scrollbar = ttk.Scrollbar(description_frame, orient=tk.VERTICAL, command=self.description_text.yview)
-        self.description_text.configure(yscrollcommand=desc_scrollbar.set)
-        
-        self.description_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
-        desc_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        row += 1
-        
-        # Información adicional
-        info_frame = ttk.Frame(form_frame)
-        info_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
-        info_frame.columnconfigure(0, weight=1)
-        
-        info_text = """Tipos de categoría:
 
-• MATERIAL: Para productos físicos con stock
-• SERVICIO: Para servicios sin stock
-
-La descripción es opcional pero recomendada."""
-        
-        info_label = ttk.Label(
-            info_frame,
-            text=info_text,
-            font=("Arial", 9),
-            foreground="gray",
-            justify=tk.LEFT
-        )
-        info_label.grid(row=0, column=0, sticky=(tk.W, tk.E))
-        
-    def _create_button_panel(self, parent):
-        """Crea el panel de botones."""
-        button_frame = ttk.Frame(parent)
-        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
-        
-        # Botones de acción - ALMACENAR REFERENCIAS
-        self.widgets['new_button'] = ttk.Button(button_frame, text="Nuevo", command=self._new_category)
-        self.widgets['new_button'].pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.widgets['save_button'] = ttk.Button(button_frame, text="Guardar", command=self._save_category, state='disabled')
-        self.widgets['save_button'].pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.widgets['edit_button'] = ttk.Button(button_frame, text="Editar", command=self._edit_category, state='disabled')
-        self.widgets['edit_button'].pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.widgets['delete_button'] = ttk.Button(button_frame, text="Eliminar", command=self._delete_category, state='disabled')
-        self.widgets['delete_button'].pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.widgets['cancel_button'] = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
-        self.widgets['cancel_button'].pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Botón cerrar
-        self.widgets['close_button'] = ttk.Button(button_frame, text="Cerrar", command=self._close_window)
-        self.widgets['close_button'].pack(side=tk.RIGHT)
-        
     def _setup_events(self):
         """Configura eventos de la ventana."""
         # Selección en TreeView
@@ -254,7 +235,7 @@ La descripción es opcional pero recomendada."""
         self.category_type_var.trace('w', self._validate_form)
         
         # Sincronizar texto de descripción
-        self.description_text.bind('<KeyRelease>', self._sync_description)
+        # self.description_entry.bind('<KeyRelease>', self._sync_description)
         
         # PROTOCOLO DE CIERRE CRÍTICO - NO DEBE SER SOBRESCRITO
         self.root.protocol("WM_DELETE_WINDOW", self._handle_window_close)
@@ -314,10 +295,12 @@ La descripción es opcional pero recomendada."""
                 self.category_type_var.set(selected_category.tipo)
                 
                 # Mostrar descripción
-                self.description_text.delete(1.0, tk.END)
-                if selected_category.descripcion:
-                    self.description_text.insert(1.0, selected_category.descripcion)
+                # self.description_text.delete(1.0, tk.END)
+                # if selected_category.descripcion:
+                #    self.description_text.insert(1.0, selected_category.descripcion)
                 
+                self.description_var.set(selected_category.descripcion or "")
+
                 # Habilitar botones de edición - CON VALIDACIÓN
                 safe_widget_state(self.widgets.get('edit_button'), 'normal')
                 safe_widget_state(self.widgets.get('delete_button'), 'normal')
@@ -346,13 +329,13 @@ La descripción es opcional pero recomendada."""
         except Exception as e:
             self.logger.error(f"Error en validación de formulario: {e}")
             
-    def _sync_description(self, event):
-        """Sincroniza el texto de descripción con la variable."""
-        try:
-            content = self.description_text.get(1.0, tk.END).strip()
-            self.description_var.set(content)
-        except Exception as e:
-            self.logger.error(f"Error al sincronizar descripción: {e}")
+ #    def _sync_description(self, event):
+ #       """Sincroniza el texto de descripción con la variable."""
+ #       try:
+ #           content = self.description_text.get(1.0, tk.END).strip()
+ #           self.description_var.set(content)
+ #       except Exception as e:
+ #           self.logger.error(f"Error al sincronizar descripción: {e}")
         
     def _enable_form(self):
         """Habilita los campos del formulario."""
@@ -361,8 +344,12 @@ La descripción es opcional pero recomendada."""
                 self.name_entry.config(state='normal')
             if validate_widget_exists(self.type_combo):
                 self.type_combo.config(state='readonly')
-            if validate_widget_exists(self.description_text):
-                self.description_text.config(state='normal')
+            # if validate_widget_exists(self.description_text):
+            #    self.description_text.config(state='normal')
+            if validate_widget_exists(self.description_entry):
+                self.description_entry.config(state='normal')
+
+
         except Exception as e:
             self.logger.error(f"Error al habilitar formulario: {e}")
         
@@ -373,8 +360,12 @@ La descripción es opcional pero recomendada."""
                 self.name_entry.config(state='readonly')
             if validate_widget_exists(self.type_combo):
                 self.type_combo.config(state='disabled')
-            if validate_widget_exists(self.description_text):
-                self.description_text.config(state='disabled')
+            # if validate_widget_exists(self.description_text):
+            #     self.description_text.config(state='disabled')
+            if validate_widget_exists(self.description_entry):
+                self.description_entry.config(state='readonly')
+
+
         except Exception as e:
             self.logger.error(f"Error al deshabilitar formulario: {e}")
         
@@ -419,6 +410,9 @@ La descripción es opcional pero recomendada."""
             
             if validate_widget_exists(self.name_entry):
                 self.name_entry.focus()
+
+            # Forzar validación para habilitar botón Guardar si corresponde
+            self._validate_form()
             
     def _save_category(self):
         """Guarda la categoría (nueva o editada)."""
@@ -426,7 +420,9 @@ La descripción es opcional pero recomendada."""
             # Obtener datos del formulario
             name = self.category_name_var.get().strip()
             type_val = self.category_type_var.get()
-            description = self.description_text.get(1.0, tk.END).strip()
+            # description = self.description_text.get(1.0, tk.END).strip()
+            description = self.description_var.get().strip()
+
             
             # Validaciones básicas
             if not name:
@@ -511,8 +507,8 @@ La descripción es opcional pero recomendada."""
             self.name_entry.config(state='readonly')
         if validate_widget_exists(self.type_combo):
             self.type_combo.config(state='disabled')
-        if validate_widget_exists(self.description_text):
-            self.description_text.config(state='disabled')
+        if validate_widget_exists(self.description_entry):
+            self.description_entry.config(state='disabled')
         
         # Configurar botones - CON VALIDACIÓN
         safe_widget_state(self.widgets.get('new_button'), 'normal')
@@ -526,11 +522,13 @@ La descripción es opcional pero recomendada."""
         self.category_name_var.set("")
         self.category_type_var.set("")
         
-        try:
-            if validate_widget_exists(self.description_text):
-                self.description_text.delete(1.0, tk.END)
-        except Exception as e:
-            self.logger.error(f"Error al limpiar descripción: {e}")
+        # try:
+        #     if validate_widget_exists(self.description_text):
+        #         self.description_text.delete(1.0, tk.END)
+        # except Exception as e:
+        #     self.logger.error(f"Error al limpiar descripción: {e}")
+
+        self.description_var.set("")
         
         # Limpiar selección en TreeView
         try:

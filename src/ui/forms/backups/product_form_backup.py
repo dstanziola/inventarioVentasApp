@@ -76,7 +76,7 @@ class ProductWindow:
         # Crear ventana
         self.root = tk.Toplevel(parent)
         self.root.title("Gestión de Productos - Con Códigos de Barras")
-        self.root.geometry("1200x800")  # Más grande para acomodar códigos
+        # self.root.geometry("1200x800")  # Más grande para acomodar códigos
         self.root.transient(parent)
         self.root.grab_set()
         
