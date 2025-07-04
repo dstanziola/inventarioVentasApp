@@ -1,0 +1,2021 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.6, pytest-8.4.1, pluggy-1.6.0 -- D:\inventario_app2\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\inventario_app2
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.9.0, asyncio-1.0.0, cov-6.2.1
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 624 items / 1 error
+
+<Package inventario_app2>
+  <Package tests>
+    <Dir api>
+      <Module test_product_schemas_service_validation.py>
+        Test ACTUALIZADO para validación de restricción stock=0 en servicios - Product Schemas
+        Sistema de Inventario v2.0 - TDD FASE GREEN
+        
+        Tests que verifican que los schemas de API cumplan con la regla de negocio:
+        "Si en 'Categoria', tipo = 'SERVICIO' entonces 'Stock' = 0"
+        
+        ACTUALIZADOS para pasar con la nueva implementación.
+        <Class TestProductServiceStockValidation>
+          Tests para validación de stock=0 en servicios.
+          <Function test_product_create_service_auto_correction>
+            Test: Crear servicio con stock > 0 se auto-corrige a 0.
+          <Function test_product_create_strict_service_with_stock_should_fail>
+            Test: Validación estricta debe fallar para servicios con stock > 0.
+          <Function test_product_create_service_with_zero_stock_should_pass>
+            Test: Crear servicio con stock = 0 debe pasar.
+          <Function test_product_create_material_with_stock_should_pass>
+            Test: Crear material con stock > 0 debe pasar.
+          <Function test_product_update_service_stock_should_fail>
+            Test: Actualizar stock de servicio debe fallar.
+          <Function test_product_update_material_stock_should_pass>
+            Test: Actualizar stock de material debe pasar.
+          <Function test_product_response_service_consistency_warning>
+            Test: ProductResponse detecta inconsistencias en servicios.
+        <Class TestProductSchemasCategoryIntegration>
+          Tests de integración con categorías.
+          <Function test_product_create_without_category_type>
+            Test: ProductCreate funciona sin categoria_tipo (campo opcional).
+          <Function test_product_create_with_validation_requires_category_type>
+            Test: ProductCreateWithValidation requiere categoria_tipo.
+        <Class TestProductSchemaExamples>
+          Tests para validar ejemplos en documentación.
+          <Function test_material_example_from_schema>
+            Test: Ejemplo de material desde la documentación funciona.
+          <Function test_service_example_auto_corrected>
+            Test: Ejemplo de servicio con auto-corrección.
+    <Dir optimization>
+      <Module test_user_service_optimization.py>
+        Test Suite para Optimización UserService - FASE 4A
+        Valida implementación de patrón FASE 3 y compatibilidad.
+        
+        OBJETIVOS:
+        - Verificar implementación de DatabaseHelper, ValidationHelper, LoggingHelper
+        - Mantener 100% compatibilidad con LoginWindow
+        - Validar nuevas funcionalidades de seguridad
+        - Confirmar mejoras de performance
+        
+        CRITERIOS ÉXITO:
+        - Todos los tests pasan
+        - Compatibilidad LoginWindow mantenida
+        - Logging apropiado implementado  
+        - Validaciones robustas funcionando
+        <UnitTestCase TestUserServiceOptimization>
+          Test suite para optimización UserService FASE 4A.
+          <TestCaseFunction test_authenticate_compatibility_maintained>
+            Test: Método authenticate debe mantener compatibilidad con LoginWindow.
+          <TestCaseFunction test_authenticate_with_invalid_credentials>
+            Test: authenticate debe manejar credenciales inválidas correctamente.
+          <TestCaseFunction test_backward_compatibility_complete>
+            Test: Compatibilidad completa con código existente.
+          <TestCaseFunction test_enhanced_password_validation>
+            Test: Validaciones de contraseña mejoradas deben funcionar.
+          <TestCaseFunction test_error_handling_improved>
+            Test: Manejo de errores debe estar mejorado.
+          <TestCaseFunction test_fase3_pattern_implementation>
+            Test: UserService debe implementar patrón FASE 3 completo.
+          <TestCaseFunction test_get_user_by_id_optimized>
+            Test: get_user_by_id debe usar helpers optimizados.
+          <TestCaseFunction test_get_user_statistics_new_method>
+            Test: Nuevo método get_user_statistics debe funcionar.
+          <TestCaseFunction test_get_users_by_role_new_method>
+            Test: Nuevo método get_users_by_role debe funcionar correctamente.
+          <TestCaseFunction test_logging_implementation>
+            Test: Logging debe estar implementado correctamente.
+          <TestCaseFunction test_performance_optimization>
+            Test: Performance debe ser igual o mejor que versión original.
+          <TestCaseFunction test_security_validations_robust>
+            Test: Validaciones de seguridad deben ser robustas.
+          <TestCaseFunction test_update_user_password_security>
+            Test: Cambio de contraseña debe tener validaciones de seguridad.
+          <TestCaseFunction test_validation_helper_integration>
+            Test: Integración con ValidationHelper debe funcionar.
+        <UnitTestCase TestUserServiceSecurityEnhancements>
+          Tests específicos para mejoras de seguridad.
+          <TestCaseFunction test_authentication_logging>
+            Test: Intentos de autenticación deben registrarse.
+          <TestCaseFunction test_password_strength_validation>
+            Test: Validación de fortaleza de contraseña.
+          <TestCaseFunction test_user_enumeration_protection>
+            Test: Protección contra enumeración de usuarios.
+    <Dir services>
+      <Module test_label_service_fase3_optimization.py>
+        Test para optimización LabelService con patrón FASE 3
+        
+        OBJETIVO: Validar implementación correcta del patrón FASE 3 en LabelService
+        - DatabaseHelper: Operaciones BD optimizadas
+        - ValidationHelper: Validaciones robustas 
+        - LoggingHelper: Auditoría estructurada
+        
+        TDD: Este test define el comportamiento esperado ANTES de implementar cambios
+        <UnitTestCase TestLabelServiceFASE3Optimization>
+          Test suite para validar optimización FASE 3 del LabelService
+          
+          PATRÓN FASE 3 REQUERIDO:
+          - DatabaseHelper para operaciones BD
+          - ValidationHelper para validaciones
+          - LoggingHelper para logging estructurado
+          <TestCaseFunction test_audit_trail_for_operations>
+            Verificar que las operaciones principales generan audit trail
+          <TestCaseFunction test_backward_compatibility_maintained>
+            CRÍTICO: Verificar que la optimización mantiene compatibilidad hacia atrás
+          <TestCaseFunction test_cache_management_with_logging>
+            Verificar que el manejo de cache usa logging apropiado
+          <TestCaseFunction test_create_product_label_with_logging>
+            Verificar que create_product_label usa logging estructurado
+          <TestCaseFunction test_error_handling_with_structured_logging>
+            Verificar que los errores se manejan con logging estructurado
+          <TestCaseFunction test_format_barcode_uses_validation_helper>
+            Verificar que format_barcode usa ValidationHelper
+          <TestCaseFunction test_generate_barcode_image_with_validation>
+            Verificar que generate_barcode_image valida entrada usando ValidationHelper
+          <TestCaseFunction test_initialization_logging>
+            Verificar que la inicialización del servicio se loggea apropiadamente
+          <TestCaseFunction test_performance_improvements>
+            Verificar que la optimización incluye mejoras de performance
+          <TestCaseFunction test_search_product_by_code_performance_logging>
+            Verificar que search_product_by_code registra métricas de performance
+          <TestCaseFunction test_service_has_fase3_components>
+            CRITÉRICO: Verificar que LabelService tiene componentes FASE 3
+          <TestCaseFunction test_templates_functionality_preserved>
+            Verificar que la funcionalidad de templates se preserva
+          <TestCaseFunction test_validate_barcode_uses_validation_helper>
+            Verificar que validate_barcode usa ValidationHelper
+        <UnitTestCase TestLabelServiceIntegrationFASE3>
+          Tests de integración para verificar funcionamiento conjunto de componentes FASE 3
+          <TestCaseFunction test_full_workflow_with_fase3_components>
+            Test de workflow completo usando todos los componentes FASE 3
+      <Module test_report_service_auxiliary_methods.py>
+        Test específicos para métodos auxiliares de ReportService - FASE 4B
+        
+        OBJETIVO: Validar implementación detallada de métodos auxiliares para construcción de reportes:
+        - _build_movements_table()
+        - _build_inventory_table() 
+        - _build_sales_summary()
+        - _build_profitability_metrics()
+        
+        TDD: Estos tests definen el comportamiento EXACTO esperado ANTES de implementar
+        <UnitTestCase TestReportServiceAuxiliaryMethods>
+          Test suite específico para métodos auxiliares de construcción de reportes.
+          
+          FOCUS: Validar que cada método auxiliar genere el contenido PDF correcto
+          con los datos proporcionados y el formato esperado.
+          <TestCaseFunction test_auxiliary_methods_return_reportlab_compatible_elements>
+            Verificar que todos los métodos auxiliares retornen elementos compatibles con ReportLab.
+          <TestCaseFunction test_build_inventory_table_calculations>
+            Verificar que _build_inventory_table incluya cálculos correctos de totales.
+          <TestCaseFunction test_build_inventory_table_empty_data>
+            Verificar manejo de inventario vacío en _build_inventory_table.
+          <TestCaseFunction test_build_inventory_table_with_zero_stock>
+            Verificar que _build_inventory_table maneje productos con stock cero.
+          <TestCaseFunction test_build_movements_table_data_integrity>
+            Verificar que _build_movements_table preserve la integridad de datos.
+          <TestCaseFunction test_build_movements_table_empty_data>
+            Verificar manejo de datos vacíos en _build_movements_table.
+          <TestCaseFunction test_build_movements_table_structure>
+            Verificar que _build_movements_table genere tabla con estructura correcta.
+          <TestCaseFunction test_build_profitability_metrics_calculations>
+            Verificar cálculos específicos en métricas de rentabilidad.
+          <TestCaseFunction test_build_profitability_metrics_comprehensive>
+            Verificar que _build_profitability_metrics genere métricas completas.
+          <TestCaseFunction test_build_sales_summary_comprehensive>
+            Verificar que _build_sales_summary genere resumen completo de ventas.
+          <TestCaseFunction test_build_sales_summary_tax_breakdown>
+            Verificar que _build_sales_summary incluya desglose detallado de impuestos.
+          <TestCaseFunction test_table_styling_consistency>
+            Verificar que las tablas generadas tengan estilos consistentes.
+      <Module test_report_service_fase3.py>
+        Test para ReportService con patrón FASE 3
+        
+        OBJETIVO: Implementar servicio completo de reportes PDF con:
+        - DatabaseHelper: Consultas optimizadas para reportes
+        - ValidationHelper: Validación de parámetros
+        - LoggingHelper: Auditoría de generación de reportes
+        
+        TDD: Este test define el comportamiento esperado ANTES de implementar
+        <UnitTestCase TestReportServiceFASE3>
+          Test suite para ReportService con patrón FASE 3 completo.
+          
+          PATRÓN FASE 3 REQUERIDO:
+          - DatabaseHelper para consultas complejas optimizadas
+          - ValidationHelper para validar parámetros de reportes
+          - LoggingHelper para auditoría de reportes generados
+          <TestCaseFunction test_database_helper_complex_queries>
+            Verificar uso de DatabaseHelper para consultas complejas.
+          <TestCaseFunction test_error_handling_with_logging>
+            Verificar manejo de errores con logging estructurado.
+          <TestCaseFunction test_inventory_report_generation>
+            Verificar generación de reporte de inventario actual.
+          <TestCaseFunction test_movements_report_generation>
+            Verificar generación de reporte de movimientos con validaciones.
+          <TestCaseFunction test_parameter_validation_with_validation_helper>
+            Verificar que todos los parámetros se validen con ValidationHelper.
+          <TestCaseFunction test_pdf_output_format_validation>
+            Verificar que todos los reportes generen PDF válido.
+          <TestCaseFunction test_performance_logging>
+            Verificar logging de métricas de performance.
+          <TestCaseFunction test_profitability_report_generation>
+            Verificar reporte de rentabilidad con análisis de costos.
+          <TestCaseFunction test_report_service_initialization_fase3>
+            CRÍTICO: Verificar inicialización con patrón FASE 3.
+          <TestCaseFunction test_sales_report_with_tax_breakdown>
+            Verificar reporte de ventas con desglose de impuestos.
+    <Module test_authentication_flow.py>
+      Test para validar el flujo de autenticación del sistema.
+      
+      Este test verifica que:
+      1. El sistema requiere autenticación antes de mostrar la ventana principal
+      2. El flujo de login funciona correctamente
+      3. La aplicación maneja errores de autenticación apropiadamente
+      <UnitTestCase TestAuthenticationFlow>
+        Test del flujo completo de autenticación.
+        <TestCaseFunction test_correct_application_flow>
+          Test: Flujo correcto de la aplicación.
+        <TestCaseFunction test_login_window_authentication_failure>
+          Test: LoginWindow maneja autenticación fallida.
+        <TestCaseFunction test_login_window_authentication_success>
+          Test: LoginWindow maneja autenticación exitosa.
+        <TestCaseFunction test_main_window_requires_authentication>
+          Test: MainWindow debe requerir autenticación.
+        <TestCaseFunction test_main_window_works_with_authentication>
+          Test: MainWindow funciona después de autenticación.
+    <Module test_barcode_service_fase3_optimization.py>
+      Tests para Optimización FASE 3 del Sistema de Códigos de Barras
+      ================================================================
+      
+      Tests específicos para validar la implementación del patrón FASE 3 en:
+      - BarcodeService optimizado con DatabaseHelper, ValidationHelper, LoggingHelper
+      - LabelService optimizado con patrón FASE 3
+      - Integración USB HID robusta
+      - Performance y compatibilidad mejoradas
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Versión: FASE 4C
+      Fecha: Julio 2025
+      <UnitTestCase TestBarcodeServiceFase3Optimization>
+        Tests para validar optimización FASE 3 del BarcodeService.
+        
+        Valida que el servicio use correctamente:
+        - DatabaseHelper para operaciones BD optimizadas
+        - ValidationHelper para validaciones centralizadas  
+        - LoggingHelper para auditoría estructurada
+        <TestCaseFunction test_cache_integration>
+          Test que servicio usa cache interno para performance.
+        <TestCaseFunction test_error_handling_with_logging>
+          Test que manejo de errores incluye logging detallado.
+        <TestCaseFunction test_get_barcode_statistics_optimized>
+          Test que estadísticas usan DatabaseHelper para performance.
+        <TestCaseFunction test_init_uses_fase3_pattern>
+          Test que inicialización usa patrón FASE 3 completo.
+        <TestCaseFunction test_read_barcode_with_logging>
+          Test que lectura de código incluye logging estructurado.
+        <TestCaseFunction test_search_product_by_code_uses_db_helper>
+          Test que búsqueda de producto usa DatabaseHelper optimizado.
+        <TestCaseFunction test_validate_barcode_uses_validation_helper>
+          Test que validación usa ValidationHelper centralizado.
+      <UnitTestCase TestLabelServiceFase3Optimization>
+        Tests para validar optimización FASE 3 del LabelService.
+        
+        Valida que el servicio use correctamente el patrón FASE 3
+        para operaciones optimizadas y logging estructurado.
+        <TestCaseFunction test_create_product_label_with_db_helper>
+          Test que creación de etiqueta usa DatabaseHelper para categorías.
+        <TestCaseFunction test_generate_barcode_image_with_validation>
+          Test que generación de imagen usa ValidationHelper.
+        <TestCaseFunction test_generate_labels_pdf_with_logging>
+          Test que generación PDF incluye logging detallado.
+        <TestCaseFunction test_init_uses_fase3_pattern>
+          Test que inicialización usa patrón FASE 3 completo.
+        <TestCaseFunction test_performance_metrics_tracking>
+          Test que servicio rastrea métricas de performance.
+      <UnitTestCase TestUSBHIDIntegration>
+        Tests para validar integración USB HID optimizada con patrón FASE 3.
+        <TestCaseFunction test_auto_connect_first_device_optimized>
+          Test que auto-conexión está optimizada con validaciones.
+        <TestCaseFunction test_detect_usb_readers_with_logging>
+          Test que detección USB incluye logging detallado.
+        <TestCaseFunction test_read_with_timeout_and_validation>
+          Test que lectura incluye timeout y validación robusta.
+      <UnitTestCase TestBarcodeSystemIntegration>
+        Tests de integración para el sistema completo de códigos de barras FASE 3.
+        <TestCaseFunction test_complete_workflow_scan_to_label>
+          Test flujo completo: escanear código -> buscar producto -> generar etiqueta.
+        <TestCaseFunction test_error_recovery_and_logging>
+          Test que sistema maneja errores y los registra correctamente.
+        <TestCaseFunction test_performance_optimization_validation>
+          Test que optimizaciones FASE 3 mejoran performance.
+    <Module test_category_form_basic.py>
+      Tests unitarios básicos para CategoryForm - FASE 5A
+      ==================================================
+      
+      OBJETIVO:
+      Completar cobertura de tests para el formulario de gestión de categorías,
+      validando funcionalidades críticas de UI y integración con servicios.
+      
+      COBERTURA:
+      - Inicialización correcta de la ventana
+      - Presencia de elementos UI críticos
+      - Funcionalidades básicas de navegación
+      - Validaciones de formulario
+      - Integración con CategoryService
+      - Eventos de UI básicos
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 3, 2025 - FASE 5A Completar Cobertura
+      <UnitTestCase TestCategoryFormBasic>
+        Test suite básico para CategoryForm - funcionalidades UI.
+        <TestCaseFunction test_cancel_edit_functionality>
+          Test funcionalidad de cancelar edición.
+        <TestCaseFunction test_category_selection>
+          Test selección de categoría en TreeView.
+        <TestCaseFunction test_category_window_initialization>
+          Test inicialización correcta de la ventana.
+        <TestCaseFunction test_create_category_integration>
+          Test integración crear categoría con servicio.
+        <TestCaseFunction test_delete_category_integration>
+          Test integración eliminar categoría.
+        <TestCaseFunction test_error_handling_invalid_data>
+          Test manejo de errores con datos inválidos.
+        <TestCaseFunction test_filter_by_type>
+          Test filtro por tipo de categoría.
+        <TestCaseFunction test_form_validation>
+          Test validación de formulario.
+        <TestCaseFunction test_initial_button_states>
+          Test estados iniciales de botones.
+        <TestCaseFunction test_load_categories_success>
+          Test carga exitosa de categorías.
+        <TestCaseFunction test_new_category_mode>
+          Test modo de nueva categoría.
+        <TestCaseFunction test_search_functionality>
+          Test funcionalidad de búsqueda.
+        <TestCaseFunction test_ui_elements_created>
+          Test que todos los elementos de UI se crean.
+        <TestCaseFunction test_update_category_integration>
+          Test integración actualizar categoría.
+        <TestCaseFunction test_window_close_protocol>
+          Test protocolo de cierre de ventana.
+    <Module test_category_loading_diagnosis.py>
+      Test de diagnóstico específico para el problema de carga de categorías.
+      Identifica la causa raíz del problema reportado por el usuario.
+      
+      Este test verifica cada componente del flujo de carga de categorías
+      para identificar exactamente dónde falla el proceso.
+      <UnitTestCase TestCategoryLoadingDiagnosis>
+        Test de diagnóstico para identificar problemas en la carga de categorías.
+        <TestCaseFunction test_1_database_connection_works>
+          Test 1: Verificar que la conexión a base de datos funciona.
+        <TestCaseFunction test_2_default_categories_exist>
+          Test 2: Verificar que existen categorías por defecto.
+        <TestCaseFunction test_3_category_service_initialization>
+          Test 3: Verificar que CategoryService se inicializa correctamente.
+        <TestCaseFunction test_4_get_all_categories_method>
+          Test 4: Verificar que el método get_all_categories funciona.
+        <TestCaseFunction test_5_simulate_form_loading>
+          Test 5: Simular exactamente lo que hace el formulario.
+    <Module test_client_form_basic.py>
+      Tests unitarios básicos para ClientForm - FASE 5A
+      =================================================
+      
+      OBJETIVO:
+      Completar cobertura de tests para el formulario de gestión de clientes,
+      validando funcionalidades críticas de UI y integración con servicios.
+      
+      COBERTURA:
+      - Inicialización correcta de la ventana
+      - Presencia de elementos UI críticos
+      - Funcionalidades básicas de navegación
+      - Validaciones de formulario
+      - Integración con ClientService
+      - Eventos de UI básicos
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 3, 2025 - FASE 5A Completar Cobertura
+      <UnitTestCase TestClientFormBasic>
+        Test suite básico para ClientForm - funcionalidades UI.
+        <TestCaseFunction test_cancel_edit_functionality>
+          Test funcionalidad de cancelar edición.
+        <TestCaseFunction test_client_selection>
+          Test selección de cliente en TreeView.
+        <TestCaseFunction test_client_window_initialization>
+          Test inicialización correcta de la ventana.
+        <TestCaseFunction test_create_client_integration>
+          Test integración crear cliente con servicio.
+        <TestCaseFunction test_create_client_without_ruc>
+          Test crear cliente sin RUC.
+        <TestCaseFunction test_deactivate_client_integration>
+          Test integración desactivar cliente.
+        <TestCaseFunction test_display_client_with_ruc>
+          Test visualización de cliente con RUC.
+        <TestCaseFunction test_display_client_without_ruc>
+          Test visualización de cliente sin RUC.
+        <TestCaseFunction test_edit_client_mode>
+          Test modo de edición de cliente.
+        <TestCaseFunction test_error_handling_empty_name>
+          Test manejo de error con nombre vacío.
+        <TestCaseFunction test_form_validation_name_required>
+          Test validación de nombre requerido.
+        <TestCaseFunction test_form_validation_ruc_optional>
+          Test validación de RUC opcional.
+        <TestCaseFunction test_initial_button_states>
+          Test estados iniciales de botones.
+        <TestCaseFunction test_initial_form_states>
+          Test estados iniciales de campos de formulario.
+        <TestCaseFunction test_load_clients_success>
+          Test carga exitosa de clientes.
+        <TestCaseFunction test_new_client_mode>
+          Test modo de nuevo cliente.
+        <TestCaseFunction test_no_selection_edit_warning>
+          Test advertencia al editar sin selección.
+        <TestCaseFunction test_search_functionality>
+          Test funcionalidad de búsqueda.
+        <TestCaseFunction test_ui_elements_created>
+          Test que todos los elementos de UI se crean.
+        <TestCaseFunction test_update_client_integration>
+          Test integración actualizar cliente.
+    <Module test_client_service_optimization.py>
+      Tests para validar optimización de ClientService - FASE 3.
+      Garantiza que todas las funcionalidades se mantienen después de aplicar helpers.
+      
+      OBJETIVO:
+      - Validar compatibilidad 100% con interfaz existente
+      - Confirmar que helpers funcionan correctamente
+      - Verificar performance mejorada
+      - Asegurar logging estandarizado
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Junio 2025 - FASE 3 OPTIMIZACIÓN ClientService
+      <UnitTestCase TestClientServiceOptimization>
+        Suite de tests para validar optimización de ClientService.
+        
+        COBERTURA:
+        - Todos los métodos públicos del servicio
+        - Validaciones de datos
+        - Manejo de errores
+        - Compatibilidad con tests existentes
+        <TestCaseFunction test_client_exists_by_name_case_insensitive>
+          Test: Verificar que búsqueda por nombre es case-insensitive.
+        <TestCaseFunction test_client_exists_by_name_false>
+          Test: Verificar existencia de cliente por nombre (no existe).
+        <TestCaseFunction test_client_exists_by_name_true>
+          Test: Verificar existencia de cliente por nombre (existe).
+        <TestCaseFunction test_client_exists_by_ruc_false>
+          Test: Verificar existencia de cliente por RUC (no existe).
+        <TestCaseFunction test_client_exists_by_ruc_true>
+          Test: Verificar existencia de cliente por RUC (existe).
+        <TestCaseFunction test_compatibility_with_existing_interface>
+          Test: Compatibilidad con interfaz existente.
+        <TestCaseFunction test_create_client_duplicate_name_should_fail>
+          Test: Crear cliente con nombre duplicado debe fallar.
+        <TestCaseFunction test_create_client_duplicate_ruc_should_fail>
+          Test: Crear cliente con RUC duplicado debe fallar.
+        <TestCaseFunction test_create_client_empty_name_should_fail>
+          Test: Crear cliente con nombre vacío debe fallar.
+        <TestCaseFunction test_create_client_invalid_ruc_should_fail>
+          Test: Crear cliente con RUC inválido debe fallar.
+        <TestCaseFunction test_create_client_valid_data>
+          Test: Crear cliente con datos válidos.
+        <TestCaseFunction test_create_client_whitespace_name_should_fail>
+          Test: Crear cliente con nombre solo espacios debe fallar.
+        <TestCaseFunction test_create_client_without_ruc>
+          Test: Crear cliente sin RUC (opcional).
+        <TestCaseFunction test_data_cleaning_nombre>
+          Test: Limpieza de datos del nombre.
+        <TestCaseFunction test_data_cleaning_ruc>
+          Test: Limpieza de datos del RUC.
+        <TestCaseFunction test_database_connection_error_handling>
+          Test: Manejo de errores de conexión a BD.
+        <TestCaseFunction test_get_all_clients_empty>
+          Test: Obtener todos los clientes cuando no hay ninguno.
+        <TestCaseFunction test_get_all_clients_including_inactive>
+          Test: Obtener todos los clientes incluyendo inactivos.
+        <TestCaseFunction test_get_all_clients_only_active>
+          Test: Obtener solo clientes activos.
+        <TestCaseFunction test_get_all_clients_with_data>
+          Test: Obtener todos los clientes cuando hay datos.
+        <TestCaseFunction test_get_client_by_id_existing>
+          Test: Obtener cliente existente por ID.
+        <TestCaseFunction test_get_client_by_id_nonexistent>
+          Test: Obtener cliente inexistente por ID.
+        <TestCaseFunction test_return_types_unchanged>
+          Test: Tipos de retorno sin cambios.
+        <TestCaseFunction test_ruc_validation_boundary_values>
+          Test: Validación de valores límite de RUC.
+        <TestCaseFunction test_ruc_validation_maximum_length>
+          Test: Validación de longitud máxima de RUC.
+        <TestCaseFunction test_ruc_validation_minimum_length>
+          Test: Validación de longitud mínima de RUC.
+        <TestCaseFunction test_sql_injection_protection>
+          Test: Protección contra inyección SQL.
+      <UnitTestCase TestClientServiceWithMocks>
+        Tests con mocks para validar compatibilidad con tests existentes.
+        
+        IMPORTANTE: Estos tests simulan el comportamiento que debe mantenerse
+        después de la optimización para garantizar que los tests existentes
+        no se rompan.
+        <TestCaseFunction test_client_exists_methods_with_mocks>
+          Test: Métodos de verificación de existencia con mocks.
+        <TestCaseFunction test_create_client_with_mock_success>
+          Test: Crear cliente con mock (éxito).
+        <TestCaseFunction test_get_client_by_id_with_mock_found>
+          Test: Obtener cliente por ID con mock (encontrado).
+        <TestCaseFunction test_get_client_by_id_with_mock_not_found>
+          Test: Obtener cliente por ID con mock (no encontrado).
+    <Module test_company_service_basic.py>
+      Test básico para Company Service - FASE 5A
+      Validación de funcionalidad crítica de configuración de empresa.
+      
+      COBERTURA:
+      - Configuración de datos de empresa
+      - Validación de información fiscal
+      - Actualización de parámetros
+      - Generación de configuración para tickets
+      - Persistencia de datos
+      
+      Objetivo: Validar funcionalidad básica del servicio de empresa
+      Estado: FASE 5A - Testing Final
+      <UnitTestCase TestCompanyServiceBasic>
+        Test básico para Company Service.
+        <TestCaseFunction test_company_backup_functionality>
+          Test funcionalidad de backup de empresa.
+        <TestCaseFunction test_company_configuration_export>
+          Test exportación de configuración de empresa.
+        <TestCaseFunction test_company_configuration_import>
+          Test importación de configuración de empresa.
+        <TestCaseFunction test_company_data_persistence>
+          Test persistencia de datos de empresa.
+        <TestCaseFunction test_company_restore_functionality>
+          Test funcionalidad de restauración de empresa.
+        <TestCaseFunction test_company_service_logging>
+          Test logging del servicio.
+        <TestCaseFunction test_error_handling>
+          Test manejo de errores del servicio.
+        <TestCaseFunction test_generate_company_report>
+          Test generación de reporte de empresa.
+        <TestCaseFunction test_get_company_for_ticket_generation>
+          Test obtención de datos para generación de tickets.
+        <TestCaseFunction test_get_company_info_success>
+          Test obtención exitosa de información de empresa.
+        <TestCaseFunction test_service_initialization>
+          Test inicialización del servicio.
+        <TestCaseFunction test_update_company_info_success>
+          Test actualización exitosa de información de empresa.
+        <TestCaseFunction test_update_company_partial_data>
+          Test actualización parcial de datos de empresa.
+        <TestCaseFunction test_validate_company_data_invalid>
+          Test validación con datos inválidos.
+        <TestCaseFunction test_validate_company_data_valid>
+          Test validación exitosa de datos de empresa.
+        <TestCaseFunction test_validate_email_format>
+          Test validación de formato de email.
+        <TestCaseFunction test_validate_ruc_format>
+          Test validación de formato de RUC.
+      <UnitTestCase TestCompanyServiceIntegration>
+        Tests de integración para Company Service.
+        <TestCaseFunction test_integration_with_database>
+          Test integración con base de datos real.
+        <TestCaseFunction test_integration_with_ticket_service>
+          Test integración con servicio de tickets.
+    <Module test_company_service_basic_fixed.py>
+      Test básico para Company Service - FASE 5A (CORREGIDO)
+      Validación de funcionalidad crítica de configuración de empresa.
+      
+      CORRECIONES APLICADAS:
+      - Imports corregidos: DatabaseConnection en lugar de Database
+      - Eliminado sys.exit() problemático
+      - Estructura compatible con tests existentes
+      - Manejo de errores mejorado
+      
+      COBERTURA:
+      - Configuración de datos de empresa
+      - Validación de información fiscal
+      - Actualización de parámetros
+      - Generación de configuración para tickets
+      - Persistencia de datos
+      
+      Objetivo: Validar funcionalidad básica del servicio de empresa
+      Estado: FASE 5A - Testing Final (CORREGIDO)
+      <UnitTestCase TestCompanyServiceBasic>
+        Test básico para Company Service - CORREGIDO.
+        <TestCaseFunction test_backup_restore_functionality>
+          Test funcionalidad de backup y restauración.
+        <TestCaseFunction test_export_import_configuration>
+          Test exportación e importación de configuración.
+        <TestCaseFunction test_get_company_for_ticket_generation>
+          Test obtención de datos para generación de tickets.
+        <TestCaseFunction test_get_company_info_success>
+          Test obtención exitosa de información de empresa.
+        <TestCaseFunction test_service_initialization>
+          Test inicialización del servicio.
+        <TestCaseFunction test_update_company_info_success>
+          Test actualización exitosa de información de empresa.
+        <TestCaseFunction test_validate_company_data_invalid>
+          Test validación con datos inválidos.
+        <TestCaseFunction test_validate_company_data_valid>
+          Test validación exitosa de datos de empresa.
+        <TestCaseFunction test_validate_email_format>
+          Test validación de formato de email.
+        <TestCaseFunction test_validate_ruc_format>
+          Test validación de formato de RUC.
+    <Module test_complete_system_validation.py>
+      Test de validación completa del sistema optimizado - FASE 3
+      Valida que todas las optimizaciones funcionan correctamente y que
+      la compatibilidad se mantiene al 100%.
+      
+      OBJETIVOS:
+      1. Validar sintaxis de todos los servicios optimizados
+      2. Verificar que helpers funcionan correctamente  
+      3. Confirmar compatibilidad con tests FASE 2
+      4. Validar funcionalidades críticas del sistema
+      5. Evaluar UserService para optimización
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Junio 29, 2025 - Validación Post-Optimización FASE 3
+      <UnitTestCase TestCompleteSystemValidation>
+        Test suite completo para validación del sistema optimizado.
+        <TestCaseFunction test_compatibility_with_existing_tests>
+          Test que los servicios optimizados mantienen compatibilidad con tests FASE 2.
+        <TestCaseFunction test_critical_system_functionality>
+          Test de funcionalidades críticas del sistema completo.
+        <TestCaseFunction test_database_helper_functionality>
+          Test que DatabaseHelper funciona correctamente.
+        <TestCaseFunction test_logging_helper_functionality>
+          Test que LoggingHelper funciona correctamente.
+        <TestCaseFunction test_new_optimized_methods>
+          Test de nuevos métodos añadidos en las optimizaciones FASE 3.
+        <TestCaseFunction test_optimized_services_initialization>
+          Test que todos los servicios optimizados se inicializan correctamente.
+        <TestCaseFunction test_optimized_services_performance>
+          Test de performance de servicios optimizados vs patrón original.
+        <TestCaseFunction test_system_error_handling>
+          Test del manejo de errores en servicios optimizados.
+        <TestCaseFunction test_user_service_analysis>
+          Test para evaluar UserService y determinar si necesita optimización.
+        <TestCaseFunction test_validation_helper_functionality>
+          Test que ValidationHelper funciona correctamente.
+    <Module test_critical_fixes.py>
+      Tests para validar las correcciones críticas del sistema.
+      Siguiendo protocolo TDD - estos tests deben pasar después de las correcciones.
+      
+      FASE 1: Corrección de Inconsistencias Críticas
+      - DatabaseConnection consistency
+      - MainWindow constructor compatibility  
+      - Syntax error fixes
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Junio 2025 - FASE 1 CRÍTICA
+      <UnitTestCase TestDatabaseConnectionCriticalFixes>
+        Tests para validar correcciones en DatabaseConnection.
+        <TestCaseFunction test_database_connection_compatible_with_main>
+          Test: DatabaseConnection debe ser compatible con main.py.
+        <TestCaseFunction test_database_connection_constructor_accepts_db_path>
+          Test: DatabaseConnection debe aceptar db_path como parámetro.
+        <TestCaseFunction test_database_connection_has_required_methods>
+          Test: DatabaseConnection debe tener métodos connect y disconnect equivalentes.
+        <TestCaseFunction test_global_connection_function_works>
+          Test: get_database_connection debe funcionar con parámetros opcionales.
+      <UnitTestCase TestMainWindowCriticalFixes>
+        Tests para validar correcciones en MainWindow.
+        <TestCaseFunction test_main_window_constructor_compatibility>
+          Test: MainWindow debe ser compatible con el llamado desde main.py.
+      <UnitTestCase TestSyntaxErrorFixes>
+        Tests para validar que no hay errores de sintaxis.
+        <TestCaseFunction test_main_compiles>
+          Test: main.py debe compilar sin errores de sintaxis.
+        <TestCaseFunction test_main_window_compiles>
+          Test: main_window.py debe compilar sin errores de sintaxis.
+        <TestCaseFunction test_product_form_compiles>
+          Test: product_form.py debe compilar sin errores de sintaxis.
+      <UnitTestCase TestIntegrationCriticalFixes>
+        Tests de integración para validar que las correcciones funcionan juntas.
+        <TestCaseFunction test_main_flow_integration>
+          Test: El flujo principal debe funcionar después de las correcciones.
+    <Module test_database_connection_evaluation.py>
+      Test de Evaluación: Implementaciones de get_database_connection y db_connection
+      
+      PROPÓSITO:
+      - Evaluar consistencia en las implementaciones de conexión a BD
+      - Identificar redundancias y potenciales mejoras
+      - Validar que el patrón singleton funciona correctamente
+      - Verificar que todos los servicios usan conexiones de forma consistente
+      
+      Fecha: 2025-07-02
+      Protocolo: TDD - Test antes de implementación
+      <UnitTestCase TestDatabaseConnectionEvaluation>
+        Test de evaluación para implementaciones de conexión a BD.
+        <TestCaseFunction test_config_db_module>
+          Verificar que config_db.py no duplica funcionalidad de conexión.
+        <TestCaseFunction test_consistency_across_services>
+          Verificar consistencia en el uso de conexiones entre servicios.
+        <TestCaseFunction test_database_connection_class_exists>
+          Verificar que DatabaseConnection está correctamente implementada.
+        <TestCaseFunction test_database_helper_integration>
+          Verificar que DatabaseHelper integra correctamente con conexiones.
+        <TestCaseFunction test_get_database_connection_singleton>
+          Verificar que get_database_connection implementa patrón singleton.
+        <TestCaseFunction test_initialize_database_function>
+          Verificar que initialize_database crea BD completa.
+        <TestCaseFunction test_main_py_initialization_pattern>
+          Verificar que main.py usa el patrón correcto de inicialización.
+        <TestCaseFunction test_no_redundant_db_connection_function>
+          Verificar que no existe función redundante db_connection.
+        <TestCaseFunction test_product_service_database_usage>
+          Evaluar cómo ProductService usa la conexión de BD.
+        <TestCaseFunction test_user_service_database_usage>
+          Evaluar cómo UserService usa la conexión de BD.
+      <UnitTestCase TestDatabaseConnectionPerformance>
+        Tests de performance para conexiones de BD.
+        <TestCaseFunction test_singleton_performance>
+          Verificar que el singleton no impacta performance.
+      <UnitTestCase TestDatabaseConnectionSecurity>
+        Tests de seguridad para conexiones de BD.
+        <TestCaseFunction test_foreign_keys_enabled>
+          Verificar que foreign keys están habilitadas.
+        <TestCaseFunction test_password_hashing_consistency>
+          Verificar que el hash de passwords es consistente.
+    <Module test_fase2_validation.py>
+      FASE 2: Tests de Validación Completa del Sistema
+      Sistema de Inventario Copy Point S.A.
+      
+      OBJETIVO:
+      - Validar funcionalidades existentes después de correcciones críticas
+      - Tests unitarios para servicios principales
+      - Tests de integración para flujos completos
+      - Validación de cobertura mínima 95%
+      
+      METODOLOGÍA: TDD
+      - Tests escritos ANTES de cualquier corrección adicional
+      - Cada test valida funcionalidad específica
+      - Tests deben pasar tras correcciones de Fase 1
+      
+      Autor: Sistema de Inventario v7.0
+      Fecha: Junio 27, 2025 - FASE 2 VALIDACIÓN
+      <UnitTestCase TestDatabaseIntegration>
+        Tests de integración para base de datos.
+        <TestCaseFunction test_database_initial_data>
+          Test: Los datos iniciales deben insertarse correctamente.
+        <TestCaseFunction test_database_schema_creation>
+          Test: El schema de BD debe crearse correctamente.
+        <TestCaseFunction test_database_schema_integrity>
+          Test: La integridad del schema debe ser válida.
+        <TestCaseFunction test_database_version_control>
+          Test: El control de versiones debe funcionar.
+      <UnitTestCase TestProductServiceValidation>
+        Tests completos para ProductService.
+        <TestCaseFunction test_get_all_products>
+          Test: Obtener todos los productos debe funcionar.
+        <TestCaseFunction test_product_creation_complete>
+          Test: Crear producto debe funcionar con todos los campos.
+        <TestCaseFunction test_product_crud_operations>
+          Test: Operaciones CRUD completas deben funcionar.
+        <TestCaseFunction test_product_validation_rules>
+          Test: Las reglas de validación deben aplicarse.
+      <UnitTestCase TestCategoryServiceValidation>
+        Tests para CategoryService.
+        <TestCaseFunction test_category_service_exists_and_functional>
+          Test: CategoryService debe existir y ser funcional.
+      <UnitTestCase TestClientServiceValidation>
+        Tests para ClientService.
+        <TestCaseFunction test_client_service_basic_functionality>
+          Test: ClientService debe tener funcionalidad básica.
+      <UnitTestCase TestSalesServiceValidation>
+        Tests para SalesService.
+        <TestCaseFunction test_sales_service_functionality>
+          Test: SalesService debe ser funcional.
+      <UnitTestCase TestReportServiceValidation>
+        Tests para ReportService.
+        <TestCaseFunction test_report_service_functionality>
+          Test: ReportService debe ser funcional.
+      <UnitTestCase TestAuthenticationValidation>
+        Tests para sistema de autenticación.
+        <TestCaseFunction test_login_window_exists>
+          Test: LoginWindow debe existir y ser funcional.
+        <TestCaseFunction test_session_manager_exists>
+          Test: SessionManager debe existir y ser funcional.
+      <UnitTestCase TestUserInterfaceValidation>
+        Tests para interfaces de usuario principales.
+        <TestCaseFunction test_main_window_functionality>
+          Test: MainWindow debe ser completamente funcional.
+        <TestCaseFunction test_product_form_functionality>
+          Test: ProductForm debe ser funcional.
+      <UnitTestCase TestSystemIntegrationFlow>
+        Tests de integración para flujos completos del sistema.
+        <TestCaseFunction test_complete_application_flow>
+          Test: Flujo completo de aplicación debe funcionar.
+        <TestCaseFunction test_product_creation_to_inventory_flow>
+          Test: Flujo de creación de producto hasta inventario.
+    <Module test_fase3_optimization.py>
+      Tests para FASE 3: Optimización y Cleanup del Sistema de Inventario.
+      
+      Este módulo valida las mejoras de optimización implementadas en la FASE 3:
+      - Eliminación de código duplicado
+      - Optimización de consultas de BD
+      - Mejora de logging y monitoreo
+      - Centralización de utilidades comunes
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Junio 2025 - FASE 3 OPTIMIZACIÓN
+      <UnitTestCase TestFase3BaseUtilities>
+        Tests para validar utilidades base creadas en FASE 3.
+        <TestCaseFunction test_database_helper_exists>
+          Test: Debe existir un helper para operaciones de BD.
+        <TestCaseFunction test_logging_helper_exists>
+          Test: Debe existir un helper para logging estandarizado.
+        <TestCaseFunction test_validation_helper_exists>
+          Test: Debe existir un helper para validaciones comunes.
+      <UnitTestCase TestFase3QueryOptimization>
+        Tests para validar optimización de consultas de BD.
+        <TestCaseFunction test_avoid_count_star_in_existence_checks>
+          Test: No debe usar COUNT(*) para verificaciones de existencia.
+        <TestCaseFunction test_category_existence_optimized>
+          Test: Verificación de categorías debe estar optimizada.
+        <TestCaseFunction test_existence_check_uses_limit_1>
+          Test: Las verificaciones de existencia deben usar LIMIT 1.
+      <UnitTestCase TestFase3CodeDeduplication>
+        Tests para validar eliminación de código duplicado.
+        <TestCaseFunction test_row_to_dict_centralized>
+          Test: Conversión de Row a Dict debe estar centralizada.
+        <TestCaseFunction test_services_use_common_database_helper>
+          Test: Los servicios deben usar un helper común para BD.
+        <TestCaseFunction test_services_use_common_validation_helper>
+          Test: Los servicios deben usar validaciones comunes.
+      <UnitTestCase TestFase3LoggingImprovement>
+        Tests para validar mejoras en logging.
+        <TestCaseFunction test_logging_helper_provides_standard_logger>
+          Test: LoggingHelper debe proveer logger estandarizado.
+        <TestCaseFunction test_services_use_consistent_logging>
+          Test: Los servicios deben usar logging consistente.
+      <UnitTestCase TestFase3PerformanceImprovement>
+        Tests para validar mejoras de performance.
+        <TestCaseFunction test_database_operations_are_efficient>
+          Test: Las operaciones de BD deben ser eficientes.
+        <TestCaseFunction test_minimal_database_calls>
+          Test: Debe minimizar llamadas a BD.
+      <UnitTestCase TestFase3DocumentationUpdate>
+        Tests para validar actualización de documentación.
+        <TestCaseFunction test_changelog_updated_for_phase3>
+          Test: El changelog debe estar actualizado para FASE 3.
+        <TestCaseFunction test_inventory_directory_updated>
+          Test: El directorio del sistema debe estar actualizado.
+      <UnitTestCase TestFase3IntegrationValidation>
+        Tests de integración para validar que las optimizaciones no rompan funcionalidad.
+        <TestCaseFunction test_category_service_still_functional_after_optimization>
+          Test: CategoryService debe seguir funcional después de optimizaciones.
+        <TestCaseFunction test_product_service_still_functional_after_optimization>
+          Test: ProductService debe seguir funcional después de optimizaciones.
+    <Module test_fase4_barcode_functionality.py>
+      Tests para funcionalidades de códigos de barras - FASE 4
+      
+      Este módulo contiene tests para validar las funcionalidades implementadas
+      en la FASE 4 del sistema de inventario:
+      
+      - Servicios de códigos de barras
+      - Generación de etiquetas
+      - Detección de hardware
+      - Configuración de dispositivos
+      
+      Autor: Sistema de Inventario
+      Versión: FASE 4
+      Fecha: Junio 2025
+      <UnitTestCase TestBarcodeService>
+        Tests para BarcodeService
+        <TestCaseFunction test_connect_barcode_device_failure>
+          Test fallo en conexión de dispositivo
+        <TestCaseFunction test_connect_barcode_device_success>
+          Test conexión exitosa de dispositivo
+        <TestCaseFunction test_format_barcode>
+          Test formateo de códigos
+        <TestCaseFunction test_lookup_product_by_barcode_found>
+          Test búsqueda de producto existente por código
+        <TestCaseFunction test_lookup_product_by_barcode_not_found>
+          Test búsqueda de producto no existente
+        <TestCaseFunction test_read_barcode_success>
+          Test lectura exitosa de código
+        <TestCaseFunction test_scan_barcode_devices>
+          Test escaneo de dispositivos
+        <TestCaseFunction test_validate_barcode_invalid_codes>
+          Test validación de códigos inválidos
+        <TestCaseFunction test_validate_barcode_valid_codes>
+          Test validación de códigos válidos
+      <UnitTestCase TestLabelService>
+        Tests para LabelService
+        <TestCaseFunction test_create_product_label_basic>
+          Test creación básica de etiqueta de producto
+        <TestCaseFunction test_create_product_label_invalid_product>
+          Test creación con producto inválido
+        <TestCaseFunction test_generate_barcode_image_invalid_code>
+          Test generación con código inválido
+        <TestCaseFunction test_generate_barcode_image_invalid_format>
+          Test generación con formato inválido
+        <TestCaseFunction test_generate_barcode_image_success>
+          Test generación exitosa de imagen de código
+        <TestCaseFunction test_get_available_templates>
+          Test obtención de templates disponibles
+        <TestCaseFunction test_validate_template_data_invalid>
+          Test validación de datos de template inválidos
+        <TestCaseFunction test_validate_template_data_valid>
+          Test validación de datos de template válidos
+      <UnitTestCase TestHardwareDetector>
+        Tests para HardwareDetector
+        <TestCaseFunction test_detect_usb_devices_no_usb>
+          Test detección USB cuando no está disponible
+        <TestCaseFunction test_get_basic_capabilities_printer>
+          Test capacidades básicas de impresora
+        <TestCaseFunction test_get_basic_capabilities_scanner>
+          Test capacidades básicas de scanner
+        <TestCaseFunction test_get_basic_capabilities_unknown>
+          Test capacidades básicas de dispositivo desconocido
+        <TestCaseFunction test_get_printer_capabilities>
+          Test capacidades específicas de impresora
+        <TestCaseFunction test_get_scanner_capabilities>
+          Test capacidades específicas de scanner
+        <TestCaseFunction test_identify_device_type_printer_by_keywords>
+          Test identificación de impresora por palabras clave
+        <TestCaseFunction test_identify_device_type_printer_by_vendor>
+          Test identificación de impresora por vendor ID
+        <TestCaseFunction test_identify_device_type_scanner_by_keywords>
+          Test identificación de scanner por palabras clave
+        <TestCaseFunction test_identify_device_type_scanner_by_vendor>
+          Test identificación de scanner por vendor ID
+        <TestCaseFunction test_identify_device_type_unknown>
+          Test identificación de dispositivo desconocido
+        <TestCaseFunction test_start_stop_auto_scan>
+          Test inicio y parada de escaneo automático
+      <UnitTestCase TestBarcodeIntegration>
+        Tests de integración para funcionalidades de códigos de barras
+        <TestCaseFunction test_barcode_to_label_workflow>
+          Test flujo completo: código de barras -> producto -> etiqueta
+        <TestCaseFunction test_device_detection_and_configuration>
+          Test detección y configuración de dispositivos
+    <Module test_fase5_deployment.py>
+      Test Suite para FASE 5 - Deployment y Productivización
+      Sistema de Inventario Copy Point S.A.
+      
+      Valida la implementación correcta de:
+      - Instalador automático
+      - Manual de usuario
+      - Scripts de deployment
+      - Documentación técnica
+      - Procesos de capacitación
+      
+      Fecha: 29 Junio 2025
+      <UnitTestCase TestDeploymentInfrastructure>
+        Tests para infraestructura de deployment
+        <TestCaseFunction test_deployment_directory_structure>
+          Verifica que exista la estructura de directorios de deployment
+        <TestCaseFunction test_deployment_scripts_exist>
+          Verifica que existan los scripts de deployment
+        <TestCaseFunction test_installer_files_exist>
+          Verifica que existan los archivos del instalador
+      <UnitTestCase TestDocumentationComplete>
+        Tests para documentación completa del sistema
+        <TestCaseFunction test_documentation_directory_exists>
+          Verifica que exista el directorio de documentación
+        <TestCaseFunction test_technical_documentation_exists>
+          Verifica que exista documentación técnica
+        <TestCaseFunction test_training_materials_exist>
+          Verifica que existan materiales de capacitación
+        <TestCaseFunction test_user_manual_exists>
+          Verifica que exista el manual de usuario completo
+      <UnitTestCase TestSystemReadyForProduction>
+        Tests para verificar que el sistema esté listo para producción
+        <TestCaseFunction test_all_services_importable>
+          Verifica que todos los servicios se puedan importar
+        <TestCaseFunction test_configuration_file_valid>
+          Verifica que el archivo de configuración sea válido
+        <TestCaseFunction test_database_initialization>
+          Verifica que la base de datos se inicialice correctamente
+        <TestCaseFunction test_main_executable_works>
+          Verifica que main.py sea ejecutable sin errores
+      <UnitTestCase TestDeploymentAssets>
+        Tests para assets y recursos de deployment
+        <TestCaseFunction test_assets_directory_complete>
+          Verifica que los assets de deployment estén completos
+        <TestCaseFunction test_license_file_exists>
+          Verifica que exista archivo de licencia
+        <TestCaseFunction test_readme_exists>
+          Verifica que exista README.md para el proyecto
+    <Module test_fase5a_coverage_analysis.py>
+      FASE 5A: Análisis de Cobertura Completa del Sistema
+      ===================================================
+      
+      OBJETIVOS:
+      1. Medir cobertura actual de tests \u226595%
+      2. Identificar gaps en tests existentes
+      3. Validar performance de servicios críticos
+      4. Tests de integración end-to-end
+      5. Security testing robusto
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 1, 2025 - FASE 5A Testing Final
+      <UnitTestCase TestFase5ACoverageAnalysis>
+        Test suite para análisis completo de cobertura FASE 5A.
+        <TestCaseFunction test_all_services_comprehensive_coverage>
+          Test cobertura completa de todos los servicios.
+        <TestCaseFunction test_authentication_security>
+          Test seguridad del sistema de autenticación.
+        <TestCaseFunction test_barcode_functionality_basic>
+          Test funcionalidad básica de códigos de barras.
+        <TestCaseFunction test_barcode_services_availability>
+          Test disponibilidad de servicios de códigos de barras.
+        <TestCaseFunction test_complete_business_workflow_integration>
+          Test workflow completo de negocio end-to-end.
+        <TestCaseFunction test_concurrent_operations_performance>
+          Test performance con operaciones concurrentes.
+        <TestCaseFunction test_core_methods_functionality_coverage>
+          Test cobertura funcionalidad métodos core de cada servicio.
+        <TestCaseFunction test_error_recovery_integration>
+          Test recuperación de errores en workflow integrado.
+        <TestCaseFunction test_input_validation_security>
+          Test validación de entradas para seguridad.
+        <TestCaseFunction test_performance_benchmarks_critical_operations>
+          Test benchmarks de performance para operaciones críticas.
+    <Module test_fase5a_security.py>
+      FASE 5A: Security Testing Suite
+      ===============================
+      
+      Test suite específico para validar seguridad del sistema antes del deployment.
+      Incluye validación de entradas, autenticación, autorización y protección contra
+      ataques comunes.
+      
+      OBJETIVOS:
+      1. Validación robusta de inputs (SQL injection, XSS, etc.)
+      2. Seguridad del sistema de autenticación
+      3. Validación de autorización por roles
+      4. Protección contra ataques de fuerza bruta
+      5. Validación de datos sensibles
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 1, 2025 - FASE 5A Security Testing
+      <UnitTestCase TestFase5ASecurity>
+        Suite de tests de seguridad para FASE 5A.
+        <TestCaseFunction test_authentication_security_robustness>
+          Test seguridad robusta del sistema de autenticación.
+        <TestCaseFunction test_business_data_validation>
+          Test validación de datos de negocio.
+        <TestCaseFunction test_comprehensive_input_validation>
+          Test validación comprehensiva de inputs.
+        <TestCaseFunction test_role_based_authorization>
+          Test autorización basada en roles.
+        <TestCaseFunction test_sql_injection_protection>
+          Test protección contra SQL injection.
+        <TestCaseFunction test_system_integrity_after_attacks>
+          Test integridad del sistema después de intentos de ataque.
+    <Module test_helpers_validation.py>
+      Tests comprehensivos para Helpers del Sistema de Inventario - FASE 5A
+      Validación completa de ValidationHelper, DatabaseHelper y LoggingHelper
+      
+      COBERTURA:
+      - ValidationHelper: 36 métodos (100% cobertura)
+      - DatabaseHelper: 12 métodos (100% cobertura)  
+      - LoggingHelper: 15 métodos + LoggingContext (100% cobertura)
+      - Casos edge y robustez
+      - Integración entre helpers
+      <UnitTestCase TestValidationHelper>
+        Test suite para ValidationHelper - 36 métodos.
+        <TestCaseFunction test_init_validation_helper>
+          Test inicialización de ValidationHelper.
+        <TestCaseFunction test_sanitize_string_valid>
+          Test sanitización de cadenas.
+        <TestCaseFunction test_validate_barcode_format_invalid>
+          Test validación de formato de código de barras inválido.
+        <TestCaseFunction test_validate_barcode_format_valid>
+          Test validación de formato de código de barras válido.
+        <TestCaseFunction test_validate_batch_data_invalid>
+          Test validación de datos en lote con errores.
+        <TestCaseFunction test_validate_batch_data_valid>
+          Test validación de datos en lote válidos.
+        <TestCaseFunction test_validate_category_data_invalid>
+          Test validación de datos de categoría inválidos.
+        <TestCaseFunction test_validate_category_data_valid>
+          Test validación de datos de categoría válidos.
+        <TestCaseFunction test_validate_date_invalid>
+          Test validación de fecha inválida.
+        <TestCaseFunction test_validate_date_range_invalid>
+          Test validación de rango de fechas inválido.
+        <TestCaseFunction test_validate_date_range_valid>
+          Test validación de rango de fechas válido.
+        <TestCaseFunction test_validate_date_valid>
+          Test validación de fecha válida.
+        <TestCaseFunction test_validate_decimal_range_invalid>
+          Test validación de decimales fuera de rango.
+        <TestCaseFunction test_validate_decimal_range_valid>
+          Test validación de decimales en rango válido.
+        <TestCaseFunction test_validate_email_invalid>
+          Test validación de emails inválidos.
+        <TestCaseFunction test_validate_email_valid>
+          Test validación de emails válidos.
+        <TestCaseFunction test_validate_list_items_invalid>
+          Test validación de elementos de lista inválidos.
+        <TestCaseFunction test_validate_list_items_valid>
+          Test validación de elementos de lista válidos.
+        <TestCaseFunction test_validate_non_empty_string_invalid>
+          Test validación de cadenas no vacías inválidas.
+        <TestCaseFunction test_validate_non_empty_string_valid>
+          Test validación de cadenas no vacías válidas.
+        <TestCaseFunction test_validate_password_strength_common>
+          Test validación de contraseñas comunes.
+        <TestCaseFunction test_validate_password_strength_empty>
+          Test validación de contraseña vacía.
+        <TestCaseFunction test_validate_password_strength_strong>
+          Test validación de contraseña fuerte.
+        <TestCaseFunction test_validate_password_strength_weak>
+          Test validación de contraseña débil.
+        <TestCaseFunction test_validate_phone_invalid>
+          Test validación de teléfonos inválidos.
+        <TestCaseFunction test_validate_phone_valid>
+          Test validación de teléfonos válidos.
+        <TestCaseFunction test_validate_positive_integer_invalid>
+          Test validación de enteros positivos inválidos.
+        <TestCaseFunction test_validate_positive_integer_valid>
+          Test validación de enteros positivos válidos.
+        <TestCaseFunction test_validate_product_data_invalid>
+          Test validación de datos de producto inválidos.
+        <TestCaseFunction test_validate_product_data_valid>
+          Test validación de datos de producto válidos.
+        <TestCaseFunction test_validate_role_invalid>
+          Test validación de roles inválidos.
+        <TestCaseFunction test_validate_role_valid>
+          Test validación de roles válidos.
+        <TestCaseFunction test_validate_username_invalid_cases>
+          Test validación de username - casos inválidos.
+        <TestCaseFunction test_validate_username_valid_cases>
+          Test validación de username - casos válidos.
+      <UnitTestCase TestDatabaseHelper>
+        Test suite para DatabaseHelper - 12 métodos.
+        <TestCaseFunction test_count_records_success>
+          Test conteo de registros exitoso.
+        <TestCaseFunction test_count_records_with_where>
+          Test conteo de registros con condición WHERE.
+        <TestCaseFunction test_execute_batch_error>
+          Test error en ejecución en lote.
+        <TestCaseFunction test_execute_batch_success>
+          Test ejecución en lote exitosa.
+        <TestCaseFunction test_get_last_insert_id_error>
+          Test error al obtener último ID insertado.
+        <TestCaseFunction test_get_last_insert_id_success>
+          Test obtención de último ID insertado exitoso.
+        <TestCaseFunction test_get_table_info_success>
+          Test obtención de información de tabla exitosa.
+        <TestCaseFunction test_init_database_helper>
+          Test inicialización de DatabaseHelper.
+        <TestCaseFunction test_optimize_database_error>
+          Test error en optimización de base de datos.
+        <TestCaseFunction test_optimize_database_success>
+          Test optimización de base de datos exitosa.
+        <TestCaseFunction test_record_exists_false>
+          Test verificación de existencia de registro - no existe.
+        <TestCaseFunction test_record_exists_true>
+          Test verificación de existencia de registro - existe.
+        <TestCaseFunction test_row_to_dict_none>
+          Test conversión de None a diccionario.
+        <TestCaseFunction test_row_to_dict_with_sqlite_row>
+          Test conversión de fila SQLite a diccionario.
+        <TestCaseFunction test_row_to_dict_with_tuple>
+          Test conversión de tupla a diccionario.
+        <TestCaseFunction test_safe_execute_error_handling>
+          Test manejo de errores en ejecución segura.
+        <TestCaseFunction test_safe_execute_fetch_all_success>
+          Test ejecución segura con fetch all exitoso.
+        <TestCaseFunction test_safe_execute_fetch_one_success>
+          Test ejecución segura con fetch one exitoso.
+        <TestCaseFunction test_safe_execute_with_commit_error>
+          Test manejo de errores en ejecución con commit.
+        <TestCaseFunction test_safe_execute_with_commit_insert>
+          Test ejecución con commit para INSERT.
+        <TestCaseFunction test_safe_execute_with_commit_update>
+          Test ejecución con commit para UPDATE.
+        <TestCaseFunction test_safe_execute_with_params>
+          Test ejecución segura con parámetros.
+        <TestCaseFunction test_table_exists_false>
+          Test verificación de existencia de tabla - no existe.
+        <TestCaseFunction test_table_exists_true>
+          Test verificación de existencia de tabla - existe.
+        <TestCaseFunction test_transaction_error_rollback>
+          Test rollback en transacción con error.
+        <TestCaseFunction test_transaction_success>
+          Test transacción exitosa.
+      <UnitTestCase TestLoggingHelper>
+        Test suite para LoggingHelper - 15 métodos + LoggingContext.
+        <TestCaseFunction test_configure_for_development>
+          Test configuración para desarrollo.
+        <TestCaseFunction test_configure_for_production>
+          Test configuración para producción.
+        <TestCaseFunction test_get_log_statistics>
+          Test obtención de estadísticas de logging.
+        <TestCaseFunction test_get_service_logger>
+          Test obtención de logger de servicio.
+        <TestCaseFunction test_get_service_logger_cached>
+          Test que los loggers se cachean correctamente.
+        <TestCaseFunction test_get_system_logger>
+          Test obtención de logger del sistema.
+        <TestCaseFunction test_get_ui_logger>
+          Test obtención de logger de UI.
+        <TestCaseFunction test_log_authentication_attempt_failure>
+          Test logging de intento de autenticación fallido.
+        <TestCaseFunction test_log_authentication_attempt_success>
+          Test logging de intento de autenticación exitoso.
+        <TestCaseFunction test_log_business_rule_violation>
+          Test logging de violación de regla de negocio.
+        <TestCaseFunction test_log_database_operation>
+          Test logging de operación de base de datos.
+        <TestCaseFunction test_log_error_with_context>
+          Test logging de error con contexto.
+        <TestCaseFunction test_log_performance_metrics_fast>
+          Test logging de métricas de performance rápidas.
+        <TestCaseFunction test_log_performance_metrics_slow>
+          Test logging de métricas de performance lentas.
+        <TestCaseFunction test_log_user_action>
+          Test logging de acción de usuario.
+        <TestCaseFunction test_setup_logging_already_configured>
+          Test que no se reconfigure si ya está configurado.
+        <TestCaseFunction test_setup_logging_basic>
+          Test configuración básica de logging.
+      <UnitTestCase TestLoggingContext>
+        Test suite para LoggingContext.
+        <TestCaseFunction test_logging_context_success>
+          Test contexto de logging exitoso.
+        <TestCaseFunction test_logging_context_with_exception>
+          Test contexto de logging con excepción.
+      <UnitTestCase TestHelpersIntegration>
+        Test suite para integración entre helpers.
+        <TestCaseFunction test_batch_validation_with_database_transaction>
+          Test integración: validación en lote con transacción de BD.
+        <TestCaseFunction test_logging_with_validation_errors>
+          Test integración: logging con errores de validación.
+        <TestCaseFunction test_validate_and_insert_product>
+          Test integración: validar y insertar producto.
+    <Module test_inventory_service_basic.py>
+      Tests unitarios básicos para InventoryService - FASE 5A
+      ======================================================
+      
+      OBJETIVO:
+      Completar cobertura de tests básicos para InventoryService que maneja
+      el control de inventario y movimientos del stock.
+      
+      COBERTURA:
+      - Consultas de inventario actual
+      - Cálculo de valores de inventario
+      - Movimientos de entrada y salida
+      - Reportes de stock
+      - Validaciones de inventario
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 3, 2025 - FASE 5A Completar Cobertura
+      <UnitTestCase TestInventoryServiceBasic>
+        Test suite básico para InventoryService.
+        <TestCaseFunction test_get_abc_analysis>
+          Test análisis ABC de productos.
+        <TestCaseFunction test_get_category_statistics>
+          Test obtener estadísticas por categoría.
+        <TestCaseFunction test_get_current_inventory>
+          Test obtener inventario actual.
+        <TestCaseFunction test_get_inventory_by_category>
+          Test obtener inventario por categoría.
+        <TestCaseFunction test_get_inventory_movements>
+          Test obtener movimientos de inventario.
+        <TestCaseFunction test_get_inventory_statistics>
+          Test obtener estadísticas de inventario.
+        <TestCaseFunction test_get_inventory_turnover_report>
+          Test reporte de rotación de inventario.
+        <TestCaseFunction test_get_inventory_value>
+          Test calcular valor total del inventario.
+        <TestCaseFunction test_get_inventory_value_by_category>
+          Test calcular valor por categoría.
+        <TestCaseFunction test_get_low_stock_products>
+          Test obtener productos con stock bajo.
+        <TestCaseFunction test_get_movements_by_date_range>
+          Test obtener movimientos por rango de fechas.
+        <TestCaseFunction test_get_out_of_stock_products>
+          Test obtener productos sin stock.
+        <TestCaseFunction test_get_product_movement_history>
+          Test obtener historial de movimientos de un producto.
+        <TestCaseFunction test_validate_stock_availability>
+          Test validar disponibilidad de stock.
+    <Module test_models_validation.py>
+      Tests unitarios para validación de modelos - FASE 5A
+      ===================================================
+      
+      OBJETIVO:
+      Completar cobertura crítica de validación de modelos de datos,
+      asegurando integridad, constraints y relaciones correctas.
+      
+      COBERTURA:
+      - Validación de modelos Producto, Categoria, Cliente, Usuario
+      - Constraints de base de datos
+      - Relaciones FK correctas
+      - Validación de tipos de datos
+      - Casos edge y validaciones de negocio
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 3, 2025 - FASE 5A Gap Analysis - Test Crítico #1
+      <UnitTestCase TestModelsValidation>
+        Test suite para validación completa de modelos de datos.
+        <TestCaseFunction test_cascade_delete_validation>
+          Test validación de eliminación en cascada.
+        <TestCaseFunction test_categoria_database_integrity>
+          Test integridad en base de datos.
+        <TestCaseFunction test_categoria_nombre_constraints>
+          Test constraints de nombre de categoría.
+        <TestCaseFunction test_categoria_tipo_validation>
+          Test validación de tipos de categoría.
+        <TestCaseFunction test_categoria_valid_creation>
+          Test creación válida de categoría.
+        <TestCaseFunction test_cliente_email_validation>
+          Test validación de email.
+        <TestCaseFunction test_cliente_ruc_validation>
+          Test validación de RUC.
+        <TestCaseFunction test_cliente_valid_creation>
+          Test creación válida de cliente.
+        <TestCaseFunction test_data_type_constraints>
+          Test constraints de tipos de datos.
+        <TestCaseFunction test_movimiento_cantidad_signs>
+          Test signos de cantidad según tipo.
+        <TestCaseFunction test_movimiento_tipos_validation>
+          Test validación de tipos de movimiento.
+        <TestCaseFunction test_movimiento_valid_creation>
+          Test creación válida de movimiento.
+        <TestCaseFunction test_producto_decimal_precision>
+          Test precisión decimal en precios.
+        <TestCaseFunction test_producto_foreign_key_categoria>
+          Test foreign key con categoría.
+        <TestCaseFunction test_producto_stock_validation>
+          Test validación de stock.
+        <TestCaseFunction test_producto_valid_creation>
+          Test creación válida de producto.
+        <TestCaseFunction test_usuario_rol_validation>
+          Test validación de roles.
+        <TestCaseFunction test_usuario_unique_constraint>
+          Test constraint único en nombre_usuario.
+        <TestCaseFunction test_usuario_valid_creation>
+          Test creación válida de usuario.
+        <TestCaseFunction test_venta_calculations_consistency>
+          Test consistencia en cálculos de venta.
+        <TestCaseFunction test_venta_foreign_key_cliente>
+          Test foreign key con cliente.
+        <TestCaseFunction test_venta_valid_creation>
+          Test creación válida de venta.
+    <Module test_movement_service_optimization.py>
+      Tests para la optimización del MovementService - FASE 3.
+      
+      Valida que la optimización mantiene 100% compatibilidad con funcionalidad original
+      mientras mejora performance y elimina código duplicado.
+      
+      COBERTURA:
+      - Helpers integrados correctamente (DatabaseHelper, ValidationHelper, LoggingHelper)
+      - Métodos originales preservados para compatibilidad
+      - Nuevos métodos optimizados funcionando
+      - Performance mejorada en operaciones críticas
+      - Logging estandarizado implementado
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Junio 2025 - FASE 3 OPTIMIZACIÓN
+      <UnitTestCase TestMovementServiceOptimization>
+        Tests para validar la optimización del MovementService.
+        <TestCaseFunction test_compatibility_original_methods_preserved>
+          Test 5: Métodos originales preservados para compatibilidad.
+        <TestCaseFunction test_database_helper_integration>
+          Test 2: DatabaseHelper reemplaza operaciones BD duplicadas.
+        <TestCaseFunction test_error_handling_consistency>
+          Test 8: Manejo de errores consistente.
+        <TestCaseFunction test_fase3_helpers_initialization>
+          Test 1: Verificar que los helpers FASE 3 se inicializan correctamente.
+        <TestCaseFunction test_get_movement_statistics>
+          Test 11: Nuevas estadísticas de movimientos.
+        <TestCaseFunction test_logging_helper_integration>
+          Test 4: LoggingHelper estandariza trazabilidad.
+        <TestCaseFunction test_movement_creation_optimized_flow>
+          Test 9: Flujo completo optimizado de creación de movimiento.
+        <TestCaseFunction test_new_optimized_methods>
+          Test 6: Nuevos métodos optimizados FASE 3.
+        <TestCaseFunction test_performance_optimization_select_1_limit_1>
+          Test 7: Optimización de performance con SELECT 1 LIMIT 1.
+        <TestCaseFunction test_validate_movement_data_optimized>
+          Test 10: Nuevo método de validación optimizada.
+        <TestCaseFunction test_validation_helper_integration>
+          Test 3: ValidationHelper centraliza validaciones.
+    <Module test_product_form_connection.py>
+      Test para validar la conexión correcta de servicios en product_form.py
+      Verifica que CategoryService reciba correctamente la conexión a la base de datos.
+      <UnitTestCase TestProductFormConnection>
+        Test de conexión de servicios en product form.
+        <TestCaseFunction test_category_service_init_signature>
+          Test que CategoryService requiere db_connection en __init__.
+        <TestCaseFunction test_category_service_receives_db_connection>
+          Test que CategoryService recibe correctamente la conexión.
+        <TestCaseFunction test_category_service_with_proper_connection>
+          Test que CategoryService funciona con conexión adecuada.
+        <TestCaseFunction test_database_connection_error_handling>
+          Test manejo de errores de conexión a base de datos.
+    <Module test_product_service_basic_crud.py>
+      Tests unitarios básicos para ProductService - FASE 5A
+      ====================================================
+      
+      OBJETIVO:
+      Completar cobertura de tests básicos para ProductService que es crítico
+      para el funcionamiento del sistema de inventario.
+      
+      COBERTURA:
+      - CRUD completo de productos
+      - Validaciones de entrada
+      - Manejo de errores
+      - Integración con categorías  
+      - Actualización de stock
+      - Casos edge específicos
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 3, 2025 - FASE 5A Completar Cobertura
+      <UnitTestCase TestProductServiceBasicCRUD>
+        Test suite básico para ProductService - operaciones CRUD.
+        <TestCaseFunction test_activate_product>
+          Test reactivar producto.
+        <TestCaseFunction test_create_product_invalid_category>
+          Test crear producto con categoría inválida.
+        <TestCaseFunction test_create_product_invalid_name>
+          Test crear producto con nombre inválido.
+        <TestCaseFunction test_create_product_minimal_data>
+          Test crear producto con datos mínimos.
+        <TestCaseFunction test_create_product_negative_values>
+          Test crear producto con valores negativos.
+        <TestCaseFunction test_create_product_success>
+          Test crear producto exitosamente.
+        <TestCaseFunction test_deactivate_product>
+          Test desactivar producto.
+        <TestCaseFunction test_get_all_products>
+          Test obtener todos los productos.
+        <TestCaseFunction test_get_low_stock_products>
+          Test obtener productos con stock bajo.
+        <TestCaseFunction test_get_product_by_id_not_found>
+          Test obtener producto inexistente.
+        <TestCaseFunction test_get_product_by_id_success>
+          Test obtener producto por ID exitoso.
+        <TestCaseFunction test_get_products_by_category>
+          Test obtener productos por categoría.
+        <TestCaseFunction test_search_products_by_name>
+          Test buscar productos por nombre.
+        <TestCaseFunction test_update_product_invalid_data>
+          Test actualizar con datos inválidos.
+        <TestCaseFunction test_update_product_not_found>
+          Test actualizar producto inexistente.
+        <TestCaseFunction test_update_product_success>
+          Test actualizar producto exitosamente.
+        <TestCaseFunction test_update_stock_add>
+          Test agregar stock.
+        <TestCaseFunction test_update_stock_insufficient>
+          Test restar más stock del disponible.
+        <TestCaseFunction test_update_stock_subtract>
+          Test restar stock.
+    <Module test_product_service_fase3_optimization.py>
+      Tests para Optimizaci\xf3n ProductService FASE 1 \u2192 FASE 3
+      ======================================================
+      
+      OBJETIVO CRÍTICO:
+      Validar que ProductService migre de FASE 1 a FASE 3 con helpers optimizados,
+      siguiendo el patrón de CategoryService, UserService y otros servicios ya optimizados.
+      
+      PROBLEMA IDENTIFICADO:
+      ProductService está en FASE 1 (sin helpers) mientras otros servicios están
+      en FASE 3 con DatabaseHelper, ValidationHelper, LoggingHelper.
+      
+      TESTS INCLUIDOS:
+      1. Verificación de helpers FASE 3 implementados
+      2. Performance optimizada vs FASE 1
+      3. Validaciones usando ValidationHelper
+      4. Logging usando LoggingHelper
+      5. Operaciones de base de datos usando DatabaseHelper
+      6. Compatibilidad con tests existentes
+      7. Funcionalidad completa preservada
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 3, 2025 - FASE 5A Testing Critical
+      <UnitTestCase TestProductServiceFase3Optimization>
+        Test suite para optimizaci\xf3n ProductService FASE 1 \u2192 FASE 3.
+        <TestCaseFunction test_all_crud_operations_working>
+          Test que todas las operaciones CRUD siguen funcionando post-optimización.
+        <TestCaseFunction test_backward_compatibility_fase1_fase3>
+          Test compatibilidad hacia atr\xe1s FASE 1 \u2192 FASE 3.
+        <TestCaseFunction test_bulk_operations_performance_fase3>
+          Test performance de operaciones en bloque FASE 3.
+        <TestCaseFunction test_business_rules_preserved>
+          Test que las reglas de negocio se preservan post-optimización.
+        <TestCaseFunction test_create_product_performance_fase3>
+          Test performance optimizada en creación de productos FASE 3.
+        <TestCaseFunction test_database_helper_implementation>
+          Test que ProductService tenga DatabaseHelper implementado.
+        <TestCaseFunction test_database_operations_with_db_helper>
+          Test operaciones de BD usando DatabaseHelper optimizado.
+        <TestCaseFunction test_integration_with_optimized_services>
+          Test integración con otros servicios ya optimizados FASE 3.
+        <TestCaseFunction test_logging_helper_implementation>
+          Test que ProductService tenga LoggingHelper implementado.
+        <TestCaseFunction test_logging_with_logging_helper>
+          Test logging usando LoggingHelper optimizado.
+        <TestCaseFunction test_search_products_performance_fase3>
+          Test performance optimizada en búsqueda de productos FASE 3.
+        <TestCaseFunction test_validation_helper_implementation>
+          Test que ProductService tenga ValidationHelper implementado.
+        <TestCaseFunction test_validations_with_validation_helper>
+          Test validaciones usando ValidationHelper optimizado.
+    <Module test_product_service_object_return.py>
+      Test para validar que ProductService.get_product_by_id() devuelve objetos Producto.
+      Este test asegura que se corrige el problema de inconsistencia de tipos.
+      
+      REQUERIMIENTO TÉCNICO:
+      - get_product_by_id() debe devolver objeto Producto, no diccionario
+      - El objeto debe tener todos los atributos necesarios para sales_form.py
+      - Compatibilidad con acceso por atributos (product.stock, product.nombre, etc.)
+      
+      Autor: Sistema TDD
+      Fecha: Mayo 2025
+      <UnitTestCase TestProductServiceObjectReturn>
+        Test para verificar que ProductService devuelve objetos Producto correctos.
+        <TestCaseFunction test_get_product_by_id_not_found>
+          Test cuando producto no existe.
+        <TestCaseFunction test_get_product_by_id_returns_producto_object>
+          Test que get_product_by_id devuelve objeto Producto, no diccionario.
+        <TestCaseFunction test_get_product_by_id_with_none_values>
+          Test manejo de valores NULL en la base de datos.
+        <TestCaseFunction test_method_signature_unchanged>
+          Test que la firma del método no cambia (compatibilidad).
+        <TestCaseFunction test_object_has_all_required_attributes>
+          Test que el objeto Producto tiene todos los atributos requeridos.
+        <TestCaseFunction test_sales_form_compatibility>
+          Test de compatibilidad específica con sales_form.py.
+    <Module test_pytest_validation_basic.py>
+      Test básico de validación post-corrección pytest.ini
+      Sistema de Inventario Copy Point - FASE 5A
+      <Class TestPytestValidation>
+        Tests básicos para validar que pytest funcione correctamente
+        <Function test_pytest_configuration_valid>
+          Valida que la configuración de pytest sea válida
+        <Function test_imports_basic>
+          Valida que los imports básicos funcionen
+        <Function test_project_structure>
+          Valida que la estructura del proyecto sea correcta
+        <Function test_database_connection_available>
+          Valida que la conexión a la base de datos esté disponible
+        <Function test_fase5a_marker>
+          Test marcado para FASE 5A
+        <Function test_pytest_markers_configured>
+          Valida que los markers de pytest estén configurados
+        <Function test_coverage_configuration>
+          Valida que la configuración de cobertura funcione
+        <Function test_timeout_configuration>
+          Valida que la configuración de timeout funcione
+    <Module test_reports_form_basic.py>
+      Test básico para Reports Form - FASE 5A
+      Validación de funcionalidad crítica de generación de reportes.
+      
+      COBERTURA:
+      - Inicialización del formulario
+      - Validación de campos requeridos
+      - Generación de reportes básicos
+      - Manejo de errores
+      - Integración con ReportService
+      
+      Objetivo: Validar funcionalidad básica del formulario de reportes
+      Estado: FASE 5A - Testing Final
+      <UnitTestCase TestReportsFormBasic>
+        Test básico para Reports Form.
+        <TestCaseFunction test_date_fields_exist>
+          Test que existen campos de fecha.
+        <TestCaseFunction test_date_validation>
+          Test validación de fechas.
+        <TestCaseFunction test_error_handling>
+          Test manejo de errores del formulario.
+        <TestCaseFunction test_export_to_excel_functionality>
+          Test funcionalidad de exportación a Excel.
+        <TestCaseFunction test_filter_options>
+          Test opciones de filtrado.
+        <TestCaseFunction test_form_has_required_tabs>
+          Test que el formulario tiene las pestañas requeridas.
+        <TestCaseFunction test_form_initialization>
+          Test inicialización del formulario.
+        <TestCaseFunction test_form_keyboard_shortcuts>
+          Test atajos de teclado del formulario.
+        <TestCaseFunction test_form_responsive_design>
+          Test que el formulario es responsive.
+        <TestCaseFunction test_generate_inventory_report_failure>
+          Test fallo en generación de reporte de inventario.
+        <TestCaseFunction test_generate_inventory_report_success>
+          Test generación exitosa de reporte de inventario.
+        <TestCaseFunction test_generate_movements_report_success>
+          Test generación exitosa de reporte de movimientos.
+        <TestCaseFunction test_generate_sales_report_success>
+          Test generación exitosa de reporte de ventas.
+        <TestCaseFunction test_progress_bar_functionality>
+          Test funcionalidad de barra de progreso.
+        <TestCaseFunction test_report_history_functionality>
+          Test funcionalidad de historial de reportes.
+        <TestCaseFunction test_report_preview_functionality>
+          Test funcionalidad de vista previa de reportes.
+      <UnitTestCase TestReportsFormIntegration>
+        Tests de integración para Reports Form.
+        <TestCaseFunction test_integration_with_report_service>
+          Test integración con ReportService real.
+        <TestCaseFunction test_real_report_generation>
+          Test generación real de reporte (si hay datos).
+    <Module test_reports_system_optimization.py>
+      Test Suite para FASE 4B: Sistema de Reportes PDF
+      
+      Valida la optimización del sistema de reportes al patrón FASE 3:
+      - ReportService optimizado con DatabaseHelper, ValidationHelper, LoggingHelper
+      - Generación de PDFs funcional para los 4 tipos de reportes
+      - Integración completa UI -> Service -> PDF
+      - Performance y validaciones robustas
+      
+      Autor: Sistema de Inventario Copy Point S.A.
+      Fecha: Julio 2025 - FASE 4B
+      Metodología: TDD
+      <UnitTestCase TestReportsSystemOptimization>
+        Test suite para optimización del sistema de reportes
+        <TestCaseFunction test_concurrent_report_generation>
+          Test generación concurrente de reportes
+        <TestCaseFunction test_error_handling_invalid_dates>
+          Test manejo de errores con fechas inválidas
+        <TestCaseFunction test_error_handling_pdf_generation>
+          Test manejo de errores en generación de PDF
+        <TestCaseFunction test_generate_pdf_report_function>
+          Test función auxiliar generate_pdf_report
+        <TestCaseFunction test_inventory_report_generation>
+          Test generación de reporte de inventario
+        <TestCaseFunction test_logging_integration>
+          Test integración con sistema de logging
+        <TestCaseFunction test_memory_usage_cleanup>
+          Test que no haya leaks de memoria
+        <TestCaseFunction test_movements_report_generation>
+          Test generación de reporte de movimientos
+        <TestCaseFunction test_pdf_generation_inventory>
+          Test generación de PDF para reporte de inventario
+        <TestCaseFunction test_pdf_generation_movements>
+          Test generación de PDF para reporte de movimientos
+        <TestCaseFunction test_pdf_generation_profitability>
+          Test generación de PDF para reporte de rentabilidad
+        <TestCaseFunction test_pdf_generation_sales>
+          Test generación de PDF para reporte de ventas
+        <TestCaseFunction test_performance_large_dataset>
+          Test performance con dataset grande
+        <TestCaseFunction test_profitability_report_generation>
+          Test generación de reporte de rentabilidad
+        <TestCaseFunction test_report_service_export_to_pdf_integration>
+          Test integración completa ReportService -> PDF
+        <TestCaseFunction test_report_service_optimization_pattern>
+          FASE 3: Test que ReportService use patrón optimizado
+        <TestCaseFunction test_sales_report_generation>
+          Test generación de reporte de ventas
+    <Module test_sales_form_correction.py>
+      Test de validación para la corrección del problema de inicialización.
+      Verifica que el problema reportado esté resuelto.
+      
+      PROPÓSITO:
+      - Confirmar que ProductService se inicializa correctamente
+      - Validar que BarcodeService funciona sin dependencias circulares
+      - Verificar que SalesWindow puede crearse sin errores
+      <UnitTestCase TestSalesFormCorrection>
+        Tests para validar que la corrección del problema funciona.
+        <TestCaseFunction test_all_services_initialization_integration>
+          Test de integración: Todos los servicios deben inicializarse correctamente.
+          
+          Simula el patrón exacto usado en sales_form.py después de la corrección.
+        <TestCaseFunction test_barcode_service_initialization_without_dependencies>
+          Test: BarcodeService debe inicializarse sin requerir ProductService.
+          
+          VALIDACIÓN DE LA CORRECCIÓN:
+          - BarcodeService() debe funcionar sin argumentos
+          - No debe lanzar errores de dependencias faltantes
+        <TestCaseFunction test_barcode_service_search_product_with_product_service>
+          Test: BarcodeService debe funcionar con ProductService configurado.
+        <TestCaseFunction test_barcode_service_search_product_without_product_service>
+          Test: BarcodeService debe manejar búsquedas sin ProductService configurado.
+        <TestCaseFunction test_barcode_service_set_product_service_method>
+          Test: Método set_product_service debe funcionar correctamente.
+        <TestCaseFunction test_product_service_initialization_with_db_connection>
+          Test: ProductService debe inicializarse correctamente con db_connection.
+        <TestCaseFunction test_sales_window_initialization_pattern_corrected>
+          Test: Patrón de inicialización corregido en SalesWindow.
+          
+          VALIDACIÓN COMPLETA de la corrección implementada.
+    <Module test_sales_form_initialization.py>
+      Test para verificar la correcta inicialización del formulario de ventas.
+      Reproduce el problema específico reportado.
+      
+      PROPÓSITO:
+      - Validar que ProductService se inicializa correctamente
+      - Verificar que no hay errores de missing argument
+      - Confirmar compatibilidad entre servicios
+      <UnitTestCase TestSalesFormInitialization>
+        Tests para validar la inicialización correcta del formulario de ventas.
+        Enfocado en el problema específico reportado.
+        <TestCaseFunction test_get_database_connection_returns_valid_object>
+          Test: get_database_connection() debe devolver objeto válido.
+        <TestCaseFunction test_product_service_initialization_with_db_connection>
+          Test: ProductService debe inicializarse correctamente con db_connection.
+          
+          VALIDACIÓN CRÍTICA:
+          - No debe lanzar TypeError sobre missing argument
+          - Debe aceptar parámetro db_connection correctamente
+        <TestCaseFunction test_product_service_missing_argument_error>
+          Test: ProductService debe fallar si no se proporciona db_connection.
+          
+          Confirma que el error reportado es por falta de argumento.
+        <TestCaseFunction test_sales_form_import_and_initialization>
+          Test: Verificar que SalesWindow puede importarse e inicializarse.
+          
+          Test de integración para el problema específico.
+        <TestCaseFunction test_sales_form_service_initialization_pattern>
+          Test: Simular el patrón de inicialización usado en sales_form.py
+          
+          Reproduce exactamente cómo se están inicializando los servicios.
+    <Module test_sales_service_optimization.py>
+      Tests para optimización del SalesService - FASE 3.
+      Valida que las optimizaciones mantengan 100% compatibilidad funcional.
+      
+      OBJETIVO:
+      - Verificar que todas las funcionalidades existentes sigan funcionando
+      - Validar nuevos métodos optimizados
+      - Confirmar mejoras de performance
+      - Tests para helpers centralizados
+      
+      METODOLOGÍA: TDD FASE 3
+      - Tests escritos ANTES de la optimización
+      - Cobertura 100% de métodos existentes
+      - Validación de compatibilidad con tests FASE 2
+      
+      Autor: Sistema de Inventario v7.0 - FASE 3 OPTIMIZACIÓN
+      Fecha: Junio 29, 2025
+      <UnitTestCase TestSalesServiceOptimization>
+        Tests para SalesService optimizado con helpers FASE 3.
+        <TestCaseFunction test_add_product_to_sale_compatibility>
+          Test: add_product_to_sale debe funcionar exactamente igual (compatibilidad FASE 2).
+        <TestCaseFunction test_category_type_optimization>
+          Test: _get_category_type debe usar helper optimizado FASE 3.
+        <TestCaseFunction test_centralized_validation>
+          Test: Validaciones deben usar ValidationHelper (FASE 3).
+        <TestCaseFunction test_client_exists_optimization>
+          Test: _client_exists debe usar consulta optimizada FASE 3.
+        <TestCaseFunction test_create_sale_compatibility>
+          Test: create_sale debe funcionar exactamente igual (compatibilidad FASE 2).
+        <TestCaseFunction test_error_handling_with_helpers>
+          Test: Manejo de errores debe ser robusto con helpers FASE 3.
+        <TestCaseFunction test_get_all_sales_new_method>
+          Test: Nuevo método get_all_sales debe funcionar (FASE 3).
+        <TestCaseFunction test_get_sale_by_id_compatibility>
+          Test: get_sale_by_id debe funcionar exactamente igual (compatibilidad FASE 2).
+        <TestCaseFunction test_get_sales_by_date_range_new_method>
+          Test: Nuevo método get_sales_by_date_range debe funcionar (FASE 3).
+        <TestCaseFunction test_get_sales_statistics_new_method>
+          Test: Nuevo método get_sales_statistics debe funcionar (FASE 3).
+        <TestCaseFunction test_helpers_initialization>
+          Test: Helpers FASE 3 deben estar correctamente inicializados.
+        <TestCaseFunction test_maintains_original_interface>
+          Test: Debe mantener interfaz original para tests FASE 2.
+        <TestCaseFunction test_mock_compatibility>
+          Test: Debe ser compatible con mocks de tests FASE 2.
+        <TestCaseFunction test_optimized_database_operations>
+          Test: Operaciones de BD deben usar DatabaseHelper (FASE 3).
+        <TestCaseFunction test_performance_improvement>
+          Test: Performance debe mejorar con optimizaciones FASE 3.
+        <TestCaseFunction test_product_exists_optimization>
+          Test: _get_product_by_id debe usar helper optimizado FASE 3.
+        <TestCaseFunction test_sales_service_initialization_compatibility>
+          Test: SalesService debe inicializarse igual que antes (compatibilidad FASE 2).
+        <TestCaseFunction test_standardized_logging>
+          Test: Logging debe estar estandarizado con LoggingHelper (FASE 3).
+        <TestCaseFunction test_validate_sale_data_new_method>
+          Test: Nuevo método validate_sale_data debe funcionar (FASE 3).
+        <TestCaseFunction test_validation_rules_compatibility>
+          Test: Reglas de validación deben mantenerse exactamente iguales (compatibilidad FASE 2).
+      <UnitTestCase TestSalesServiceOptimizationIntegration>
+        Tests de integración para SalesService optimizado.
+        <TestCaseFunction test_complete_sale_flow_optimized>
+          Test: Flujo completo de venta debe funcionar con optimizaciones FASE 3.
+        <TestCaseFunction test_performance_comparison_with_original>
+          Test: Comparar performance con implementación original.
+    <Module test_ticket_service_basic.py>
+      Test básico para Ticket Service - FASE 5A
+      Validación de funcionalidad crítica de generación y gestión de tickets.
+      
+      COBERTURA:
+      - Generación de tickets de venta y entrada
+      - Numeración automática consecutiva
+      - Validación de asociaciones (venta/movimiento)
+      - Reimpresión de tickets
+      - Búsqueda y consulta de tickets
+      - Validación de datos de tickets
+      - Manejo de errores y excepciones
+      
+      Objetivo: Validar funcionalidad básica del servicio de tickets
+      Estado: FASE 5A - Testing Final
+      <UnitTestCase TestTicketServiceBasic>
+        Test básico para Ticket Service.
+        <TestCaseFunction test_actualizar_pdf_path_success>
+          Test actualización exitosa de ruta PDF.
+        <TestCaseFunction test_actualizar_pdf_path_ticket_no_existe>
+          Test actualización de PDF para ticket inexistente.
+        <TestCaseFunction test_eliminar_ticket_no_existe>
+          Test eliminación de ticket inexistente.
+        <TestCaseFunction test_eliminar_ticket_success>
+          Test eliminación exitosa de ticket.
+        <TestCaseFunction test_error_handling_database>
+          Test manejo de errores de base de datos.
+        <TestCaseFunction test_generar_ticket_entrada_movimiento_inexistente>
+          Test generación de ticket para movimiento inexistente.
+        <TestCaseFunction test_generar_ticket_entrada_movimiento_venta>
+          Test generación de ticket para movimiento de venta (no entrada).
+        <TestCaseFunction test_generar_ticket_entrada_success>
+          Test generación exitosa de ticket de entrada.
+        <TestCaseFunction test_generar_ticket_venta_duplicado>
+          Test generación de ticket para venta que ya tiene ticket.
+        <TestCaseFunction test_generar_ticket_venta_success>
+          Test generación exitosa de ticket de venta.
+        <TestCaseFunction test_generar_ticket_venta_venta_inexistente>
+          Test generación de ticket para venta inexistente.
+        <TestCaseFunction test_obtener_estadisticas_tickets_empty>
+          Test obtención de estadísticas sin tickets.
+        <TestCaseFunction test_obtener_estadisticas_tickets_success>
+          Test obtención exitosa de estadísticas de tickets.
+        <TestCaseFunction test_obtener_ticket_por_id_no_existe>
+          Test obtención de ticket inexistente.
+        <TestCaseFunction test_obtener_ticket_por_id_success>
+          Test obtención exitosa de ticket por ID.
+        <TestCaseFunction test_obtener_tickets_por_fecha_success>
+          Test obtención exitosa de tickets por rango de fechas.
+        <TestCaseFunction test_obtener_tickets_por_movimiento_success>
+          Test obtención exitosa de tickets por movimiento.
+        <TestCaseFunction test_obtener_tickets_por_venta_success>
+          Test obtención exitosa de tickets por venta.
+        <TestCaseFunction test_obtener_tickets_sin_pdf_success>
+          Test obtención exitosa de tickets sin PDF.
+        <TestCaseFunction test_obtener_ultimo_ticket_por_tipo_invalido>
+          Test obtención con tipo de ticket inválido.
+        <TestCaseFunction test_obtener_ultimo_ticket_por_tipo_success>
+          Test obtención exitosa del último ticket por tipo.
+        <TestCaseFunction test_reimprimir_ticket_no_existe>
+          Test reimpresión de ticket inexistente.
+        <TestCaseFunction test_reimprimir_ticket_success>
+          Test reimpresión exitosa de ticket.
+        <TestCaseFunction test_service_initialization>
+          Test inicialización del servicio.
+        <TestCaseFunction test_validation_ticket_number_generation>
+          Test validación de generación de números de ticket.
+      <UnitTestCase TestTicketServiceIntegration>
+        Tests de integración para Ticket Service.
+        <TestCaseFunction test_integration_with_database>
+          Test integración con base de datos real.
+        <TestCaseFunction test_integration_with_movement_service>
+          Test integración con servicio de movimientos.
+        <TestCaseFunction test_integration_with_sales_service>
+          Test integración con servicio de ventas.
+    <Module test_user_service_optimization.py>
+      Tests para optimización UserService con patrón FASE 3.
+      
+      OBJETIVOS DE PRUEBA:
+      - Validar compatibilidad 100% con LoginWindow
+      - Verificar uso correcto de helpers FASE 3
+      - Validar nuevas funcionalidades de seguridad
+      - Performance tests vs versión original
+      
+      Cobertura mínima requerida: 95%
+      <UnitTestCase TestUserServiceOptimization>
+        Test suite para UserService optimizado con patrón FASE 3.
+        <TestCaseFunction test_authenticate_logs_attempts>
+          Verificar que authenticate() registra intentos de login.
+        <TestCaseFunction test_authenticate_maintains_compatibility>
+          Verificar que authenticate() mantiene compatibilidad 100% con LoginWindow.
+        <TestCaseFunction test_authenticate_with_invalid_credentials>
+          Verificar que authenticate() maneja credenciales inválidas.
+        <TestCaseFunction test_backward_compatibility_all_methods>
+          Verificar compatibilidad hacia atrás de todos los métodos públicos.
+        <TestCaseFunction test_create_user_with_enhanced_validations>
+          Verificar que create_user() tiene validaciones de seguridad mejoradas.
+        <TestCaseFunction test_create_user_with_strong_password>
+          Verificar que create_user() acepta contraseñas seguras.
+        <TestCaseFunction test_database_helper_usage>
+          Verificar que usa DatabaseHelper apropiadamente.
+        <TestCaseFunction test_error_handling_improvement>
+          Verificar que el manejo de errores está mejorado.
+        <TestCaseFunction test_get_user_statistics>
+          Verificar nuevo método get_user_statistics().
+        <TestCaseFunction test_get_users_by_role>
+          Verificar nuevo método get_users_by_role().
+        <TestCaseFunction test_logging_helper_usage>
+          Verificar que usa LoggingHelper apropiadamente.
+        <TestCaseFunction test_performance_vs_original>
+          Test de performance comparando con versión original.
+        <TestCaseFunction test_security_enhancements>
+          Verificar mejoras de seguridad implementadas.
+        <TestCaseFunction test_user_service_uses_fase3_pattern>
+          Verificar que UserService usa patrón FASE 3 completo.
+        <TestCaseFunction test_validation_helper_usage>
+          Verificar que usa ValidationHelper apropiadamente.
+    <Package ui>
+      <Package auth>
+        <Module test_login_window_widget_lifecycle.py>
+          Test para verificar el manejo correcto del ciclo de vida de widgets en LoginWindow.
+          
+          Este test específicamente verifica que no se produzcan errores al intentar
+          modificar widgets después de que la ventana ha sido destruida.
+          <UnitTestCase TestLoginWindowWidgetLifecycle>
+            Tests para el ciclo de vida de widgets en LoginWindow.
+            <TestCaseFunction test_successful_login_no_widget_error>
+              Test: Un login exitoso no debe generar errores al destruir widgets.
+              
+              Verifica que después de un login exitoso y destrucción de ventana,
+              no se intente modificar widgets ya destruidos.
+            <TestCaseFunction test_widget_exists_before_modification>
+              Test: Verificar que se compruebe la existencia del widget antes de modificarlo.
+              
+              Este test verifica que el código implemente verificación de existencia
+              del widget antes de intentar modificarlo.
+    <Dir unit>
+      <Module test_categoria_activo_field.py>
+        Test TDD para campo 'activo' en modelo Categoria
+        =====================================================
+        
+        OBJETIVO:
+        Verificar que el modelo Categoria incluya el campo 'activo' y funcione
+        correctamente con el esquema de base de datos optimizado.
+        
+        PROBLEMA IDENTIFICADO:
+        - Base de datos tiene columna 'activo' en tabla categorias
+        - Modelo Categoria no incluye atributo 'activo'
+        - CategoryService no maneja el campo 'activo'
+        
+        SOLUCIÓN TDD:
+        1. Escribir test que valide campo 'activo' en modelo Categoria
+        2. Implementar campo 'activo' en modelo para pasar test
+        3. Actualizar CategoryService para manejar campo 'activo'
+        4. Validar integración completa
+        
+        Autor: Sistema de Inventario Copy Point S.A.
+        Fecha: Julio 3, 2025 - FASE 5A TDD
+        <UnitTestCase TestCategoriaActivoField>
+          Test suite para validar campo 'activo' en modelo Categoria.
+          <TestCaseFunction test_categoria_activo_methods>
+            Test métodos de utilidad para campo activo.
+          <TestCaseFunction test_categoria_constructor_with_activo_default>
+            Test que constructor incluya campo 'activo' con valor por defecto True.
+          <TestCaseFunction test_categoria_constructor_with_activo_explicit>
+            Test que constructor permita especificar valor explícito de activo.
+          <TestCaseFunction test_categoria_crear_material_with_activo>
+            Test que método crear_material maneje campo activo.
+          <TestCaseFunction test_categoria_crear_servicio_with_activo>
+            Test que método crear_servicio maneje campo activo.
+          <TestCaseFunction test_categoria_equality_considers_activo>
+            Test que comparación de igualdad considere campo activo.
+          <TestCaseFunction test_categoria_from_dict_includes_activo>
+            Test que método from_dict maneje campo activo.
+          <TestCaseFunction test_categoria_str_includes_activo>
+            Test que representación string incluya estado activo.
+          <TestCaseFunction test_categoria_to_dict_includes_activo>
+            Test que método to_dict incluya campo activo.
+      <Module test_service_stock_restriction.py>
+        Test para restricción de stock en servicios.
+        Valida que los productos con categoría tipo 'SERVICIO' mantengan stock = 0.
+        
+        REQUERIMIENTO:
+        Si en 'Categoria', tipo = 'SERVICIO' entonces 'Stock' = 0
+        
+        Autor: Sistema TDD
+        Fecha: Junio 30, 2025
+        <UnitTestCase TestServiceStockRestriction>
+          Test suite para validar la restricción de stock en servicios.
+          
+          CASOS DE PRUEBA:
+          1. Producto con categoría SERVICIO debe tener stock = 0
+          2. No se puede actualizar stock de productos SERVICIO a valor != 0
+          3. Movimientos de inventario deben rechazarse para servicios
+          4. Validación en creación de productos
+          5. Validación en actualización de productos
+          <TestCaseFunction test_material_can_have_nonzero_stock>
+            Test que productos MATERIAL pueden tener stock > 0.
+          <TestCaseFunction test_producto_service_enforces_stock_restriction>
+            Test que ProductService aplica la restricción de stock.
+          <TestCaseFunction test_servicio_creation_with_nonzero_stock_rejected>
+            Test que se rechaza crear servicio con stock != 0.
+          <TestCaseFunction test_servicio_modelo_validates_zero_stock>
+            Test que el modelo Producto valida stock = 0 para servicios.
+          <TestCaseFunction test_servicio_stock_zero_on_creation>
+            Test que productos con categoría SERVICIO se crean con stock = 0.
+          <TestCaseFunction test_update_material_stock_allowed>
+            Test que se puede actualizar stock de materiales normalmente.
+          <TestCaseFunction test_update_servicio_stock_to_nonzero_rejected>
+            Test que no se puede actualizar stock de servicio a valor != 0.
+
+=================================== ERRORS ====================================
+______________ ERROR collecting tests/test_fase5a_performance.py ______________
+ImportError while importing test module 'D:\inventario_app2\tests\test_fase5a_performance.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_fase5a_performance.py:25: in <module>
+    import psutil
+E   ModuleNotFoundError: No module named 'psutil'
+=========================== short test summary info ===========================
+ERROR tests/test_fase5a_performance.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+==================== 624 tests collected, 1 error in 1.13s ====================

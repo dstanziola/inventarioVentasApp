@@ -30,13 +30,16 @@ class TicketService:
     tickets de venta y entrada de inventario.
     """
     
-    def __init__(self):
+    def __init__(self, db_connection=None):
         """
         Inicializar el servicio de tickets.
+        
+        Args:
+            db_connection: Conexión a la base de datos (opcional)
         """
-        self.db = Database()
-        self.sales_service = SalesService()
-        self.movement_service = MovementService()
+        self.db = db_connection or get_database_connection()
+        self.sales_service = SalesService(self.db)
+        self.movement_service = MovementService(self.db)
     
     def _obtener_siguiente_numero_ticket(self, ticket_type: str) -> str:
         """

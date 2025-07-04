@@ -6,7 +6,7 @@ echo.
 :: Verificar si existe el entorno virtual
 if not exist "venv" (
     echo Creando entorno virtual...
-    python -m venv venv
+    python -m venv venv 
     call venv\Scripts\activate
     echo Instalando dependencias...
     python -m pip install --upgrade pip
@@ -27,7 +27,7 @@ cd /d "D:\inventario_app"
 :: Verificar si existe el entorno virtual
 if not exist "venv" (
     echo [INFO] Creando entorno virtual...
-    python -m venv venv
+    python -m venv venv >nul
     if %errorlevel% neq 0 (
         echo [ERROR] No se pudo crear el entorno virtual
         pause
