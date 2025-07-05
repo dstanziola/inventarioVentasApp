@@ -1,36 +1,49 @@
 """
-Servicio de Códigos de Barras
-============================
+Servicio de Códigos de Barras - Modo Teclado
+===========================================
 
 Servicio de lógica de negocio para manejo de códigos de barras
-en el sistema de inventario.
+en el sistema de inventario usando lectores en modo HID teclado.
 
-Autor: Sistema de Inventario
-Versión: 1.0.1 - CORREGIDO
-Fecha: Junio 2025
+CAMBIOS PRINCIPALES v1.1.0:
+- Eliminadas dependencias de hardware externo (hidapi, device_manager)
+- Enfoque en modo teclado para lectores HID
+- Métodos simplificados y más robustos
+- Sin dependencias circulares
+- Compatibilidad con BarcodeEntry widget
+
+Autor: Sistema de Inventario Copy Point S.A.
+Versión: 1.1.0 - Modo Teclado
+Fecha: Julio 2025
 """
 
 import logging
 import re
 from typing import List, Dict, Optional, Any, Union
 
-from hardware.device_manager import DeviceManager, DeviceManagerError
-
 
 class BarcodeService:
     """
-    Servicio para gestión de códigos de barras.
+    Servicio para gestión de códigos de barras en modo teclado.
     
-    Proporciona funcionalidades de alto nivel para:
-    - Gestión de dispositivos de códigos de barras
-    - Lectura y validación de códigos
-    - Búsqueda de productos por código
+    NUEVA FILOSOFÍA v1.1.0:
+    - Sin dependencias de hardware externo
+    - Enfocado en validación y lógica de negocio
+    - Compatible con lectores HID configurados como teclado
+    - Integración con BarcodeEntry widget para captura
+    - Métodos simplificados y confiables
+    
+    MODO DE OPERACIÓN:
+    1. Los lectores de códigos de barras se configuran en modo HID teclado
+    2. El widget BarcodeEntry captura la entrada automáticamente
+    3. Este servicio valida, formatea y busca productos
+    4. No hay gestión directa de dispositivos USB
+    
+    Funcionalidades principales:
+    - Validación de códigos de barras
     - Formateo y normalización de códigos
-    
-    CORRECCIÓN CRÍTICA v1.0.1:
-    - Eliminada dependencia circular con ProductService
-    - ProductService ahora se inyecta cuando es necesario
-    - Constructor sin dependencias obligatorias
+    - Búsqueda de productos por código
+    - Estadísticas básicas del sistema
     """
     
     # Patrón para validación de códigos de barras
@@ -42,26 +55,25 @@ class BarcodeService:
     
     def __init__(self, product_service=None):
         """
-        Inicializa el servicio de códigos de barras.
-        
-        CORRECCIÓN CRÍTICA:
-        - product_service ahora es opcional para evitar dependencia circular
-        - Se puede inyectar después si es necesario
+        Inicializa el servicio de códigos de barras en modo teclado.
         
         Args:
-            product_service: Servicio de productos (opcional)
+            product_service: Servicio de productos (opcional para evitar dependencias circulares)
         """
         self.logger = logging.getLogger(__name__)
-        self.device_manager = DeviceManager()
-        self.product_service = product_service  # CORREGIDO: ahora opcional
+        self.product_service = product_service
         
-        self.logger.info("BarcodeService inicializado correctamente")
+        # Configuración para modo teclado
+        self._keyboard_mode = True
+        self._service_version = "1.1.0"
+        
+        self.logger.info("BarcodeService inicializado en modo teclado (sin hardware externo)")
     
     def set_product_service(self, product_service):
         """
         Establece el servicio de productos después de la inicialización.
         
-        NUEVO MÉTODO para evitar dependencias circulares.
+        Método para evitar dependencias circulares.
         
         Args:
             product_service: Instancia de ProductService
@@ -69,300 +81,7 @@ class BarcodeService:
         self.product_service = product_service
         self.logger.debug("ProductService configurado en BarcodeService")
     
-    def is_connected(self) -> bool:
-        """
-        Verifica si hay algún dispositivo de códigos de barras conectado.
-        
-        Returns:
-            bool: True si hay al menos un dispositivo conectado
-        """
-        try:
-            connected_devices = self.get_connected_devices()
-            return len(connected_devices) > 0
-        except Exception as e:
-            self.logger.error(f"Error verificando conexión: {e}")
-            return False
-    
-    def is_scanner_available(self) -> bool:
-        """
-        Verifica si hay algún escáner de códigos de barras disponible.
-        
-        MÉTODO AGREGADO para corregir error de atributo faltante.
-        
-        Returns:
-            bool: True si hay al menos un escáner disponible
-        """
-        try:
-            # Verificar dispositivos disponibles
-            available_devices = self.get_available_devices()
-            return len(available_devices) > 0
-        except Exception as e:
-            self.logger.error(f"Error verificando disponibilidad del escáner: {e}")
-            return False
-    
-    def read_code(self, timeout: float = 0.1) -> Optional[str]:
-        """
-        Intenta leer un código desde cualquier dispositivo conectado.
-        
-        MÉTODO SIMPLIFICADO para lectura rápida.
-        
-        Args:
-            timeout: Tiempo de espera en segundos
-            
-        Returns:
-            str: Código leído o None si no hay lectura
-        """
-        try:
-            connected_devices = self.get_connected_devices()
-            
-            if not connected_devices:
-                return None
-            
-            # Intentar leer desde el primer dispositivo disponible
-            device_id = connected_devices[0].get('device_id', 'default')
-            timeout_ms = int(timeout * 1000)
-            
-            return self.read_barcode(device_id, timeout_ms)
-            
-        except Exception as e:
-            # No es crítico si no se puede leer, simplemente retornar None
-            self.logger.debug(f"No se pudo leer código: {e}")
-            return None
-    
-    def search_product_by_code(self, code: str):
-        """
-        Busca un producto por código de barras.
-        
-        MÉTODO CORREGIDO con validación de dependencias.
-        
-        Args:
-            code: Código de barras o ID del producto
-            
-        Returns:
-            Producto encontrado o None si no existe
-        """
-        if not self.product_service:
-            self.logger.warning("ProductService no está configurado")
-            return None
-        
-        try:
-            # Formatear el código
-            formatted_code = self.format_barcode(code)
-            
-            # Intentar convertir a ID numérico
-            if formatted_code.isdigit():
-                product_id = int(formatted_code)
-                return self.product_service.get_product_by_id(product_id)
-            else:
-                self.logger.debug(f"Código no numérico: {formatted_code}")
-                return None
-                
-        except Exception as e:
-            self.logger.error(f"Error buscando producto por código {code}: {e}")
-            return None
-    
-    def scan_barcode_devices(self) -> List[Dict[str, Any]]:
-        """
-        Escanea y detecta dispositivos de códigos de barras disponibles.
-        
-        Returns:
-            List[Dict]: Lista de dispositivos detectados
-        """
-        try:
-            devices = self.device_manager.scan_devices()
-            self.logger.info(f"Detectados {len(devices)} dispositivos de códigos de barras")
-            return devices
-            
-        except Exception as e:
-            self.logger.error(f"Error al escanear dispositivos: {e}")
-            return []
-    
-    def connect_barcode_device(self, device_id: str) -> bool:
-        """
-        Conecta con un dispositivo específico de códigos de barras.
-        
-        Args:
-            device_id: ID único del dispositivo
-            
-        Returns:
-            bool: True si la conexión fue exitosa
-        """
-        try:
-            result = self.device_manager.connect_device(device_id)
-            if result:
-                self.logger.info(f"Dispositivo conectado exitosamente: {device_id}")
-            else:
-                self.logger.warning(f"Fallo al conectar dispositivo: {device_id}")
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error al conectar dispositivo {device_id}: {e}")
-            return False
-    
-    def disconnect_device(self, device_id: str) -> bool:
-        """
-        Desconecta un dispositivo específico.
-        
-        Args:
-            device_id: ID único del dispositivo
-            
-        Returns:
-            bool: True si la desconexión fue exitosa
-        """
-        try:
-            result = self.device_manager.disconnect_device(device_id)
-            if result:
-                self.logger.info(f"Dispositivo desconectado: {device_id}")
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error al desconectar dispositivo {device_id}: {e}")
-            return False
-    
-    def disconnect_all_devices(self) -> None:
-        """
-        Desconecta todos los dispositivos conectados.
-        """
-        try:
-            self.device_manager.disconnect_all()
-            self.logger.info("Todos los dispositivos desconectados")
-            
-        except Exception as e:
-            self.logger.error(f"Error al desconectar todos los dispositivos: {e}")
-    
-    def get_connected_devices(self) -> List[Dict[str, Any]]:
-        """
-        Obtiene la lista de dispositivos actualmente conectados.
-        
-        Returns:
-            List[Dict]: Lista de dispositivos conectados
-        """
-        try:
-            return self.device_manager.get_connected_devices()
-            
-        except Exception as e:
-            self.logger.error(f"Error al obtener dispositivos conectados: {e}")
-            return []
-    
-    def get_device_info(self, device_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Obtiene información detallada de un dispositivo.
-        
-        Args:
-            device_id: ID único del dispositivo
-            
-        Returns:
-            Dict: Información del dispositivo, None si no existe
-        """
-        try:
-            return self.device_manager.get_device_info(device_id)
-            
-        except Exception as e:
-            self.logger.error(f"Error al obtener info del dispositivo {device_id}: {e}")
-            return None
-    
-    def read_barcode(self, device_id: str, timeout: int = 5000) -> Optional[str]:
-        """
-        Lee un código de barras desde un dispositivo específico.
-        
-        Args:
-            device_id: ID único del dispositivo
-            timeout: Tiempo máximo de espera en milisegundos
-            
-        Returns:
-            str: Código de barras leído, None si falla o timeout
-        """
-        try:
-            barcode = self.device_manager.read_from_device(device_id, timeout)
-            if barcode:
-                formatted_barcode = self.format_barcode(barcode)
-                self.logger.info(f"Código leído y formateado: {formatted_barcode}")
-                return formatted_barcode
-            else:
-                self.logger.debug(f"No se pudo leer código desde {device_id}")
-                return None
-                
-        except Exception as e:
-            self.logger.error(f"Error al leer código desde {device_id}: {e}")
-            return None
-    
-    def read_barcode_with_validation(self, device_id: str, timeout: int = 5000) -> Optional[str]:
-        """
-        Lee un código de barras y lo valida antes de retornarlo.
-        
-        Args:
-            device_id: ID único del dispositivo
-            timeout: Tiempo máximo de espera en milisegundos
-            
-        Returns:
-            str: Código válido, None si es inválido o falla la lectura
-        """
-        barcode = self.read_barcode(device_id, timeout)
-        if barcode and self.validate_barcode(barcode):
-            return barcode
-        elif barcode:
-            self.logger.warning(f"Código leído pero inválido: {barcode}")
-        
-        return None
-    
-    def read_barcode_with_formatting(self, device_id: str, timeout: int = 5000) -> Optional[str]:
-        """
-        Lee un código de barras y aplica formateo completo.
-        
-        Args:
-            device_id: ID único del dispositivo
-            timeout: Tiempo máximo de espera en milisegundos
-            
-        Returns:
-            str: Código formateado, None si falla la lectura
-        """
-        return self.read_barcode(device_id, timeout)  # Ya incluye formateo
-    
-    def read_and_lookup_product(self, device_id: str, timeout: int = 5000) -> Optional[Dict[str, Any]]:
-        """
-        Lee un código de barras y busca el producto correspondiente.
-        
-        Args:
-            device_id: ID único del dispositivo
-            timeout: Tiempo máximo de espera en milisegundos
-            
-        Returns:
-            Dict: Diccionario con 'barcode' y 'product', None si falla la lectura
-        """
-        try:
-            barcode = self.read_barcode_with_validation(device_id, timeout)
-            if not barcode:
-                return None
-            
-            product = self.search_product_by_code(barcode)
-            
-            result = {
-                'barcode': barcode,
-                'product': product
-            }
-            
-            if product:
-                self.logger.info(f"Producto encontrado para código {barcode}: {product.nombre}")
-            else:
-                self.logger.warning(f"No se encontró producto para código: {barcode}")
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"Error al leer y buscar producto: {e}")
-            return None
-    
-    def lookup_product_by_barcode(self, barcode: str):
-        """
-        Busca un producto por su código de barras.
-        
-        Args:
-            barcode: Código de barras a buscar
-            
-        Returns:
-            Producto: Instancia del producto, None si no se encuentra
-        """
-        return self.search_product_by_code(barcode)
+    # ===== MÉTODOS PRINCIPALES DE VALIDACIÓN Y BÚSQUEDA =====
     
     def validate_barcode(self, barcode: Union[str, None]) -> bool:
         """
@@ -415,23 +134,231 @@ class BarcodeService:
         
         return formatted
     
-    def get_barcode_statistics(self) -> Dict[str, Any]:
+    def search_product_by_code(self, code: str):
         """
-        Obtiene estadísticas de uso de códigos de barras.
+        Busca un producto por código de barras.
+        
+        En el sistema, el ID del producto funciona como código de barras.
+        
+        Args:
+            code: Código de barras o ID del producto
+            
+        Returns:
+            Producto encontrado o None si no existe
+        """
+        if not self.product_service:
+            self.logger.warning("ProductService no está configurado")
+            return None
+        
+        try:
+            # Formatear el código
+            formatted_code = self.format_barcode(code)
+            
+            if not formatted_code:
+                self.logger.debug("Código vacío después del formateo")
+                return None
+            
+            # Intentar convertir a ID numérico
+            if formatted_code.isdigit():
+                product_id = int(formatted_code)
+                product = self.product_service.get_product_by_id(product_id)
+                
+                if product:
+                    self.logger.info(f"Producto encontrado para código {formatted_code}: {product.nombre}")
+                else:
+                    self.logger.warning(f"No se encontró producto para código: {formatted_code}")
+                
+                return product
+            else:
+                self.logger.debug(f"Código no numérico: {formatted_code}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error buscando producto por código {code}: {e}")
+            return None
+    
+    # ===== MÉTODOS DE COMPATIBILIDAD (SIN HARDWARE) =====
+    
+    def is_connected(self) -> bool:
+        """
+        Verifica conexión de dispositivos.
+        
+        En modo teclado, siempre retorna False ya que no gestionamos hardware directamente.
         
         Returns:
-            Dict: Estadísticas de códigos de barras
+            bool: False (no hay gestión directa de hardware)
+        """
+        return False
+    
+    def is_scanner_available(self) -> bool:
+        """
+        Verifica disponibilidad de escáner.
+        
+        En modo teclado, no podemos detectar hardware directamente.
+        
+        Returns:
+            bool: False (detección no disponible en modo teclado)
+        """
+        return False
+    
+    def scan_barcode_devices(self) -> List[Dict[str, Any]]:
+        """
+        Escanea dispositivos de códigos de barras.
+        
+        En modo teclado, retorna lista vacía ya que no gestionamos hardware directamente.
+        
+        Returns:
+            List[Dict]: Lista vacía (no hay detección de hardware)
+        """
+        self.logger.debug("scan_barcode_devices llamado en modo teclado - retornando lista vacía")
+        return []
+    
+    def connect_barcode_device(self, device_id: str) -> bool:
+        """
+        Conecta dispositivo de código de barras.
+        
+        En modo teclado, no hay conexiones directas de hardware.
+        
+        Args:
+            device_id: ID del dispositivo (ignorado)
+            
+        Returns:
+            bool: False (no hay gestión directa de hardware)
+        """
+        self.logger.debug(f"connect_barcode_device({device_id}) llamado en modo teclado - sin efecto")
+        return False
+    
+    def disconnect_device(self, device_id: str) -> bool:
+        """
+        Desconecta dispositivo específico.
+        
+        Args:
+            device_id: ID del dispositivo (ignorado)
+            
+        Returns:
+            bool: False (no hay gestión directa de hardware)
+        """
+        self.logger.debug(f"disconnect_device({device_id}) llamado en modo teclado - sin efecto")
+        return False
+    
+    def disconnect_all_devices(self) -> None:
+        """
+        Desconecta todos los dispositivos.
+        
+        En modo teclado, no hay dispositivos que desconectar.
+        """
+        self.logger.debug("disconnect_all_devices llamado en modo teclado - sin efecto")
+    
+    def get_connected_devices(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene dispositivos conectados.
+        
+        Returns:
+            List[Dict]: Lista vacía (no hay gestión directa de hardware)
+        """
+        return []
+    
+    def get_device_info(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Obtiene información de dispositivo.
+        
+        Args:
+            device_id: ID del dispositivo
+            
+        Returns:
+            None: No hay información de hardware en modo teclado
+        """
+        self.logger.debug(f"get_device_info({device_id}) llamado en modo teclado - retornando None")
+        return None
+    
+    def read_code(self, timeout: float = 0.1) -> Optional[str]:
+        """
+        Intenta leer código desde dispositivo.
+        
+        En modo teclado, la lectura se maneja por el widget BarcodeEntry.
+        
+        Args:
+            timeout: Tiempo de espera (ignorado)
+            
+        Returns:
+            None: Lectura directa no disponible en modo teclado
+        """
+        self.logger.debug("read_code llamado en modo teclado - usar BarcodeEntry widget")
+        return None
+    
+    def read_barcode(self, device_id: str, timeout: int = 5000) -> Optional[str]:
+        """
+        Lee código desde dispositivo específico.
+        
+        Args:
+            device_id: ID del dispositivo (ignorado)
+            timeout: Timeout en milisegundos (ignorado)
+            
+        Returns:
+            None: Lectura directa no disponible en modo teclado
+        """
+        self.logger.debug(f"read_barcode({device_id}) llamado en modo teclado - usar BarcodeEntry widget")
+        return None
+    
+    def is_device_connected(self, device_id: str) -> bool:
+        """
+        Verifica si dispositivo está conectado.
+        
+        Args:
+            device_id: ID del dispositivo
+            
+        Returns:
+            bool: False (no hay gestión directa de hardware)
+        """
+        return False
+    
+    def get_available_devices(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene dispositivos disponibles.
+        
+        Returns:
+            List[Dict]: Lista vacía (no hay detección de hardware)
+        """
+        return []
+    
+    def auto_connect_first_device(self) -> Optional[str]:
+        """
+        Auto-conecta primer dispositivo disponible.
+        
+        Returns:
+            None: No hay auto-conexión en modo teclado
+        """
+        self.logger.debug("auto_connect_first_device llamado en modo teclado - sin dispositivos")
+        return None
+    
+    # ===== MÉTODOS DE ESTADÍSTICAS Y UTILIDADES =====
+    
+    def get_barcode_statistics(self) -> Dict[str, Any]:
+        """
+        Obtiene estadísticas del servicio de códigos de barras.
+        
+        Returns:
+            Dict: Estadísticas del servicio en modo teclado
         """
         try:
-            device_stats = self.device_manager.get_device_statistics()
-            
-            # Agregar estadísticas específicas del servicio
             service_stats = {
-                'devices': device_stats,
-                'service_version': '1.0.1',
+                'service_version': self._service_version,
+                'keyboard_mode': self._keyboard_mode,
                 'validation_pattern': self.VALID_BARCODE_PATTERN.pattern,
                 'max_barcode_length': self.MAX_BARCODE_LENGTH,
-                'product_service_configured': self.product_service is not None
+                'product_service_configured': self.product_service is not None,
+                'hardware_dependencies': False,
+                'supported_features': [
+                    'validation',
+                    'formatting', 
+                    'product_search',
+                    'keyboard_mode_integration'
+                ],
+                'deprecated_features': [
+                    'direct_usb_access',
+                    'device_management',
+                    'hardware_detection'
+                ]
             }
             
             return service_stats
@@ -440,59 +367,52 @@ class BarcodeService:
             self.logger.error(f"Error al obtener estadísticas: {e}")
             return {}
     
-    def is_device_connected(self, device_id: str) -> bool:
+    # ===== MÉTODOS SIMPLIFICADOS PARA INTEGRACIÓN =====
+    
+    def lookup_product_by_barcode(self, barcode: str):
         """
-        Verifica si un dispositivo específico está conectado.
+        Busca producto por código de barras (alias para compatibility).
         
         Args:
-            device_id: ID único del dispositivo
+            barcode: Código de barras a buscar
             
         Returns:
-            bool: True si está conectado
+            Producto: Instancia del producto, None si no se encuentra
         """
-        try:
-            return self.device_manager.is_device_connected(device_id)
-            
-        except Exception as e:
-            self.logger.error(f"Error al verificar conexión del dispositivo {device_id}: {e}")
-            return False
+        return self.search_product_by_code(barcode)
     
-    def get_available_devices(self) -> List[Dict[str, Any]]:
+    def read_barcode_with_validation(self, device_id: str, timeout: int = 5000) -> Optional[str]:
         """
-        Obtiene lista de todos los dispositivos disponibles.
+        Lee código con validación (método de compatibilidad).
         
-        Returns:
-            List[Dict]: Lista de dispositivos disponibles
-        """
-        try:
-            return self.device_manager.get_available_devices()
+        En modo teclado, no hay lectura directa.
+        
+        Args:
+            device_id: ID del dispositivo (ignorado)
+            timeout: Timeout (ignorado)
             
-        except Exception as e:
-            self.logger.error(f"Error al obtener dispositivos disponibles: {e}")
-            return []
+        Returns:
+            None: Usar BarcodeEntry widget para lectura
+        """
+        self.logger.debug("read_barcode_with_validation llamado en modo teclado - usar BarcodeEntry")
+        return None
     
-    def auto_connect_first_device(self) -> Optional[str]:
+    def read_and_lookup_product(self, device_id: str, timeout: int = 5000) -> Optional[Dict[str, Any]]:
         """
-        Conecta automáticamente al primer dispositivo disponible.
+        Lee código y busca producto (método de compatibilidad).
         
+        Args:
+            device_id: ID del dispositivo (ignorado)
+            timeout: Timeout (ignorado)
+            
         Returns:
-            str: ID del dispositivo conectado, None si no hay dispositivos
+            None: Usar BarcodeEntry widget con callback para este flujo
         """
-        try:
-            devices = self.scan_barcode_devices()
-            if devices:
-                device_id = devices[0]['device_id']
-                if self.connect_barcode_device(device_id):
-                    self.logger.info(f"Auto-conectado al dispositivo: {device_id}")
-                    return device_id
-            
-            self.logger.warning("No hay dispositivos disponibles para auto-conexión")
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"Error en auto-conexión: {e}")
-            return None
+        self.logger.debug("read_and_lookup_product llamado en modo teclado - usar BarcodeEntry con callback")
+        return None
 
+
+# ===== EXCEPCIONES =====
 
 class BarcodeServiceError(Exception):
     """Excepción base para errores del servicio de códigos de barras"""
@@ -505,10 +425,26 @@ class BarcodeValidationError(BarcodeServiceError):
 
 
 class BarcodeDeviceError(BarcodeServiceError):
-    """Excepción para errores de dispositivos de códigos de barras"""
+    """Excepción para errores de dispositivos de códigos de barras (deprecated en modo teclado)"""
     pass
 
 
 class BarcodeReadError(BarcodeServiceError):
-    """Excepción para errores de lectura de códigos"""
+    """Excepción para errores de lectura de códigos (deprecated en modo teclado)"""
     pass
+
+
+# ===== FUNCIÓN DE UTILIDAD PARA CREAR SERVICIO =====
+
+def create_barcode_service(product_service=None) -> BarcodeService:
+    """
+    Función de conveniencia para crear BarcodeService en modo teclado.
+    
+    Args:
+        product_service: Servicio de productos opcional
+        
+    Returns:
+        BarcodeService: Servicio configurado para modo teclado
+    """
+    service = BarcodeService(product_service)
+    return service

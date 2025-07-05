@@ -20,11 +20,12 @@ try:
     from services.category_service import CategoryService
     from models.producto import Producto
     
-    # Imports opcionales para códigos de barras (FASE 4)
+    # Imports opcionales para códigos de barras (MODO TECLADO)
     try:
         from services.label_service import LabelService
         from services.barcode_service import BarcodeService
         from utils.barcode_utils import validate_barcode, BarcodeUtils, generate_product_code
+        from ui.widgets.barcode_entry import BarcodeEntry
         BARCODE_SUPPORT = True
     except ImportError as e:
         print(f"Advertencia: Funcionalidades de códigos de barras no disponibles: {e}")
@@ -383,11 +384,16 @@ class ProductWindow:
         
         barcode_frame.columnconfigure(1, weight=1)
         
-        # Campo código
+        # Campo código con BarcodeEntry Widget
         ttk.Label(barcode_frame, text="Código:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.barcode_entry = ttk.Entry(
-            barcode_frame, 
-            textvariable=self.barcode_var, 
+        
+        # Usar BarcodeEntry en lugar de Entry normal
+        self.barcode_entry = BarcodeEntry(
+            barcode_frame,
+            textvariable=self.barcode_var,
+            on_scan_complete=self._on_barcode_scanned,
+            validation_enabled=True,
+            clear_after_scan=False,  # Mantener código para edición
             width=30,
             font=('Consolas', 11)
         )
@@ -400,6 +406,7 @@ class ProductWindow:
         ttk.Button(button_frame, text="Generar", command=self._generate_barcode).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Validar", command=self._validate_barcode).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Limpiar", command=self._clear_barcode).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Buscar Producto", command=self._search_by_barcode).pack(side=tk.LEFT, padx=5)
         
         # Estado
         self.validation_label = ttk.Label(barcode_frame, text="Sin código", foreground='gray')
@@ -522,10 +529,145 @@ class ProductWindow:
         self.validation_label.config(text="Sin código", foreground='gray')
         
     def _scan_barcode(self):
-        """Escanea código de barras."""
+        """Abre ventana de escaneo de códigos de barras."""
         if not self.barcode_support:
             return
-        messagebox.showinfo("Scanner", "Funcionalidad de escaneo en desarrollo")
+        
+        # Crear ventana de escaneo
+        scan_window = tk.Toplevel(self.root)
+        scan_window.title("Escanear Código de Barras")
+        scan_window.geometry("400x200")
+        scan_window.transient(self.root)
+        scan_window.grab_set()
+        
+        # Frame principal
+        main_frame = ttk.Frame(scan_window, padding=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Instrucciones
+        ttk.Label(
+            main_frame, 
+            text="Escanee el código de barras con su lector:\n(El código aparecerá automáticamente)",
+            justify=tk.CENTER
+        ).pack(pady=(0, 15))
+        
+        # Campo de escaneo
+        scan_var = tk.StringVar()
+        scan_entry = BarcodeEntry(
+            main_frame,
+            textvariable=scan_var,
+            on_scan_complete=lambda code, valid: self._handle_scanned_code(code, valid, scan_window),
+            validation_enabled=True,
+            clear_after_scan=False,
+            width=40,
+            font=('Consolas', 12)
+        )
+        scan_entry.pack(pady=(0, 15))
+        scan_entry.focus()
+        
+        # Botones
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack()
+        
+        ttk.Button(
+            button_frame, 
+            text="Cerrar", 
+            command=scan_window.destroy
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            button_frame, 
+            text="Buscar Manualmente", 
+            command=lambda: self._handle_scanned_code(scan_var.get(), True, scan_window)
+        ).pack(side=tk.LEFT, padx=5)
+    
+    def _handle_scanned_code(self, code: str, is_valid: bool, scan_window: tk.Toplevel):
+        """Maneja código escaneado desde la ventana de escaneo."""
+        if not code.strip():
+            return
+        
+        if not is_valid:
+            messagebox.showwarning("Código Inválido", "El código escaneado no es válido")
+            return
+        
+        # Buscar producto
+        try:
+            product = self.barcode_service.search_product_by_code(code)
+            
+            if product:
+                # Mostrar producto encontrado
+                self._show_product_in_form(product)
+                self._on_product_found_by_barcode(product)
+                scan_window.destroy()
+            else:
+                result = messagebox.askyesno(
+                    "Producto No Encontrado",
+                    f"No se encontró un producto con el código '{code}'.\n¿Desea usar este código para un nuevo producto?"
+                )
+                
+                if result:
+                    self.barcode_var.set(code)
+                    scan_window.destroy()
+                    self._new_product()  # Crear nuevo producto con este código
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error buscando producto: {e}")
+    
+    def _on_product_found_by_barcode(self, product: Producto):
+        """Maneja cuando se encuentra un producto por código de barras."""
+        # Seleccionar el producto en la lista
+        for item in self.product_tree.get_children():
+            values = self.product_tree.item(item)['values']
+            if values[0] == product.id_producto:
+                self.product_tree.selection_set(item)
+                self.product_tree.see(item)
+                break
+        
+        # Habilitar botones de edición
+        self.edit_button.config(state='normal')
+        self.delete_button.config(state='normal')
+        
+        messagebox.showinfo(
+            "Producto Encontrado", 
+            f"Producto: {product.nombre}\nID: {product.id_producto}"
+        )
+    
+    def _on_barcode_scanned(self, code: str, is_valid: bool):
+        """Callback para cuando se escanea un código en el campo de código de barras."""
+        if not is_valid:
+            self.validation_label.config(text="✗ Código Inválido", foreground='red')
+            return
+        
+        self.validation_label.config(text="✓ Código Válido", foreground='green')
+        
+        # Buscar producto automáticamente si está en modo de visualización
+        if not self.is_creating_new and self.editing_product is None:
+            self._search_by_barcode()
+    
+    def _search_by_barcode(self):
+        """Busca un producto por el código de barras actual."""
+        if not self.barcode_support:
+            return
+        
+        code = self.barcode_var.get().strip()
+        if not code:
+            messagebox.showwarning("Advertencia", "Ingrese un código de barras para buscar")
+            return
+        
+        try:
+            product = self.barcode_service.search_product_by_code(code)
+            
+            if product:
+                self._show_product_in_form(product)
+                self._on_product_found_by_barcode(product)
+            else:
+                messagebox.showinfo(
+                    "Producto No Encontrado", 
+                    f"No se encontró un producto con el código '{code}'"
+                )
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Error buscando producto: {e}")
         
     def _on_barcode_changed(self, *args):
         """Maneja cambios en código de barras."""
