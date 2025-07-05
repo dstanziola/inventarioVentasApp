@@ -24,8 +24,7 @@ import logging
 
 from db.database import get_database_connection
 from services.user_service import UserService
-from .session_manager import session_manager
-
+from ui.auth.session_manager import session_manager
 
 class LoginWindow:
     """Ventana de autenticación de usuarios."""

@@ -81,7 +81,58 @@ class ClientService:
         )
         
         return cliente
-    
+
+    def update_client(self, id_cliente: int, nombre: str, ruc: Optional[str] = None) -> Cliente:
+        """
+        Actualiza un cliente existente aplicando validaciones de negocio.
+        
+        Args:
+            id_cliente: ID del cliente a actualizar
+            nombre: Nuevo nombre del cliente
+            ruc: Nuevo RUC (opcional)
+        
+        Returns:
+            Cliente actualizado
+        
+        Raises:
+            ValueError: Si los datos no son válidos o el cliente no existe
+        """
+        # Validaciones básicas
+        if not nombre or not nombre.strip():
+            raise ValueError("El nombre del cliente no puede estar vacío")
+        
+        nombre = nombre.strip()
+        ruc = ruc.strip() if ruc else None
+        
+        # Verificar existencia
+        existing_client = self.get_client_by_id(id_cliente)
+        if not existing_client:
+            raise ValueError("El cliente no existe")
+        
+        # Validar unicidad del nombre si cambia
+        if nombre.lower() != existing_client.nombre.lower() and self._client_exists_by_name(nombre):
+            raise ValueError(f"Ya existe un cliente con el nombre '{nombre}'")
+        
+        # Validar unicidad del RUC si cambia y se proporciona
+        if ruc and ruc != existing_client.ruc and self._client_exists_by_ruc(ruc):
+            raise ValueError(f"Ya existe un cliente con el RUC '{ruc}'")
+        
+        # Actualizar en la base de datos
+        cursor = self.db.get_connection().cursor()
+        cursor.execute(
+            "UPDATE clientes SET nombre = ?, ruc = ? WHERE id_cliente = ?",
+            (nombre, ruc, id_cliente)
+        )
+        self.db.get_connection().commit()
+        
+        # Retornar objeto actualizado
+        return Cliente(
+            id_cliente=id_cliente,
+            nombre=nombre,
+            ruc=ruc,
+            activo=existing_client.activo
+        )
+
     def get_client_by_id(self, id_cliente: int) -> Optional[Cliente]:
         """
         Obtener cliente por su ID.
