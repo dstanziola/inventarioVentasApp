@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 
 # Importar módulos necesarios con paths corregidos
 try:
-    from db.database import get_database_connection, initialize_database
-    from ui.auth.login_window import LoginWindow
-    from ui.main.main_window import start_main_window
+    from src.db.database import get_database_connection, initialize_database
+    from src.ui.auth.login_window import LoginWindow
+    from src.ui.main.main_window import start_main_window
     
     logger.info("Módulos importados correctamente")
 except ImportError as e:
