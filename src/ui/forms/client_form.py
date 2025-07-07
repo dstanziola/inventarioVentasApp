@@ -78,7 +78,10 @@ class ClientWindow:
         self.client_name_var = tk.StringVar()
         self.client_ruc_var = tk.StringVar()
         self.search_var = tk.StringVar()
-        
+
+        # Variable de filtro de estado
+        self.filter_var = tk.StringVar(value="Activos")  # Valor por defecto
+
         # Estado del formulario
         self.editing_client: Optional[Cliente] = None
         self.clients: List[Cliente] = []
@@ -150,6 +153,13 @@ class ClientWindow:
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
         search_entry.grid(row=0, column=1, sticky=(tk.W, tk.E))
         
+        # Filtro de estado
+        ttk.Label(search_frame, text="Mostrar:").grid(row=1, column=0, pady=(5, 0), sticky=tk.W)
+        filter_options = ["Activos", "Inactivos", "Todos"]
+        filter_combo = ttk.Combobox(search_frame, textvariable=self.filter_var, values=filter_options, state="readonly", width=12)
+        filter_combo.grid(row=1, column=1, pady=(5, 0), sticky=tk.W)
+        filter_combo.bind("<<ComboboxSelected>>", self._on_filter_change)
+
         # TreeView para lista de clientes
         columns = ('ID', 'Nombre', 'RUC', 'Estado')
         self.client_tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=20)
@@ -258,35 +268,73 @@ Notas importantes:
         # Protocolo de cierre
         self.root.protocol("WM_DELETE_WINDOW", self._close_window)
         
+    # def _load_clients(self):
+    #     """Carga los clientes desde la base de datos."""
+    #     try:
+    #         self.clients = self.client_service.get_all_clients()
+    #         self._update_client_list()
+    #         self.logger.info(f"Cargados {len(self.clients)} clientes")
+    #     except Exception as e:
+    #         self.logger.error(f"Error al cargar clientes: {e}")
+    #         messagebox.showerror("Error", f"No se pudieron cargar los clientes: {e}")
+
     def _load_clients(self):
         """Carga los clientes desde la base de datos."""
         try:
-            self.clients = self.client_service.get_all_clients()
+            # Siempre cargamos TODOS, filtraremos al mostrar
+            self.clients = self.client_service.get_all_clients(only_active=False)
             self._update_client_list()
             self.logger.info(f"Cargados {len(self.clients)} clientes")
         except Exception as e:
             self.logger.error(f"Error al cargar clientes: {e}")
             messagebox.showerror("Error", f"No se pudieron cargar los clientes: {e}")
-            
+    
     def _update_client_list(self, filter_text: str = ""):
         """Actualiza la lista de clientes en el TreeView."""
+        
+        filter_text = filter_text.lower() if filter_text else ""
+        filter_option = self.filter_var.get()
+        
         # Limpiar TreeView
         for item in self.client_tree.get_children():
             self.client_tree.delete(item)
             
         # Agregar clientes filtrados
+        # for client in self.clients:
+        #     if not filter_text or filter_text.lower() in client.nombre.lower():
+        #         status = "Activo" if client.activo else "Inactivo"
+        #         ruc_display = client.ruc if client.ruc else "N/A"
+                
+        #         self.client_tree.insert('', tk.END, values=(
+        #             client.id_cliente,
+        #             client.nombre,
+        #             ruc_display,
+        #             status
+        #          ))
+
+        # Agregar clientes filtrados
         for client in self.clients:
-            if not filter_text or filter_text.lower() in client.nombre.lower():
-                status = "Activo" if client.activo else "Inactivo"
-                ruc_display = client.ruc if client.ruc else "N/A"
-                
-                self.client_tree.insert('', tk.END, values=(
-                    client.id_cliente,
-                    client.nombre,
-                    ruc_display,
-                    status
-                ))
-                
+            if filter_option == "Activos" and not client.activo:
+                continue
+            if filter_option == "Inactivos" and client.activo:
+                continue
+            if filter_text and filter_text not in client.nombre.lower():
+                continue
+
+            status = "Activo" if client.activo else "Inactivo"
+            ruc_display = client.ruc if client.ruc else "N/A"
+
+            self.client_tree.insert('', tk.END, values=(
+                client.id_cliente,
+                client.nombre,
+                ruc_display,
+                status
+            ))
+
+    def _on_filter_change(self, event):
+        """Actualiza la lista al cambiar el filtro."""
+        self._update_client_list(self.search_var.get())
+
     def _on_client_select(self, event):
         """Maneja la selección de un cliente en la lista."""
         selection = self.client_tree.selection()
@@ -424,14 +472,16 @@ Notas importantes:
         
         # Confirmar eliminación
         result = messagebox.askyesno(
-            "Confirmar Eliminación",
-            f"¿Está seguro que desea eliminar el cliente '{client_name}'?\n\nEsta acción no se puede deshacer."
+            "Confirmar Desactivación",
+            f"¿Está seguro que desea desactivar el cliente '{client_name}'?\n\nEsta acción no se puede deshacer."
         )
         
         if result:
             try:
                 # En lugar de eliminar físicamente, desactivar cliente
+                # self.client_service.deactivate_user(client_id)
                 self.client_service.deactivate_client(client_id)
+
                 messagebox.showinfo("Éxito", "Cliente desactivado exitosamente")
                 self.logger.info(f"Cliente desactivado: {client_name}")
                 

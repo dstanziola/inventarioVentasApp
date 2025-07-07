@@ -105,10 +105,12 @@ class MainWindow:
     def _center_window(self):
         """Centra la ventana en la pantalla."""
         self.root.update_idletasks()
-        x = (self.root.winfo_screenwidth() // 2) - (1024 // 2)
-        y = (self.root.winfo_screenheight() // 2) - (768 // 2)
-        self.root.geometry(f"1024x768+{x}+{y}")
-        
+        width = 800   # Nuevo ancho
+        height = 600  # Nueva altura
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+
     def _create_menu(self):
         """Crea la barra de menú principal."""
         menubar = tk.Menu(self.root)
@@ -181,7 +183,7 @@ class MainWindow:
         # Botón nueva venta
         ttk.Button(
             toolbar,
-            text="💰 Nueva Venta",
+            text="💰 Ventas",
             command=self._open_sales
         ).pack(side=tk.LEFT, padx=(0, 5))
         
@@ -271,53 +273,53 @@ class MainWindow:
         user_label.pack(pady=(0, 20))
         
         # Accesos rápidos
-        shortcuts_frame = ttk.LabelFrame(welcome_frame, text="Accesos Rápidos", padding=10)
-        shortcuts_frame.pack(fill=tk.X, pady=(0, 20))
+        # shortcuts_frame = ttk.LabelFrame(welcome_frame, text="Accesos Rápidos", padding=10)
+        # shortcuts_frame.pack(fill=tk.X, pady=(0, 20))
         
         # Configurar grid para botones
-        shortcuts_frame.columnconfigure(0, weight=1)
-        shortcuts_frame.columnconfigure(1, weight=1)
-        shortcuts_frame.columnconfigure(2, weight=1)
-        shortcuts_frame.columnconfigure(3, weight=1)
+        # shortcuts_frame.columnconfigure(0, weight=1)
+        # shortcuts_frame.columnconfigure(1, weight=1)
+        # shortcuts_frame.columnconfigure(2, weight=1)
+        # shortcuts_frame.columnconfigure(3, weight=1)
         
         # Botones de acceso rápido
-        ttk.Button(
-            shortcuts_frame,
-            text="💰 Nueva Venta",
-            command=self._open_sales,
-            width=15
-        ).grid(row=0, column=0, padx=5, pady=5)
+        # ttk.Button(
+        #     shortcuts_frame,
+        #     text="💰 Ventas",
+        #     command=self._open_sales,
+        #     width=15
+        # ).grid(row=0, column=0, padx=5, pady=5)
         
-        ttk.Button(
-            shortcuts_frame,
-            text="👥 Clientes",
-            command=self._open_clients,
-            width=15
-        ).grid(row=0, column=1, padx=5, pady=5)
+        # ttk.Button(
+        #     shortcuts_frame,
+        #     text="👥 Clientes",
+        #     command=self._open_clients,
+        #     width=15
+        # ).grid(row=0, column=1, padx=5, pady=5)
         
-        if session_manager.has_permission('admin'):
-            ttk.Button(
-                shortcuts_frame,
-                text="📦 Productos",
-                command=self._open_products,
-                width=15
-            ).grid(row=0, column=2, padx=5, pady=5)
+        # if session_manager.has_permission('admin'):
+        #     ttk.Button(
+        #         shortcuts_frame,
+        #         text="📦 Productos",
+        #         command=self._open_products,
+        #         width=15
+        #     ).grid(row=0, column=2, padx=5, pady=5)
             
             # FASE 2: Acceso rápido a reportes
-            ttk.Button(
-                shortcuts_frame,
-                text="📊 Reportes",
-                command=self._open_reports_system,
-                width=15
-            ).grid(row=0, column=3, padx=5, pady=5)
+        #     ttk.Button(
+        #         shortcuts_frame,
+        #         text="📊 Reportes",
+        #         command=self._open_reports_system,
+        #         width=15
+        #     ).grid(row=0, column=3, padx=5, pady=5)
             
             # FASE 3: Acceso rápido a tickets
-            ttk.Button(
-                shortcuts_frame,
-                text="🎫 Tickets",
-                command=self._open_ticket_preview,
-                width=15
-            ).grid(row=1, column=0, padx=5, pady=5)
+        #     ttk.Button(
+        #         shortcuts_frame,
+        #         text="🎫 Tickets",
+        #         command=self._open_ticket_preview,
+        #         width=15
+        #     ).grid(row=1, column=0, padx=5, pady=5)
         
     def _create_status_bar(self):
         """Crea la barra de estado en la parte inferior."""

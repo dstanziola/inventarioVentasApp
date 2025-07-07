@@ -113,7 +113,7 @@ class SalesWindow:
         # Título
         title_label = ttk.Label(
             main_frame,
-            text="Nueva Venta - Modo Teclado",
+            text="Nueva Venta",
             font=("Arial", 16, "bold")
         )
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))

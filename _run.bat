@@ -1,5 +1,5 @@
 @echo off
-chcp 65001
+chcp 65001 >nul
 title Sistema de Inventario - Launcher Simple
 
 echo Iniciando Sistema de Inventario v2.0

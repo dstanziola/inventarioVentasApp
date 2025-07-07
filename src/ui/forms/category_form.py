@@ -24,6 +24,7 @@ class CategoryWindow:
         
         Args:
             parent: Ventana padre
+            db_connection: Conexión a base de datos
         """
         self.parent = parent
         self.category_service = CategoryService(get_database_connection())

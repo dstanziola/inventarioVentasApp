@@ -246,3 +246,24 @@ class ClientService:
             return int(count) > 0
         except (TypeError, ValueError):
             return bool(count)  # Fallback para mocks complejos
+        
+    def deactivate_client(self, id_cliente: int):
+        """
+        Desactiva un cliente (marca como inactivo).
+        
+        Args:
+            id_cliente: ID del cliente a desactivar
+            
+        Raises:
+            ValueError: Si el cliente no existe
+        """
+        existing_client = self.get_client_by_id(id_cliente)
+        if not existing_client:
+            raise ValueError("El cliente no existe")
+        
+        cursor = self.db.get_connection().cursor()
+        cursor.execute(
+            "UPDATE clientes SET activo = 0 WHERE id_cliente = ?",
+            (id_cliente,)
+        )
+        self.db.get_connection().commit()
