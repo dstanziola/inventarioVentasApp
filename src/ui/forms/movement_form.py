@@ -312,7 +312,7 @@ class MovementForm:
         # Fila 1: Instrucciones
         instructions_label = ttk.Label(
             barcode_frame,
-            text="• Escanee código de barras con su lector HID configurado como teclado\\n"
+            text="• Escanee código de barras con su lector HID configurado como teclado\n"
                  "• O ingrese manualmente el ID del producto y presione Enter",
             font=("Arial", 9),
             foreground="darkblue",
@@ -412,9 +412,9 @@ class MovementForm:
                 # Mostrar confirmación
                 messagebox.showinfo(
                     "Producto Encontrado",
-                    f"Producto seleccionado automáticamente:\\n\\n"
-                    f"ID: {producto.id_producto}\\n"
-                    f"Nombre: {producto.nombre}\\n"
+                    f"Producto seleccionado automáticamente:\n\n"
+                    f"ID: {producto.id_producto}\n"
+                    f"Nombre: {producto.nombre}\n"
                     f"Stock actual: {getattr(producto, 'stock', 0)}"
                 )
             else:
@@ -426,7 +426,7 @@ class MovementForm:
                 # Ofrecer búsqueda manual
                 if messagebox.askyesno(
                     "Producto No Encontrado",
-                    f"No se encontró producto con código: {code}\\n\\n"
+                    f"No se encontró producto con código: {code}\n\n"
                     "¿Desea buscar manualmente en la lista de productos?"
                 ):
                     self.producto_combo.focus()
@@ -785,7 +785,7 @@ class MovementForm:
             if is_valid:
                 messagebox.showinfo("Validación", "✓ Los datos del movimiento son válidos")
             else:
-                error_message = "Errores encontrados:\\n" + "\\n".join(errors)
+                error_message = "Errores encontrados:\n" + "\n".join(errors)
                 messagebox.showerror("Validación", error_message)
         
         except Exception as e:
@@ -821,9 +821,9 @@ class MovementForm:
             # Mostrar éxito
             messagebox.showinfo(
                 "Éxito",
-                f"Movimiento creado exitosamente\\n"
-                f"ID: {movimiento.id_movimiento}\\n"
-                f"Tipo: {movimiento.tipo_movimiento}\\n"
+                f"Movimiento creado exitosamenten"
+                f"ID: {movimiento.id_movimiento}\n"
+                f"Tipo: {movimiento.tipo_movimiento}\n"
                 f"Producto: {producto_nombre}"
             )
             
@@ -1055,8 +1055,8 @@ class MovementForm:
             # Preguntar si desea generar ticket
             if messagebox.askyesno(
                 "Generar Ticket",
-                f"¿Desea generar un ticket para el movimiento de entrada?\\n"
-                f"Producto: {producto_nombre}\\n"
+                f"¿Desea generar un ticket para el movimiento de entrada?\n"
+                f"Producto: {producto_nombre}\n"
                 f"Cantidad: {cantidad} unidades"
             ):
                 ticket_service = self.ticket_service
@@ -1073,8 +1073,8 @@ class MovementForm:
                 
                 messagebox.showinfo(
                     "Ticket Generado",
-                    f"Ticket de entrada generado exitosamente\\n"
-                    f"Número: {ticket.ticket_number}\\n"
+                    f"Ticket de entrada generado exitosamente\n"
+                    f"Número: {ticket.ticket_number}\n"
                     f"Archivo: {ticket.pdf_path}"
                 )
                 

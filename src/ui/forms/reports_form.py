@@ -504,53 +504,53 @@ class ReportsForm:
         """Formatea estadísticas de inventario"""
         summary = data.get('summary', {})
         
-        text_widget.insert(tk.END, "📦 RESUMEN DE INVENTARIO\\n")
-        text_widget.insert(tk.END, "=" * 30 + "\\n")
-        text_widget.insert(tk.END, f"Total de productos: {summary.get('total_productos', 0)}\\n")
-        text_widget.insert(tk.END, f"Productos con stock: {summary.get('productos_con_stock', 0)}\\n")
-        text_widget.insert(tk.END, f"Productos sin stock: {summary.get('productos_sin_stock', 0)}\\n")
-        text_widget.insert(tk.END, f"Valor total inventario: ${summary.get('valor_total_inventario', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Fecha de corte: {summary.get('fecha_corte', 'N/A')}\\n")
+        text_widget.insert(tk.END, "📦 RESUMEN DE INVENTARIO\n")
+        text_widget.insert(tk.END, "=" * 30 + "\n")
+        text_widget.insert(tk.END, f"Total de productos: {summary.get('total_productos', 0)}\n")
+        text_widget.insert(tk.END, f"Productos con stock: {summary.get('productos_con_stock', 0)}\n")
+        text_widget.insert(tk.END, f"Productos sin stock: {summary.get('productos_sin_stock', 0)}\n")
+        text_widget.insert(tk.END, f"Valor total inventario: ${summary.get('valor_total_inventario', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Fecha de corte: {summary.get('fecha_corte', 'N/A')}\n")
     
     def _format_movements_stats(self, text_widget, data):
         """Formatea estadísticas de movimientos"""
         summary = data.get('summary', {})
         
-        text_widget.insert(tk.END, "📋 RESUMEN DE MOVIMIENTOS\\n")
-        text_widget.insert(tk.END, "=" * 30 + "\\n")
-        text_widget.insert(tk.END, f"Total movimientos: {summary.get('total_movimientos', 0)}\\n")
-        text_widget.insert(tk.END, f"Total entradas: {summary.get('total_entradas', 0)}\\n")
-        text_widget.insert(tk.END, f"Total salidas: {summary.get('total_salidas', 0)}\\n")
-        text_widget.insert(tk.END, f"Valor total: ${summary.get('valor_total_movimientos', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Período: {summary.get('periodo', 'N/A')}\\n")
+        text_widget.insert(tk.END, "📋 RESUMEN DE MOVIMIENTOS\n")
+        text_widget.insert(tk.END, "=" * 30 + "\n")
+        text_widget.insert(tk.END, f"Total movimientos: {summary.get('total_movimientos', 0)}\n")
+        text_widget.insert(tk.END, f"Total entradas: {summary.get('total_entradas', 0)}\n")
+        text_widget.insert(tk.END, f"Total salidas: {summary.get('total_salidas', 0)}\n")
+        text_widget.insert(tk.END, f"Valor total: ${summary.get('valor_total_movimientos', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Período: {summary.get('periodo', 'N/A')}\n")
     
     def _format_sales_stats(self, text_widget, data):
         """Formatea estadísticas de ventas"""
         summary = data.get('summary', {})
         totals = data.get('totals', {})
         
-        text_widget.insert(tk.END, "💰 RESUMEN DE VENTAS\\n")
-        text_widget.insert(tk.END, "=" * 30 + "\\n")
-        text_widget.insert(tk.END, f"Total ventas: {summary.get('total_ventas', 0)}\\n")
-        text_widget.insert(tk.END, f"Promedio por venta: ${summary.get('promedio_venta', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Subtotal: ${totals.get('subtotal_total', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Impuestos: ${totals.get('impuestos_total', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Total: ${totals.get('gran_total', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Período: {summary.get('periodo', 'N/A')}\\n")
+        text_widget.insert(tk.END, "💰 RESUMEN DE VENTAS\n")
+        text_widget.insert(tk.END, "=" * 30 + "\n")
+        text_widget.insert(tk.END, f"Total ventas: {summary.get('total_ventas', 0)}\n")
+        text_widget.insert(tk.END, f"Promedio por venta: ${summary.get('promedio_venta', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Subtotal: ${totals.get('subtotal_total', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Impuestos: ${totals.get('impuestos_total', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Total: ${totals.get('gran_total', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Período: {summary.get('periodo', 'N/A')}\n")
     
     def _format_profitability_stats(self, text_widget, data):
         """Formatea estadísticas de rentabilidad"""
         summary = data.get('summary', {})
         totals = data.get('totals', {})
         
-        text_widget.insert(tk.END, "📊 RESUMEN DE RENTABILIDAD\\n")
-        text_widget.insert(tk.END, "=" * 30 + "\\n")
-        text_widget.insert(tk.END, f"Productos analizados: {summary.get('productos_analizados', 0)}\\n")
-        text_widget.insert(tk.END, f"Ingresos totales: ${totals.get('total_ingresos', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Costos totales: ${totals.get('total_costos', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Ganancia bruta: ${totals.get('total_ganancia', 0):,.2f}\\n")
-        text_widget.insert(tk.END, f"Margen: {totals.get('margen_total_porcentaje', 0):.2f}%\\n")
-        text_widget.insert(tk.END, f"Período: {summary.get('periodo', 'N/A')}\\n")
+        text_widget.insert(tk.END, "📊 RESUMEN DE RENTABILIDAD\n")
+        text_widget.insert(tk.END, "=" * 30 + "\n")
+        text_widget.insert(tk.END, f"Productos analizados: {summary.get('productos_analizados', 0)}\n")
+        text_widget.insert(tk.END, f"Ingresos totales: ${totals.get('total_ingresos', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Costos totales: ${totals.get('total_costos', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Ganancia bruta: ${totals.get('total_ganancia', 0):,.2f}\n")
+        text_widget.insert(tk.END, f"Margen: {totals.get('margen_total_porcentaje', 0):.2f}%\n")
+        text_widget.insert(tk.END, f"Período: {summary.get('periodo', 'N/A')}\n")
     
     def _generate_report(self):
         """Genera el reporte seleccionado"""
@@ -674,7 +674,7 @@ class ReportsForm:
         if 'generate_btn' in self.widgets:
             self.widgets['generate_btn'].config(state="normal")
         
-        messagebox.showerror("Error", f"Error generando reporte:\\n{error_message}")
+        messagebox.showerror("Error", f"Error generando reporte:\n{error_message}")
     
     def _export_to_pdf(self):
         """Exporta el último reporte a PDF"""
@@ -739,7 +739,7 @@ class ReportsForm:
         self._update_status(f"PDF exportado: {os.path.basename(file_path)}", "green")
         
         # Preguntar si abrir el archivo
-        if messagebox.askyesno("Exportación Exitosa", f"PDF guardado en:\\n{file_path}\\n\\n¿Desea abrir el archivo?"):
+        if messagebox.askyesno("Exportación Exitosa", f"PDF guardado en:\n{file_path}\n\n¿Desea abrir el archivo?"):
             try:
                 os.startfile(file_path)  # Windows
             except AttributeError:
@@ -752,14 +752,13 @@ class ReportsForm:
         """Callback cuando hay error exportando PDF"""
         self._show_progress(False)
         self._update_status(f"Error exportando PDF: {error_message}", "red")
-        messagebox.showerror("Error", f"Error exportando PDF:\\n{error_message}")
+        messagebox.showerror("Error", f"Error exportando PDF:\n{error_message}")
     
     def _on_close(self):
         """Cierra el formulario"""
         if self.window:
             self.window.destroy()
             self.window = None
-
 
 def main():
     """Función principal para testing"""

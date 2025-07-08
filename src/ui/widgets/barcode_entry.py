@@ -551,7 +551,7 @@ if __name__ == '__main__':
     # Información
     info_label = ttk.Label(
         main_frame,
-        text="Escriba un código y presione Enter, o use los botones de simulación.\\n"
+        text="Escriba un código y presione Enter, o use los botones de simulación.\n"
              "El widget está diseñado para lectores HID en modo teclado.",
         justify=tk.CENTER,
         foreground="gray"

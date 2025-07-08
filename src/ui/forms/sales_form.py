@@ -72,6 +72,11 @@ class SalesWindow:
         self.barcode_var = tk.StringVar()
         self.quantity_var = tk.StringVar(value="1")
         self.client_var = tk.StringVar()
+
+        self.all_clients: List = []         # Lista completa de clientes
+        self.filtered_clients: List = []    # Lista filtrada por búsqueda
+        self.client_search_var = tk.StringVar()  # Texto del campo de búsqueda
+
         self.subtotal_var = tk.StringVar(value="B/. 0.00")
         self.tax_var = tk.StringVar(value="B/. 0.00")
         self.total_var = tk.StringVar(value="B/. 0.00")
@@ -218,18 +223,18 @@ class SalesWindow:
         self.product_status_label.grid(row=0, column=0, sticky=tk.W)
         
         # Botones de acción
-        ttk.Button(
-            info_frame,
-            text="Buscar Manual",
-            command=self._manual_search,
-            width=12
-        ).grid(row=0, column=3, padx=(10, 5))
+        # ttk.Button(
+        #     info_frame,
+        #     text="Buscar Manual",
+        #     command=self._manual_search,
+        #     width=12
+        # ).grid(row=0, column=3, padx=(10, 5))
         
-        ttk.Button(
-            info_frame,
-            text="Limpiar",
-            command=self._clear_barcode
-        ).grid(row=0, column=4, padx=(5, 0))
+        # ttk.Button(
+        #     info_frame,
+        #     text="Limpiar",
+        #     command=self._clear_barcode
+        # ).grid(row=0, column=4, padx=(5, 0))
         
     def _create_client_panel(self, parent):
         """Crea el panel de información del cliente."""
@@ -241,21 +246,34 @@ class SalesWindow:
         client_frame.columnconfigure(1, weight=1)
         
         # ComboBox de clientes
-        ttk.Label(client_frame, text="Cliente:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
-        self.client_combo = ttk.Combobox(
-            client_frame,
-            textvariable=self.client_var,
-            state='readonly',
-            width=25
-        )
-        self.client_combo.grid(row=0, column=1, sticky=(tk.W, tk.E))
+        # ttk.Label(client_frame, text="Cliente:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
+        # self.client_combo = ttk.Combobox(
+        #     client_frame,
+        #     textvariable=self.client_var,
+        #   state='readonly',
+        #    width=25
+        #)
+        # self.client_combo.grid(row=0, column=1, sticky=(tk.W, tk.E))
         
+        # Campo búsqueda cliente
+        ttk.Label(client_frame, text="Buscar cliente:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
+        client_search_entry = ttk.Entry(client_frame, textvariable=self.client_search_var, width=25)
+        client_search_entry.grid(row=0, column=1, sticky=(tk.W, tk.E))
+
+        # Lista de clientes filtrados
+        self.client_listbox = tk.Listbox(client_frame, height=4)
+        self.client_listbox.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0))
+
+        # Cliente seleccionado
+        self.selected_client_label = ttk.Label(client_frame, text="Cliente seleccionado: Ninguno", foreground="blue")
+        self.selected_client_label.grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=(5, 0))
+
         # Botón nuevo cliente
         ttk.Button(
             client_frame,
             text="Nuevo Cliente",
             command=self._create_new_client
-        ).grid(row=1, column=1, sticky=tk.E, pady=(5, 0))
+        ).grid(row=3, column=1, sticky=tk.E, pady=(5, 0))
         
     def _create_sale_items_panel(self, parent):
         """Crea el panel de lista de productos de la venta."""
@@ -376,7 +394,7 @@ class SalesWindow:
         self.quantity_entry.bind('<Return>', lambda e: self._add_product_to_sale())
         
         # Selección de cliente
-        self.client_combo.bind('<<ComboboxSelected>>', self._on_client_select)
+        # self.client_combo.bind('<<ComboboxSelected>>', self._on_client_select)
         
         # Protocolo de cierre
         self.root.protocol("WM_DELETE_WINDOW", self._close_window)
@@ -386,22 +404,66 @@ class SalesWindow:
 
         # Preview de información del producto al escribir en el campo de código
         self.barcode_var.trace_add("write", self._preview_product_info)
-        
+
+        # Filtrado de clientes en tiempo real
+        self.client_search_var.trace_add("write", lambda *_: self._update_client_listbox())
+
+        # Selección de cliente al hacer clic
+        self.client_listbox.bind("<<ListboxSelect>>", self._on_client_selected)
+
     def _load_data(self):
         """Carga los datos iniciales."""
         try:
             # Cargar clientes para ComboBox
-            clients = self.client_service.get_all_clients()
-            client_options = ["Venta sin cliente"] + [f"{client.nombre} - {client.ruc if client.ruc else 'Sin RUC'}" for client in clients]
-            self.client_combo['values'] = client_options
-            self.client_combo.current(0)  # Seleccionar "Venta sin cliente"
+            # clients = self.client_service.get_all_clients()
+            # client_options = ["Venta sin cliente"] + [f"{client.nombre} - {client.ruc if client.ruc else 'Sin RUC'}" for client in clients]
+            # self.client_combo['values'] = client_options
+            # self.client_combo.current(0)  # Seleccionar "Venta sin cliente"
             
-            self.logger.info("Datos cargados para nueva venta con códigos de barras en modo teclado")
+            self.all_clients = self.client_service.get_all_clients()
+            self.filtered_clients = self.all_clients.copy()
+            self._update_client_listbox()
+
+            self.logger.info("Datos cargados para venta")
             
         except Exception as e:
             self.logger.error(f"Error al cargar datos: {e}")
             messagebox.showerror("Error", f"No se pudieron cargar los datos: {e}")
     
+    def _on_client_selected(self, event):
+        """Actualiza el cliente seleccionado desde el Listbox."""
+        try:
+            selection = self.client_listbox.curselection()
+            if selection:
+                index = selection[0]
+                self.selected_client = self.filtered_clients[index]
+                self.logger.info(f"Cliente seleccionado: {self.selected_client.nombre}")
+                self.selected_client_label.config(text=f"Cliente seleccionado: {self.selected_client.nombre}")
+            else:
+                self.selected_client = None
+                self.selected_client_label.config(text="Cliente seleccionado: Ninguno")
+
+        except Exception as e:
+            self.logger.error(f"Error seleccionando cliente: {e}")
+            self.selected_client = None
+
+    def _update_client_listbox(self):
+        """Actualiza el Listbox con los clientes filtrados por búsqueda."""
+        if not hasattr(self, "client_listbox") or not self.client_listbox.winfo_exists():
+            return  # El Listbox no está creado o ya fue destruido
+
+        search_text = self.client_search_var.get().lower()
+        self.filtered_clients = [
+            c for c in self.all_clients
+            if search_text in c.nombre.lower()
+        ]
+        
+        self.client_listbox.delete(0, tk.END)
+        
+        for c in self.filtered_clients:
+            ruc_str = c.ruc if c.ruc else "Sin RUC"
+            self.client_listbox.insert(tk.END, f"{c.nombre} - {ruc_str}")
+
     # ===== MÉTODOS DE CÓDIGOS DE BARRAS - MODO TECLADO =====
     
     def _on_barcode_scanned(self, code: str, is_valid: bool = True):
@@ -443,7 +505,7 @@ class SalesWindow:
                 # Ofrecer búsqueda manual
                 messagebox.showinfo(
                     "Producto No Encontrado",
-                    f"No se encontró producto con código: {code}\\n\\n"
+                    f"No se encontró producto con código: {code}\n\n"
                     f"Verifique el código o agregue el producto manualmente."
                 )
                 
@@ -597,7 +659,7 @@ class SalesWindow:
             if precio <= 0:
                 if not messagebox.askyesno(
                     "Sin Precio",
-                    f"El producto '{producto.nombre}' no tiene precio configurado.\\n\\n"
+                    f"El producto '{producto.nombre}' no tiene precio configurado.\n\n"
                     f"¿Desea continuar?"
                 ):
                     return False
@@ -779,11 +841,11 @@ class SalesWindow:
             self.quantity_var.set("1")
             
             # Mostrar confirmación
-            messagebox.showinfo(
-                "Producto Agregado",
-                f"Producto agregado: {product.nombre}\\n"
-                f"Cantidad: {quantity}"
-            )
+            # messagebox.showinfo(
+            #     "Producto Agregado",
+            #     f"Producto agregado: {product.nombre}\n"
+            #     f"Cantidad: {quantity}"
+            # )
             
         except Exception as e:
             self.logger.error(f"Error agregando producto: {e}")
@@ -892,10 +954,51 @@ class SalesWindow:
         except Exception as e:
             self.logger.error(f"Error seleccionando cliente: {e}")
         
+    # def _create_new_client(self):
+    #     """Abre ventana para crear nuevo cliente."""
+    #     from ui.forms.client_form import ClientWindow
+    #     ClientWindow(self.root)
+
+    #     # Esperar que la ventana se cierre y luego recargar los datos
+    #     self.root.wait_window()  # Esto pausa hasta que se cierre la ventana
+    #     self._load_data()        # Vuelve a cargar los clientes
+
     def _create_new_client(self):
-        """Abre ventana para crear nuevo cliente."""
-        messagebox.showinfo("En Desarrollo", "Funcionalidad de crear cliente en desarrollo")
-        
+        from ui.forms.client_form import ClientWindow
+
+        # Guardar lista completa antes (id_cliente y ruc)
+        clientes_antes = {(c.ruc, c.nombre) for c in self.client_service.get_all_clients()}
+
+        # Abrir ventana de creación de cliente y esperar cierre
+        client_window = ClientWindow(self.root)
+        self.root.wait_window(client_window.root)
+
+        # Recargar clientes y lista
+        self._load_data()
+
+        # Lista después
+        clientes_despues = {(c.ruc, c.nombre) for c in self.all_clients}
+
+        nuevos = clientes_despues - clientes_antes
+
+        if nuevos:
+            nuevo_ruc, nuevo_nombre = nuevos.pop()
+            for i, cliente in enumerate(self.filtered_clients):
+                if cliente.ruc == nuevo_ruc and cliente.nombre == nuevo_nombre:
+                    self.selected_client = cliente
+                    self.client_listbox.selection_clear(0, tk.END)
+                    self.client_listbox.selection_set(i)
+                    self.client_listbox.activate(i)
+                    self.client_listbox.see(i)
+                    self.selected_client_label.config(text=f"Cliente seleccionado: {cliente.nombre}")
+                    break
+        else:
+            # No se detectó nuevo cliente
+            self.selected_client = None
+            self.client_search_var.set("")
+            self._update_client_listbox()
+            self.selected_client_label.config(text="Cliente seleccionado: Ninguno")
+
     def _process_sale(self):
         """Procesa la venta completa."""
         if not self.sale_items:
@@ -907,14 +1010,14 @@ class SalesWindow:
             total_amount = sum(item['total'] for item in self.sale_items)
             item_count = len(self.sale_items)
             
-            confirm_msg = f"Procesar venta:\\n\\n"
-            confirm_msg += f"Productos: {item_count} items\\n"
-            confirm_msg += f"Total: B/. {total_amount:.2f}\\n"
+            confirm_msg = f"Procesar venta:\n\n"
+            confirm_msg += f"Productos: {item_count} items\n"
+            confirm_msg += f"Total: B/. {total_amount:.2f}\n"
             
             if self.selected_client:
-                confirm_msg += f"Cliente: {self.selected_client.nombre}\\n"
+                confirm_msg += f"Cliente: {self.selected_client.nombre}\n"
             
-            confirm_msg += "\\n¿Confirmar venta?"
+            confirm_msg += "\n¿Confirmar venta?"
             
             if not messagebox.askyesno("Confirmar Venta", confirm_msg):
                 return
@@ -947,16 +1050,16 @@ class SalesWindow:
                 # Mostrar mensaje de éxito con ID real de venta
                 messagebox.showinfo(
                     "Venta Procesada", 
-                    f"Venta procesada exitosamente\\n"
-                    f"ID Venta: {venta.id_venta}\\n"
-                    f"Total: B/. {total_amount:.2f}\\n"
+                    f"Venta procesada exitosamente\n"
+                    f"ID Venta: {venta.id_venta}\n"
+                    f"Total: B/. {total_amount:.2f}\n"
                     f"Stock actualizado automáticamente"
                 )
                 
             except Exception as venta_error:
                 messagebox.showerror(
                     "Error en Venta",
-                    f"Error procesando venta: {venta_error}\\n\\n"
+                    f"Error procesando venta: {venta_error}\n\n"
                     f"La venta no se pudo completar."
                 )
                 return  # No limpiar si hay error
@@ -964,8 +1067,12 @@ class SalesWindow:
             # Limpiar venta
             self._clear_all_items()
             self.selected_client = None
-            self.client_combo.current(0)
+            # self.client_combo.current(0)
             
+            self.client_search_var.set("")       # Limpia la búsqueda
+            self.selected_client = None
+            self._update_client_listbox()        # Vuelve a mostrar todos
+
         except Exception as e:
             self.logger.error(f"Error procesando venta: {e}")
             messagebox.showerror("Error", f"Error procesando venta: {e}")
@@ -975,13 +1082,16 @@ class SalesWindow:
         if self.sale_items:
             result = messagebox.askyesno(
                 "Cancelar Venta",
-                "¿Está seguro que desea cancelar la venta actual?\\nSe perderán todos los productos agregados."
+                "¿Está seguro que desea cancelar la venta actual?\nSe perderán todos los productos agregados."
             )
             if result:
                 self._clear_all_items()
                 self.selected_client = None
-                self.client_combo.current(0)
-        
+                # self.client_combo.current(0)
+                self.client_search_var.set("")       # Limpia la búsqueda
+                self.selected_client = None
+                self._update_client_listbox()        # Vuelve a mostrar todos
+
     def _close_window(self):
         """Cierra la ventana."""
         try:
