@@ -32,7 +32,8 @@ class Producto:
         precio: Union[int, float, Decimal] = 0,
         tasa_impuesto: Union[int, float, Decimal] = 0,
         activo: bool = True,
-        id_producto: Optional[int] = None
+        id_producto: Optional[int] = None,
+        categoria_tipo: Optional[str] = None
     ):
         """
         Inicializar un nuevo producto.
@@ -55,6 +56,7 @@ class Producto:
         self.precio = Decimal(str(precio))
         self.tasa_impuesto = Decimal(str(tasa_impuesto))
         self.activo = activo
+        self.categoria_tipo = categoria_tipo  # ← AÑADIR ESTA LÍNEA
     
     def calcular_impuesto(self, cantidad: int) -> Decimal:
         """

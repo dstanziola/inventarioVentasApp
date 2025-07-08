@@ -31,10 +31,7 @@ from datetime import datetime, date
 from decimal import Decimal
 import logging
 
-from services.movement_service import MovementService
-from services.product_service import ProductService
-from services.barcode_service import BarcodeService
-from services.ticket_service import TicketService
+from services.service_container import get_container
 from ui.auth.session_manager import session_manager
 from ui.widgets.decimal_entry import DecimalEntry
 from ui.widgets.barcode_entry import BarcodeEntry
@@ -42,7 +39,6 @@ from utils.barcode_utils import BarcodeUtils
 
 # Configurar logging
 logger = logging.getLogger(__name__)
-
 
 class MovementForm:
     """
@@ -69,16 +65,16 @@ class MovementForm:
         
         Args:
             parent: Ventana padre
-            db_connection: Conexión a base de datos
+            db_connection: Conexión a base de datos (mantenido para compatibilidad)
         """
         self.parent = parent
-        self.db = db_connection
-        self.movement_service = MovementService(db_connection)
-        self.product_service = ProductService(db_connection)
-        self.barcode_service = BarcodeService()
+        self.db = db_connection  # Mantenido para compatibilidad
         
-        # Configurar BarcodeService con ProductService
-        self.barcode_service.set_product_service(self.product_service)
+        # Lazy loading para servicios
+        self._movement_service = None
+        self._product_service = None
+        self._barcode_service = None
+        self._ticket_service = None
         
         # Variables del formulario
         self.producto_var = tk.StringVar()
@@ -100,6 +96,41 @@ class MovementForm:
         self.update_form_state()
         
         logger.info("MovementForm inicializado en modo teclado (sin hardware)")
+    
+    @property
+    def movement_service(self):
+        """Acceso lazy al MovementService a través del Service Container."""
+        if self._movement_service is None:
+            container = get_container()
+            self._movement_service = container.get('movement_service')
+        return self._movement_service
+    
+    @property
+    def product_service(self):
+        """Acceso lazy al ProductService a través del Service Container."""
+        if self._product_service is None:
+            container = get_container()
+            self._product_service = container.get('product_service')
+        return self._product_service
+    
+    @property
+    def barcode_service(self):
+        """Acceso lazy al BarcodeService a través del Service Container."""
+        if self._barcode_service is None:
+            container = get_container()
+            self._barcode_service = container.get('barcode_service')
+            # Configurar BarcodeService con ProductService
+            if hasattr(self._barcode_service, 'set_product_service'):
+                self._barcode_service.set_product_service(self.product_service)
+        return self._barcode_service
+    
+    @property
+    def ticket_service(self):
+        """Acceso lazy al TicketService a través del Service Container."""
+        if self._ticket_service is None:
+            container = get_container()
+            self._ticket_service = container.get('ticket_service')
+        return self._ticket_service
     
     def create_widgets(self):
         """Crear widgets de la interfaz."""
@@ -1028,7 +1059,7 @@ class MovementForm:
                 f"Producto: {producto_nombre}\\n"
                 f"Cantidad: {cantidad} unidades"
             ):
-                ticket_service = TicketService(self.db)
+                ticket_service = self.ticket_service
                 
                 # Obtener usuario actual
                 current_user = session_manager.get_current_user()

@@ -28,9 +28,10 @@ logger = logging.getLogger(__name__)
 
 # Importar módulos necesarios con paths corregidos
 try:
-    from src.db.database import get_database_connection, initialize_database
-    from src.ui.auth.login_window import LoginWindow
-    from src.ui.main.main_window import start_main_window
+    from db.database import get_database_connection, initialize_database
+    from ui.auth.login_window import LoginWindow
+    from ui.main.main_window import start_main_window
+    from services.service_container import setup_default_container, cleanup_container
     
     logger.info("Módulos importados correctamente")
 except ImportError as e:
@@ -142,6 +143,16 @@ def main():
         db_connection, monetary_config = initialize_system()
         logger.info("Sistema inicializado correctamente")
         
+        # Configurar Service Container con servicios del sistema
+        logger.info("Configurando Service Container...")
+        try:
+            container = setup_default_container()
+            logger.info(f"Service Container configurado con {len(container.get_registered_services())} servicios")
+        except Exception as e:
+            logger.error(f"Error configurando Service Container: {e}")
+            messagebox.showerror("Error", f"Error configurando servicios del sistema: {e}")
+            return
+        
         # Mostrar ventana de login
         login_window = LoginWindow()
         login_success = login_window.show()
@@ -150,10 +161,16 @@ def main():
             logger.info("Login exitoso, iniciando ventana principal")
             
             # Iniciar ventana principal (MainWindow maneja su propia instancia de Tk)
-            main_window = start_main_window()
-            logger.info("Aplicación iniciada correctamente")
+            try:
+                main_window = start_main_window()
+                logger.info("Aplicación iniciada correctamente")
+            finally:
+                # Cleanup del Service Container al cerrar aplicación
+                logger.info("Limpiando Service Container...")
+                cleanup_container()
         else:
             logger.info("Login cancelado o fallido")
+            cleanup_container()
             return
         
     except Exception as e:

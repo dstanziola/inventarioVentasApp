@@ -212,7 +212,10 @@ class BarcodeEntry(ttk.Entry):
             
             # Limpiar campo si está configurado
             if self._clear_after_scan:
-                self.delete(0, tk.END)
+                # self.delete(0, tk.END)
+                if self.winfo_exists():
+                    self.delete(0, tk.END)
+
                 logger.debug("Campo limpiado después del escaneo")
             
             # Actualizar estilo según validación

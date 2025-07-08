@@ -26,12 +26,8 @@ import logging
 from typing import Dict, Any
 from datetime import datetime
 
-# Importaciones de servicios
-from db.database import get_database_connection
-from services.category_service import CategoryService
-from services.product_service import ProductService
-from services.client_service import ClientService
-from services.sales_service import SalesService
+# Importaciones de servicios - Service Container Integration
+from services.service_container import get_container
 
 # Importaciones de ventanas
 from ui.forms.category_form import CategoryWindow
@@ -88,19 +84,52 @@ class MainWindow:
         self._setup_events()
         
         self.logger.info("Ventana principal inicializada correctamente")
+    
+    # === PROPIEDADES LAZY PARA SERVICIOS DEL CONTAINER ===
+    
+    @property
+    def db_connection(self):
+        """Obtiene conexión de base de datos del container (lazy)."""
+        return self.container.get('database')
+    
+    @property 
+    def category_service(self):
+        """Obtiene CategoryService del container (lazy)."""
+        return self.container.get('category_service')
+    
+    @property
+    def product_service(self):
+        """Obtiene ProductService del container (lazy)."""
+        return self.container.get('product_service')
+    
+    @property
+    def client_service(self):
+        """Obtiene ClientService del container (lazy)."""
+        return self.container.get('client_service')
+    
+    @property
+    def sales_service(self):
+        """Obtiene SalesService del container (lazy)."""
+        return self.container.get('sales_service')
         
     def _initialize_services(self):
-        """Inicializa los servicios necesarios para la aplicación."""
+        """Inicializa los servicios usando Service Container."""
         try:
-            self.db_connection = get_database_connection()
-            self.category_service = CategoryService(self.db_connection)
-            self.product_service = ProductService(self.db_connection)
-            self.client_service = ClientService(self.db_connection)
-            self.sales_service = SalesService(self.db_connection)
+            # Obtener Service Container configurado
+            self.container = get_container()
+            
+            # Validar que el container tenga los servicios necesarios
+            required_services = ['database', 'category_service', 'product_service', 'client_service', 'sales_service']
+            for service in required_services:
+                if not self.container.is_registered(service):
+                    raise ConnectionError(f"Servicio '{service}' no está registrado en el container")
+            
+            # Los servicios se obtienen lazy a través de propiedades
+            self.logger.info("Servicios inicializados correctamente usando Service Container")
             
         except Exception as e:
             self.logger.error(f"Error al inicializar servicios: {e}")
-            raise ConnectionError(f"No se pudo conectar con la base de datos: {e}")
+            raise ConnectionError(f"No se pudo inicializar el Service Container: {e}")
             
     def _center_window(self):
         """Centra la ventana en la pantalla."""

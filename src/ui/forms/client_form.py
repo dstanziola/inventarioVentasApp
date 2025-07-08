@@ -18,8 +18,7 @@ from tkinter import ttk, messagebox
 from typing import Optional, List
 import logging
 
-from db.database import get_database_connection
-from services.client_service import ClientService
+from services.service_container import get_container
 from models.cliente import Cliente
 
 
@@ -62,7 +61,7 @@ class ClientWindow:
             parent: Ventana padre
         """
         self.parent = parent
-        self.client_service = ClientService(get_database_connection())
+        self._client_service = None  # Lazy loading
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)
@@ -104,6 +103,14 @@ class ClientWindow:
         
         # Cargar datos iniciales
         self._load_clients()
+    
+    @property
+    def client_service(self):
+        """Acceso lazy al ClientService a través del Service Container."""
+        if self._client_service is None:
+            container = get_container()
+            self._client_service = container.get('client_service')
+        return self._client_service
         
     def _create_ui(self):
         """Crea los elementos de la interfaz de usuario."""

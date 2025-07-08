@@ -1,5 +1,3 @@
-# ui/auth/session_manager.py
-
 """
 Sistema de gestión de sesiones de usuario.
 
@@ -14,71 +12,90 @@ RESPONSABILIDADES:
 """
 
 from typing import Optional
-from models.usuario import Usuario  # Asegúrate de tener esta clase definida
+from models.usuario import Usuario
+
 
 class SessionManager:
+    """Gestor de sesiones de usuario para la aplicación.
+       Implementación tipo Singleton simple.
     """
-    Gestor de sesión para mantener al usuario autenticado actual.
-    """
-
+    
     def __init__(self):
+        """Inicializa el gestor de sesiones."""
         self._current_user: Optional[Usuario] = None
         self._is_authenticated: bool = False
-
+        
+    @property
+    def current_user(self) -> Optional[Usuario]:
+        """Retorna el usuario actualmente autenticado."""
+        return self._current_user
+        
+    @property
+    def is_authenticated(self) -> bool:
+        """Retorna True si hay un usuario autenticado."""
+        return self._is_authenticated
+        
     def login(self, user: Usuario) -> None:
-        """Establece sesión para usuario autenticado."""
+        """
+        Establece sesión para usuario autenticado.
+        
+        Args:
+            user: Usuario autenticado exitosamente
+        """
         self._current_user = user
         self._is_authenticated = True
-
+        
     def logout(self) -> None:
         """Cierra la sesión actual y limpia datos de usuario."""
         self._current_user = None
         self._is_authenticated = False
-
+        
     def has_permission(self, action: str) -> bool:
-        """Verifica si el usuario actual tiene permiso para una acción."""
+        """
+        Verifica si el usuario actual tiene permiso para una acción.
+        
+        Args:
+            action: Acción a verificar ('admin', 'sales', 'reports', etc.)
+            
+        Returns:
+            True si el usuario tiene permiso, False en caso contrario
+        """
         if not self.is_authenticated or not self._current_user:
             return False
-
+            
         user_role = self._current_user.rol
-
+        
+        # Administradores tienen acceso completo
         if user_role == 'ADMIN':
             return True
-
+            
+        # Vendedores solo tienen acceso a ventas y consultas
         if user_role == 'VENDEDOR':
             allowed_actions = ['sales', 'view_products', 'view_clients', 'view_categories']
             return action in allowed_actions
-
+            
         return False
-
+        
     def get_user_info(self) -> dict:
-        """Retorna información del usuario actual para mostrar en UI."""
+        """
+        Retorna información del usuario actual para mostrar en UI.
+        
+        Returns:
+            Dict con información de usuario o datos vacíos si no hay sesión
+        """
         if not self.is_authenticated or not self._current_user:
             return {
                 'nombre_usuario': 'No autenticado',
                 'rol': '',
                 'activo': False
             }
-
+            
         return {
             'nombre_usuario': self._current_user.nombre_usuario,
             'rol': self._current_user.rol,
             'activo': self._current_user.activo
         }
 
-    def get_current_user(self) -> Optional[dict]:
-        """Retorna un diccionario con los datos del usuario actual, compatible con el sistema."""
-        if self._current_user:
-            return self.get_user_info()
-        return None
 
-    @property
-    def current_user(self) -> Optional[Usuario]:
-        return self._current_user
-
-    @property
-    def is_authenticated(self) -> bool:
-        return self._is_authenticated
-
-# Instancia global
+# Instancia global del gestor de sesiones
 session_manager = SessionManager()

@@ -237,6 +237,7 @@ class ProductService:
             query = """
                 SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.costo,
                        p.stock, p.stock_minimo, p.id_categoria, c.nombre as categoria_nombre,
+                       c.tipo AS categoria_tipo,
                        p.tasa_impuesto, p.activo, p.fecha_creacion
                 FROM productos p
                 LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
@@ -253,6 +254,7 @@ class ProductService:
                     id_producto=result['id_producto'],
                     nombre=result['nombre'],
                     id_categoria=result['id_categoria'],
+                    categoria_tipo=result['categoria_tipo'],
                     stock=result['stock'] if result['stock'] is not None else 0,
                     costo=Decimal(str(result['costo'])) if result['costo'] is not None else Decimal('0'),
                     precio=Decimal(str(result['precio'])) if result['precio'] is not None else Decimal('0'),

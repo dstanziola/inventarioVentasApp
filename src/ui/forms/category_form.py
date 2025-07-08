@@ -10,8 +10,7 @@ from tkinter import ttk, messagebox
 from typing import Optional, List
 import logging
 
-from db.database import get_database_connection
-from services.category_service import CategoryService
+from services.service_container import get_container
 from models.categoria import Categoria
 from ui.utils.window_manager import window_manager, safe_widget_state, validate_widget_exists
 
@@ -24,10 +23,9 @@ class CategoryWindow:
         
         Args:
             parent: Ventana padre
-            db_connection: Conexión a base de datos
         """
         self.parent = parent
-        self.category_service = CategoryService(get_database_connection())
+        self._category_service = None  # Lazy loading
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)
@@ -67,6 +65,14 @@ class CategoryWindow:
         
         # Cargar datos iniciales
         self._load_categories()
+    
+    @property
+    def category_service(self):
+        """Acceso lazy al CategoryService a través del Service Container."""
+        if self._category_service is None:
+            container = get_container()
+            self._category_service = container.get('category_service')
+        return self._category_service
         
     def _create_ui(self):
         """Crea los elementos de la interfaz de usuario."""

@@ -13,17 +13,13 @@ from datetime import datetime
 import tempfile
 import os
 
-# Imports corregidos con manejo de errores robusto
+# Imports con Service Container Integration
 try:
-    from db.database import get_database_connection, DatabaseConnection
-    from services.product_service import ProductService
-    from services.category_service import CategoryService
+    from services.service_container import get_container
     from models.producto import Producto
     
     # Imports opcionales para códigos de barras (MODO TECLADO)
     try:
-        from services.label_service import LabelService
-        from services.barcode_service import BarcodeService
         from utils.barcode_utils import validate_barcode, BarcodeUtils, generate_product_code
         from ui.widgets.barcode_entry import BarcodeEntry
         BARCODE_SUPPORT = True
@@ -98,75 +94,87 @@ class ProductWindow:
         self._load_initial_data()
         
         self.logger.info("ProductWindow inicializado correctamente")
+    
+    # === PROPIEDADES LAZY PARA SERVICIOS DEL CONTAINER ===
+    
+    @property
+    def product_service(self):
+        """Obtiene ProductService del container (lazy)."""
+        return self.container.get('product_service')
+    
+    @property
+    def category_service(self):
+        """Obtiene CategoryService del container (lazy)."""
+        return self.container.get('category_service')
+    
+    @property
+    def label_service(self):
+        """Obtiene LabelService del container si está disponible (lazy)."""
+        if self.barcode_support and self.container.is_registered('label_service'):
+            return self.container.get('label_service')
+        return None
+    
+    @property
+    def barcode_service(self):
+        """Obtiene BarcodeService del container si está disponible (lazy)."""
+        if self.barcode_support and self.container.is_registered('barcode_service'):
+            return self.container.get('barcode_service')
+        return None
         
     def _initialize_services(self):
-        """Inicializa todos los servicios con manejo de errores robusto."""
-        self.logger.info("Inicializando servicios...")
-        
-        # Inicializar servicios principales
-        self.product_service = None
-        self.category_service = None
-        
-        # Inicializar servicios opcionales
-        self.label_service = None
-        self.barcode_service = None
+        """Inicializa servicios usando Service Container."""
+        self.logger.info("Inicializando servicios con Service Container...")
         
         try:
-            # Obtener conexión de base de datos
-            self.logger.info("Obteniendo conexión a base de datos...")
-            db_connection = get_database_connection()
+            # Obtener Service Container configurado
+            self.container = get_container()
             
-            if db_connection is None:
-                raise Exception("get_database_connection() retornó None")
+            # Validar servicios principales requeridos
+            required_services = ['product_service', 'category_service']
+            for service in required_services:
+                if not self.container.is_registered(service):
+                    raise Exception(f"Servicio principal '{service}' no está registrado en el container")
             
-            # Validar que la conexión es del tipo correcto
-            if not isinstance(db_connection, DatabaseConnection):
-                raise Exception(f"Conexión de tipo inesperado: {type(db_connection)}")
+            self.logger.info("Servicios principales validados en container")
             
-            # Probar la conexión
-            test_conn = db_connection.get_connection()
-            if test_conn is None:
-                raise Exception("No se pudo obtener conexión SQLite")
-            
-            self.logger.info("Conexión de base de datos validada correctamente")
-            
-            # Inicializar servicios principales con conexión validada
-            self.logger.info("Inicializando ProductService...")
-            self.product_service = ProductService(db_connection)
-            
-            self.logger.info("Inicializando CategoryService...")
-            self.category_service = CategoryService(db_connection)
-            
-            self.logger.info("Servicios principales inicializados correctamente")
-            
-            # Inicializar servicios opcionales (códigos de barras)
+            # Verificar servicios opcionales de códigos de barras
             if self.barcode_support:
-                try:
-                    self.logger.info("Inicializando servicios de códigos de barras...")
-                    self.label_service = LabelService()
-                    self.barcode_service = BarcodeService()
-                    self.logger.info("Servicios de códigos de barras inicializados")
-                except Exception as e:
-                    self.logger.warning(f"No se pudieron inicializar servicios de códigos: {e}")
-                    # CORRECCIÓN CRÍTICA: Usar variable de instancia, no global
+                barcode_services = ['label_service', 'barcode_service']
+                missing_services = []
+                
+                for service in barcode_services:
+                    if not self.container.is_registered(service):
+                        missing_services.append(service)
+                
+                if missing_services:
+                    self.logger.warning(f"Servicios de barcode no disponibles: {missing_services}")
                     self.barcode_support = False
+                else:
+                    self.logger.info("Servicios de códigos de barras disponibles en container")
+            
+            self.logger.info(f"Servicios inicializados: barcode_support={self.barcode_support}")
             
         except Exception as e:
-            self.logger.error(f"Error crítico inicializando servicios: {e}")
+            self.logger.error(f"Error inicializando servicios: {e}")
             self._show_service_error(e)
             
     def _validate_services(self) -> bool:
-        """Valida que los servicios críticos estén inicializados correctamente."""
-        if self.product_service is None:
-            self.logger.error("ProductService no inicializado")
-            return False
+        """Valida que los servicios críticos estén disponibles en el container."""
+        try:
+            # Intentar obtener servicios principales del container
+            product_service = self.container.get('product_service')
+            category_service = self.container.get('category_service')
             
-        if self.category_service is None:
-            self.logger.error("CategoryService no inicializado")
-            return False
+            if product_service is None or category_service is None:
+                self.logger.error("Servicios principales no disponibles en container")
+                return False
+                
+            self.logger.info("Validación de servicios exitosa")
+            return True
             
-        self.logger.info("Validación de servicios exitosa")
-        return True
+        except Exception as e:
+            self.logger.error(f"Error validando servicios: {e}")
+            return False
         
     def _show_service_error(self, error: Exception):
         """Muestra error de inicialización de servicios al usuario."""

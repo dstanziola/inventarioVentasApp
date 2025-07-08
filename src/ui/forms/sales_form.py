@@ -30,11 +30,8 @@ from typing import List, Dict, Optional
 import logging
 from decimal import Decimal
 
-from db.database import get_database_connection
-from services.sales_service import SalesService
-from services.product_service import ProductService
-from services.client_service import ClientService
-from services.barcode_service import BarcodeService
+from services.service_container import get_container
+from src.models import producto
 from ui.widgets.barcode_entry import BarcodeEntry
 from utils.barcode_utils import validate_barcode, BarcodeUtils
 
@@ -50,29 +47,20 @@ class SalesWindow:
             parent: Ventana padre
         """
         self.parent = parent
-        # Configurar servicios con dependencias correctas
-        self.db_connection = get_database_connection()
-        self.product_service = ProductService(self.db_connection)
-        self.client_service = ClientService(self.db_connection)
         
-        # Configurar SalesService con sus dependencias
-        self.sales_service = SalesService(
-            self.db_connection, 
-            product_service=self.product_service,
-            client_service=self.client_service
-        )
-        
-        # Configurar BarcodeService sin dependencias de hardware
-        self.barcode_service = BarcodeService()
-        self.barcode_service.set_product_service(self.product_service)
+        # Lazy loading para servicios
+        self._product_service = None
+        self._client_service = None
+        self._sales_service = None
+        self._barcode_service = None
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)
         
         # Crear ventana
         self.root = tk.Toplevel(parent)
-        self.root.title("Procesamiento de Ventas - Modo Teclado")
-        self.root.geometry("1200x800")  # Tamaño optimizado
+        self.root.title("Procesamiento de Ventas")
+        self.root.geometry("900x600")
         self.root.transient(parent)
         self.root.grab_set()
         
@@ -96,6 +84,41 @@ class SalesWindow:
         
         # Cargar datos iniciales
         self._load_data()
+    
+    @property
+    def product_service(self):
+        """Acceso lazy al ProductService a través del Service Container."""
+        if self._product_service is None:
+            container = get_container()
+            self._product_service = container.get('product_service')
+        return self._product_service
+    
+    @property
+    def client_service(self):
+        """Acceso lazy al ClientService a través del Service Container."""
+        if self._client_service is None:
+            container = get_container()
+            self._client_service = container.get('client_service')
+        return self._client_service
+    
+    @property
+    def sales_service(self):
+        """Acceso lazy al SalesService a través del Service Container."""
+        if self._sales_service is None:
+            container = get_container()
+            self._sales_service = container.get('sales_service')
+        return self._sales_service
+    
+    @property
+    def barcode_service(self):
+        """Acceso lazy al BarcodeService a través del Service Container."""
+        if self._barcode_service is None:
+            container = get_container()
+            self._barcode_service = container.get('barcode_service')
+            # Configurar con ProductService si es necesario
+            if hasattr(self._barcode_service, 'set_product_service'):
+                self._barcode_service.set_product_service(self.product_service)
+        return self._barcode_service
         
         self.logger.info("SalesWindow inicializado en modo teclado (sin hardware)")
         
@@ -113,7 +136,7 @@ class SalesWindow:
         # Título
         title_label = ttk.Label(
             main_frame,
-            text="Nueva Venta",
+            text="Ventas",
             font=("Arial", 16, "bold")
         )
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
@@ -145,9 +168,7 @@ class SalesWindow:
         # Instrucciones
         instructions = ttk.Label(
             entry_frame,
-            text="• Configure su lector de códigos de barras en modo HID teclado\\n"
-                 "• Escanee código de barras o ingrese ID del producto manualmente\\n"
-                 "• Presione Enter para agregar el producto a la venta",
+            text=" Escanee código de barras o ingrese ID del producto",
             font=("Arial", 9),
             foreground="darkblue",
             justify=tk.LEFT
@@ -165,7 +186,7 @@ class SalesWindow:
             validation_enabled=True,
             clear_after_scan=True,
             font=('Consolas', 12),
-            width=25
+            width=12
         )
         self.barcode_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
         
@@ -254,7 +275,7 @@ class SalesWindow:
         for col in columns:
             self.items_tree.heading(col, text=col)
             
-        self.items_tree.column('Código', width=100)
+        self.items_tree.column('Código', width=50)
         self.items_tree.column('Producto', width=200)
         self.items_tree.column('Cantidad', width=80)
         self.items_tree.column('Precio Unit.', width=100)
@@ -362,6 +383,9 @@ class SalesWindow:
         
         # Foco inicial en código de barras
         self.barcode_entry.focus()
+
+        # Preview de información del producto al escribir en el campo de código
+        self.barcode_var.trace_add("write", self._preview_product_info)
         
     def _load_data(self):
         """Carga los datos iniciales."""
@@ -431,6 +455,35 @@ class SalesWindow:
             )
             messagebox.showerror("Error", f"Error procesando código: {e}")
     
+    def _preview_product_info(self, *_):
+        """
+        Actualiza la información del producto al ingresar código, sin agregarlo aún.
+        """
+        code = self.barcode_var.get().strip()
+
+        if not code:
+            self._clear_product_status()
+            return
+
+        if not validate_barcode(code) and not code.isdigit():
+            self.product_status_label.config(
+                text="✗ Código inválido",
+                foreground="red"
+            )
+            return
+
+        producto = self._search_product_by_code(code)
+        if producto:
+            self.product_status_label.config(
+                text=f"✓ {producto.nombre} - Stock: {producto.stock}",
+                foreground="green"
+            )
+        else:
+            self.product_status_label.config(
+                text="✗ Producto no encontrado",
+                foreground="red"
+            )
+
     def _search_product_by_code(self, code: str):
         """
         Buscar producto por código de barras o ID.
@@ -487,19 +540,23 @@ class SalesWindow:
                 quantity = int(quantity_str)
             
             # Verificar stock disponible
-            if producto.stock is not None and producto.stock < quantity:
-                if not messagebox.askyesno(
-                    "Stock Insuficiente",
-                    f"Stock disponible: {producto.stock}\\n"
-                    f"Cantidad solicitada: {quantity}\\n\\n"
-                    f"¿Desea continuar con la venta?"
-                ):
-                    self.product_status_label.config(
-                        text="Venta cancelada por stock insuficiente",
-                        foreground="orange"
-                    )
-                    return
-            
+            # Omitir advertencia si es servicio
+            # self.logger.warning(f"[DEBUG] Producto: {producto.nombre} | Categoria tipo: {getattr(producto, 'categoria_tipo', 'NULO')}")
+
+            if getattr(producto, 'categoria_tipo', None) != 'SERVICIO':
+                if producto.stock is not None and producto.stock < quantity:
+                    if not messagebox.askyesno(
+                        "Stock Insuficiente",
+                        f"Stock disponible: {producto.stock}\n"
+                        f"Cantidad solicitada: {quantity}\n\n"
+                        f"¿Desea continuar con la venta?"
+                    ):
+                        self.product_status_label.config(
+                            text="Venta cancelada por stock insuficiente",
+                            foreground="orange"
+                        )
+                        return
+
             # Agregar producto a la venta
             self._add_product_item(producto, quantity, code)
             
@@ -579,6 +636,9 @@ class SalesWindow:
                 existing_item['impuesto'] = existing_item['subtotal'] * tasa_impuesto / 100
                 existing_item['total'] = existing_item['subtotal'] + existing_item['impuesto']
                 
+                if not self.items_tree.winfo_exists():
+                    return
+
                 # Actualizar TreeView
                 for child in self.items_tree.get_children():
                     item_values = self.items_tree.item(child, 'values')
@@ -693,15 +753,23 @@ class SalesWindow:
             if not self._validate_product_for_sale(product):
                 return
             
-            # Verificar stock disponible
-            if product.stock is not None and product.stock < quantity:
-                if not messagebox.askyesno(
-                    "Stock Insuficiente",
-                    f"Stock disponible: {product.stock}\\n"
-                    f"Cantidad solicitada: {quantity}\\n\\n"
-                    f"¿Desea continuar con la venta?"
-                ):
-                    return
+            # Verificar 
+            # Omitir advertencia de stock si es servicio
+            # self.logger.warning(f"[DEBUG] Producto: {product.nombre} | Categoria tipo: {getattr(product, 'categoria_tipo', 'NULO')}")
+
+            if getattr(product, 'categoria_tipo', '').upper() != 'SERVICIO':
+                if product.stock is not None and product.stock < quantity:
+                    if not messagebox.askyesno(
+                        "Stock Insuficiente",
+                        f"Stock disponible: {product.stock}\n"
+                        f"Cantidad solicitada: {quantity}\n\n"
+                        f"¿Desea continuar con la venta?"
+                    ):
+                        self.product_status_label.config(
+                            text="Venta cancelada por stock insuficiente",
+                            foreground="orange"
+                        )
+                        return
             
             # Agregar producto
             self._add_product_item(product, quantity, code_or_id)
