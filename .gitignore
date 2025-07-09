@@ -1,4 +1,5 @@
 # .gitignore
+
 # Entorno virtual
 venv/
 env/
@@ -32,13 +33,19 @@ dist/
 build/
 
 # .gitignore additions
-"""
+commit*.*
+
 # Logging
 logs/
 *.log
-"""
 
 # Archivos de respaldo
 *.bk
 *.bak
 *.bk
+
+# Archivos de desarrollo
+.coverage.*
+CHANGELOG*.*
+validate*.*
+test*.*
