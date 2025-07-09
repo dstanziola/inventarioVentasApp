@@ -827,9 +827,9 @@ class MovementForm:
                 f"Producto: {producto_nombre}"
             )
             
-            # Preguntar si desea generar ticket para movimientos de ENTRADA
-            if movimiento.tipo_movimiento == 'ENTRADA':
-                self._offer_ticket_generation(movimiento.id_movimiento, producto_nombre, cantidad)
+            # Preguntar si desea generar ticket para movimientos de ENTRADA y AJUSTE
+            if movimiento.tipo_movimiento in ['ENTRADA', 'AJUSTE']:
+                self._offer_ticket_generation(movimiento.id_movimiento, producto_nombre, cantidad, movimiento.tipo_movimiento)
             
             # Limpiar formulario
             self.clear_form()
@@ -1049,15 +1049,28 @@ class MovementForm:
         self.on_tipo_changed()
         self.validate_form_data()
     
-    def _offer_ticket_generation(self, id_movimiento: int, producto_nombre: str, cantidad: int):
-        """Ofrecer generar ticket para movimiento de entrada."""
+    def _offer_ticket_generation(self, id_movimiento: int, producto_nombre: str, cantidad: int, tipo_movimiento: str = "ENTRADA"):
+        """Ofrecer generar ticket para movimiento de entrada o ajuste."""
         try:
+            # Validar tipo de movimiento soportado
+            if tipo_movimiento not in ['ENTRADA', 'AJUSTE']:
+                logger.warning(f"Tipo de movimiento {tipo_movimiento} no soportado para tickets")
+                return
+            
+            # Determinar mensaje según tipo
+            if tipo_movimiento == 'ENTRADA':
+                tipo_texto = "entrada"
+                cantidad_texto = f"{cantidad} unidades"
+            else:  # AJUSTE
+                tipo_texto = "ajuste de inventario"
+                cantidad_texto = f"{cantidad:+d} unidades" if cantidad != 0 else "sin cambio de cantidad"
+            
             # Preguntar si desea generar ticket
             if messagebox.askyesno(
                 "Generar Ticket",
-                f"¿Desea generar un ticket para el movimiento de entrada?\n"
+                f"¿Desea generar un ticket para el movimiento de {tipo_texto}?\n"
                 f"Producto: {producto_nombre}\n"
-                f"Cantidad: {cantidad} unidades"
+                f"Cantidad: {cantidad_texto}"
             ):
                 ticket_service = self.ticket_service
                 
@@ -1071,9 +1084,11 @@ class MovementForm:
                     responsable=responsable
                 )
                 
+                # Mostrar mensaje de éxito
+                tipo_ticket_texto = "entrada" if tipo_movimiento == 'ENTRADA' else "ajuste de inventario"
                 messagebox.showinfo(
                     "Ticket Generado",
-                    f"Ticket de entrada generado exitosamente\n"
+                    f"Ticket de {tipo_ticket_texto} generado exitosamente\n"
                     f"Número: {ticket.ticket_number}\n"
                     f"Archivo: {ticket.pdf_path}"
                 )

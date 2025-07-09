@@ -53,6 +53,7 @@ class SalesWindow:
         self._client_service = None
         self._sales_service = None
         self._barcode_service = None
+        self._ticket_service = None
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)
@@ -89,6 +90,8 @@ class SalesWindow:
         
         # Cargar datos iniciales
         self._load_data()
+        
+        self.logger.info("SalesWindow inicializado en modo teclado (sin hardware)")
     
     @property
     def product_service(self):
@@ -124,8 +127,14 @@ class SalesWindow:
             if hasattr(self._barcode_service, 'set_product_service'):
                 self._barcode_service.set_product_service(self.product_service)
         return self._barcode_service
-        
-        self.logger.info("SalesWindow inicializado en modo teclado (sin hardware)")
+    
+    @property
+    def ticket_service(self):
+        """Acceso lazy al TicketService a través del Service Container."""
+        if self._ticket_service is None:
+            container = get_container()
+            self._ticket_service = container.get('ticket_service')
+        return self._ticket_service
         
     def _create_ui(self):
         """Crea los elementos de la interfaz de usuario."""
@@ -1072,6 +1081,9 @@ class SalesWindow:
             self.client_search_var.set("")       # Limpia la búsqueda
             self.selected_client = None
             self._update_client_listbox()        # Vuelve a mostrar todos
+            
+            # Ofrecer generar ticket para la venta procesada
+            self._offer_ticket_generation_for_sale(venta)
 
         except Exception as e:
             self.logger.error(f"Error procesando venta: {e}")
@@ -1092,6 +1104,52 @@ class SalesWindow:
                 self.selected_client = None
                 self._update_client_listbox()        # Vuelve a mostrar todos
 
+    def _offer_ticket_generation_for_sale(self, venta):
+        """Ofrecer generar ticket para venta procesada."""
+        try:
+            # Preguntar si desea generar ticket
+            if messagebox.askyesno(
+                "Generar Ticket",
+                f"¿Desea generar un ticket para la venta?\n"
+                f"ID Venta: {venta.id_venta}\n"
+                f"Total: B/. {float(venta.total):.2f}"
+            ):
+                ticket_service = self.ticket_service
+                
+                # Obtener usuario actual
+                from ui.auth.session_manager import session_manager
+                current_user = session_manager.get_current_user()
+                responsable = current_user.get('nombre_usuario', 'vendedor') if current_user else 'vendedor'
+                
+                # Generar ticket
+                ticket = ticket_service.generar_ticket_venta(
+                    id_venta=venta.id_venta,
+                    responsable=responsable
+                )
+                
+                messagebox.showinfo(
+                    "Ticket Generado",
+                    f"Ticket de venta generado exitosamente\n"
+                    f"Número: {ticket.ticket_number}\n"
+                    f"Archivo: {ticket.pdf_path}"
+                )
+                
+                # Preguntar si desea abrir el archivo PDF
+                if messagebox.askyesno("Abrir PDF", "¿Desea abrir el archivo PDF generado?"):
+                    import os
+                    import subprocess
+                    if os.path.exists(ticket.pdf_path):
+                        try:
+                            os.startfile(ticket.pdf_path)  # Windows
+                        except AttributeError:
+                            subprocess.run(['xdg-open', ticket.pdf_path])  # Linux
+                        except Exception:
+                            messagebox.showinfo("Archivo Listo", f"El archivo se guardó en: {ticket.pdf_path}")
+                            
+        except Exception as e:
+            self.logger.error(f"Error generando ticket: {e}")
+            messagebox.showerror("Error", f"Error al generar ticket: {e}")
+    
     def _close_window(self):
         """Cierra la ventana."""
         try:
