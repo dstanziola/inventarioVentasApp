@@ -1073,6 +1073,9 @@ class SalesWindow:
                 )
                 return  # No limpiar si hay error
             
+            # Ofrecer generar ticket para la venta procesada
+            self._offer_ticket_generation_for_sale(venta)
+
             # Limpiar venta
             self._clear_all_items()
             self.selected_client = None
@@ -1081,9 +1084,6 @@ class SalesWindow:
             self.client_search_var.set("")       # Limpia la búsqueda
             self.selected_client = None
             self._update_client_listbox()        # Vuelve a mostrar todos
-            
-            # Ofrecer generar ticket para la venta procesada
-            self._offer_ticket_generation_for_sale(venta)
 
         except Exception as e:
             self.logger.error(f"Error procesando venta: {e}")

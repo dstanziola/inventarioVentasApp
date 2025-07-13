@@ -322,3 +322,6 @@ class SalesService:
             return int(count) > 0
         except (TypeError, ValueError):
             return bool(count)  # Fallback para mocks complejos
+    
+    # Alias para compatibilidad con TicketService
+    obtener_venta_por_id = get_sale_by_id
