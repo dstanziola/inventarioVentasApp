@@ -170,12 +170,11 @@ class CompanyService:
         try:
             # Buscar configuración existente (siempre config_id = 1)
             query = """
-                SELECT config_id, nombre, ruc, direccion, telefono, email,
+                SELECT id, nombre, ruc, direccion, telefono, email,
                        itbms_rate, moneda, logo_path, updated_at
-                FROM company_config 
-                WHERE config_id = 1
+                FROM company_config WHERE id = 1
             """
-            
+
             cursor.execute(query)
             row = cursor.fetchone()
             

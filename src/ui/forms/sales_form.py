@@ -32,6 +32,7 @@ from decimal import Decimal
 
 from services.service_container import get_container
 from src.models import producto
+from src.reports.ticket_generator import TicketGenerator
 from ui.widgets.barcode_entry import BarcodeEntry
 from utils.barcode_utils import validate_barcode, BarcodeUtils
 
@@ -114,7 +115,17 @@ class SalesWindow:
         """Acceso lazy al SalesService a través del Service Container."""
         if self._sales_service is None:
             container = get_container()
+            
+            # Validación robusta de ServiceContainer
+            if not container.is_registered('sales_service'):
+                raise RuntimeError("SalesService no está registrado en ServiceContainer")
+            
             self._sales_service = container.get('sales_service')
+            
+            # Validar que tiene métodos esperados
+            if not hasattr(self._sales_service, 'obtener_detalles_venta'):
+                raise AttributeError(f"SalesService incorrecto: {type(self._sales_service)} - no tiene método obtener_detalles_venta")
+                
         return self._sales_service
     
     @property
@@ -1107,49 +1118,101 @@ class SalesWindow:
     def _offer_ticket_generation_for_sale(self, venta):
         """Ofrecer generar ticket para venta procesada."""
         try:
+            # Validación de entrada
+            if not venta:
+                self.logger.error("Error en generación de ticket: objeto venta requerido")
+                messagebox.showerror("Error", "Error: objeto venta requerido")
+                return
+            
+            # Validar que venta tiene ID
+            if not hasattr(venta, 'id_venta') or venta.id_venta is None:
+                self.logger.error("Error en generación de ticket: venta sin ID")
+                messagebox.showerror("Error", "Error: venta sin ID válido")
+                return
+            
             # Preguntar si desea generar ticket
             if messagebox.askyesno(
                 "Generar Ticket",
                 f"¿Desea generar un ticket para la venta?\n"
                 f"ID Venta: {venta.id_venta}\n"
-                f"Total: B/. {float(venta.total):.2f}"
+                # f"Total: B/. {float(venta.total):.2f}"
             ):
-                ticket_service = self.ticket_service
-                
+                # Validar que ticket_service está disponible
+                try:
+                    ticket_service = self.ticket_service
+                    if not ticket_service:
+                        raise RuntimeError("TicketService no disponible")
+                except Exception as e:
+                    self.logger.error(f"Error obteniendo TicketService: {e}")
+                    messagebox.showerror("Error", f"Error de configuración: TicketService no disponible")
+                    return
+
                 # Obtener usuario actual
                 from ui.auth.session_manager import session_manager
                 current_user = session_manager.get_current_user()
                 responsable = current_user.get('nombre_usuario', 'vendedor') if current_user else 'vendedor'
-                
-                # Generar ticket
+
+                # Generar ticket sin PDF aún
                 ticket = ticket_service.generar_ticket_venta(
                     id_venta=venta.id_venta,
                     generated_by=responsable
                 )
+
+                # --- Generar PDF del ticket ---
+                from reports.ticket_generator import TicketGenerator
+                # generator = TicketGenerator()
                 
-                messagebox.showinfo(
-                    "Ticket Generado",
-                    f"Ticket de venta generado exitosamente\n"
-                    f"Número: {ticket.ticket_number}\n"
-                    f"Archivo: {ticket.pdf_path}"
-                )
+                db = getattr(self.ticket_service.sales_service, 'db', None)
                 
-                # Preguntar si desea abrir el archivo PDF
-                if messagebox.askyesno("Abrir PDF", "¿Desea abrir el archivo PDF generado?"):
-                    import os
-                    import subprocess
-                    if os.path.exists(ticket.pdf_path):
+                # Crear generador de ticket pasando db correctamente
+                generator = TicketGenerator(db)
+
+                output_path = generator.generar_ruta_archivo(ticket)
+                success = generator.generar_ticket_pdf(ticket, output_path)
+
+                if success:
+                    # Actualizar ruta en la base de datos y en el objeto ticket
+                    ticket_service.actualizar_pdf_path(ticket.id_ticket, output_path)
+                    ticket.pdf_path = output_path
+
+                    messagebox.showinfo(
+                        "Ticket Generado",
+                        f"Ticket de venta generado exitosamente\n"
+                        f"Número: {ticket.ticket_number}\n"
+                        f"Archivo: {ticket.pdf_path}"
+                    )
+
+                    # Preguntar si desea abrir el archivo PDF
+                    if ticket.pdf_path and messagebox.askyesno("Abrir PDF", "¿Desea abrir el archivo PDF generado?"):
+                        import os
+                        import subprocess
                         try:
-                            os.startfile(ticket.pdf_path)  # Windows
+                            if os.path.exists(ticket.pdf_path):
+                                os.startfile(ticket.pdf_path)  # Windows
                         except AttributeError:
-                            subprocess.run(['xdg-open', ticket.pdf_path])  # Linux
+                            subprocess.run(['xdg-open', ticket.pdf_path])  # Linux/Mac
                         except Exception:
                             messagebox.showinfo("Archivo Listo", f"El archivo se guardó en: {ticket.pdf_path}")
-                            
+                else:
+                    messagebox.showwarning("Advertencia", "El ticket fue generado pero no se pudo crear el PDF.")
+
+        except AttributeError as e:
+            self.logger.error(f"Error de atributo en generación de ticket: {e}")
+            if "get" in str(e) and "Venta" in str(e):
+                messagebox.showerror("Error", "Error de compatibilidad en objeto venta. Verifique la configuración del sistema.")
+            elif "obtener_detalles_venta" in str(e):
+                messagebox.showerror("Error", "Error de configuración: SalesService no disponible correctamente.")
+            elif "cursor" in str(e):
+                messagebox.showerror("Error", "Error de base de datos. Verifique la conexión.")
+            else:
+                messagebox.showerror("Error", f"Error de configuración: {e}")
+        except RuntimeError as e:
+            self.logger.error(f"Error de runtime en generación de ticket: {e}")
+            messagebox.showerror("Error", f"Error del sistema: {e}")
         except Exception as e:
-            self.logger.error(f"Error generando ticket: {e}")
+            self.logger.error(f"Error general generando ticket: {e}")
             messagebox.showerror("Error", f"Error al generar ticket: {e}")
-    
+
     def _close_window(self):
         """Cierra la ventana."""
         try:

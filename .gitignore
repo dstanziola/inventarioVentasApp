@@ -27,7 +27,6 @@ __pycache__/
 Thumbs.db
 
 # Archivos generados
-reports/
 logs/
 dist/
 build/

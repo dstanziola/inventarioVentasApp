@@ -43,8 +43,9 @@ class TicketPreviewForm:
         """
         self.parent = parent
         self.ticket = ticket
-        self.ticket_generator = TicketGenerator()
+        # self.ticket_generator = TicketGenerator()
         self.ticket_service = TicketService()
+        self.ticket_generator = TicketGenerator(self.ticket_service.sales_service.db)
         self.company_service = CompanyService()
         
         # Variables del formulario

@@ -65,13 +65,15 @@ class SalesService:
             raise ValueError(f"No existe el cliente con ID {id_cliente}")
         
         # Crear venta en base de datos
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO ventas (id_cliente, subtotal, impuestos, total, responsable)
             VALUES (?, 0, 0, 0, ?)
         """, (id_cliente, responsable.strip()))
         
-        self.db.get_connection().commit()
+        conn.commit()
         
         # Crear objeto de dominio
         venta = Venta(
@@ -141,7 +143,9 @@ class SalesService:
         impuesto_item = (subtotal_item * tasa_impuesto).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
         # Agregar detalle de venta
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO detalle_ventas (id_venta, id_producto, cantidad, precio_unitario, subtotal_item, impuesto_item)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -161,7 +165,7 @@ class SalesService:
                 VALUES (?, 'VENTA', ?, ?, ?, ?)
             """, (id_producto, cantidad, venta.responsable, id_venta, f"Venta #{id_venta}"))
         
-        self.db.get_connection().commit()
+        conn.commit()
         
         # Recalcular totales de la venta
         self._recalculate_sale_totals(id_venta)
@@ -185,7 +189,9 @@ class SalesService:
         Returns:
             Venta o None si no existe
         """
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT id_venta, fecha_venta, id_cliente, subtotal, impuestos, total, responsable
             FROM ventas
@@ -210,7 +216,30 @@ class SalesService:
             return Venta(**data)
         
         return None
-    
+        
+    def obtener_detalles_venta(self, id_venta: int) -> list:
+        """
+        Retorna los detalles (productos) de una venta.
+        """
+        try:
+            # Manejo robusto de diferentes tipos de conexión DB
+            conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    p.nombre AS nombre_producto,
+                    dv.cantidad,
+                    dv.precio_unitario,
+                    dv.cantidad * dv.precio_unitario AS subtotal_item
+                FROM detalle_ventas dv
+                JOIN productos p ON dv.id_producto = p.id_producto
+                WHERE dv.id_venta = ?
+            """, (id_venta,))
+            columnas = [col[0] for col in cursor.description]
+            return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+        except Exception as e:
+            raise RuntimeError(f"Error al obtener detalles de venta: {e}")
+
     def _recalculate_sale_totals(self, id_venta: int) -> None:
         """
         Recalcular totales de una venta basado en sus detalles.
@@ -218,7 +247,9 @@ class SalesService:
         Args:
             id_venta: ID de la venta
         """
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT COALESCE(SUM(subtotal_item), 0), COALESCE(SUM(impuesto_item), 0)
             FROM detalle_ventas
@@ -237,7 +268,7 @@ class SalesService:
             WHERE id_venta = ?
         """, (float(subtotal), float(impuestos), float(total), id_venta))
         
-        self.db.get_connection().commit()
+        conn.commit()
     
     def _get_product_by_id(self, id_producto: int) -> Optional[Producto]:
         """
@@ -253,7 +284,9 @@ class SalesService:
             return self.product_service.get_product_by_id(id_producto)
         
         # Implementación directa si no hay servicio inyectado
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT id_producto, nombre, id_categoria, stock, costo, precio, tasa_impuesto, activo
             FROM productos
@@ -290,7 +323,9 @@ class SalesService:
         Returns:
             Tipo de categoría ('MATERIAL' o 'SERVICIO')
         """
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("SELECT tipo FROM categorias WHERE id_categoria = ?", (id_categoria,))
         result = cursor.fetchone()
         return result[0] if result else 'MATERIAL'
@@ -305,7 +340,9 @@ class SalesService:
         Returns:
             True si existe
         """
-        cursor = self.db.get_connection().cursor()
+        # Manejo robusto de diferentes tipos de conexión DB
+        conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+        cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM clientes WHERE id_cliente = ? AND activo = 1", (id_cliente,))
         result = cursor.fetchone()
         

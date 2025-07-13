@@ -392,3 +392,27 @@ class Venta:
         if self.fecha_venta:
             return self.fecha_venta.strftime(formato)
         return "Sin fecha"
+    
+    def get(self, key: str, default=None):
+        """
+        Obtener valor de atributo usando interface dict-like.
+        
+        Proporciona compatibilidad con TicketGenerator y otros componentes
+        que esperan poder usar .get() como con diccionarios.
+        
+        Args:
+            key: Nombre del atributo a obtener
+            default: Valor por defecto si el atributo no existe
+            
+        Returns:
+            Valor del atributo o default si no existe
+            
+        Raises:
+            None: Método seguro que no lanza excepciones
+        """
+        try:
+            # Usar getattr para acceso seguro a atributos
+            return getattr(self, key, default)
+        except Exception:
+            # En caso de cualquier error, retornar default
+            return default
