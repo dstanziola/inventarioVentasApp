@@ -129,6 +129,7 @@
 ### **6.2 Tipos de Tickets**
 - **Ticket de Entrada**: fecha, productos, cantidades, responsable, valor total
 - **Ticket de Venta**: fecha, productos, cantidades, cliente (opcional), subtotal, impuestos, total, responsable
+- **Ticket de ajuste**:fecha, producto, cantidad, responsable, observaciones
 
 ### **6.3 Funcionalidades**
 - Visualización en pantalla

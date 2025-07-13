@@ -633,6 +633,17 @@ def setup_default_container() -> ServiceContainer:
             dependencies=['database']
         )
         
+        # Registrar CompanyService con corrección aplicada
+        try:
+            from services.company_service import CompanyService
+            container.register(
+                'company_service',
+                lambda c: CompanyService(db_connection=c.get('database')),
+                dependencies=['database']
+            )
+        except ImportError:
+            pass
+        
         # Registrar servicios opcionales si están disponibles
         try:
             from services.label_service import LabelService
@@ -650,6 +661,28 @@ def setup_default_container() -> ServiceContainer:
                 'barcode_service',
                 lambda c: BarcodeService(),
                 dependencies=[]
+            )
+        except ImportError:
+            pass
+        
+        # Registrar TicketService - CORREGIDO
+        try:
+            from services.ticket_service import TicketService
+            container.register(
+                'ticket_service',
+                lambda c: TicketService(c.get('database')),
+                dependencies=['database']
+            )
+        except ImportError:
+            pass
+        
+        # Registrar InventoryService si está disponible
+        try:
+            from services.inventory_service import InventoryService
+            container.register(
+                'inventory_service',
+                lambda c: InventoryService(c.get('database')),
+                dependencies=['database']
             )
         except ImportError:
             pass

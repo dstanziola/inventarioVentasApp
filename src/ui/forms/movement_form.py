@@ -1081,7 +1081,7 @@ class MovementForm:
                 # Generar ticket
                 ticket = ticket_service.generar_ticket_entrada(
                     id_movimiento=id_movimiento,
-                    responsable=responsable
+                    generated_by=responsable
                 )
                 
                 # Mostrar mensaje de éxito

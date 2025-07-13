@@ -8,6 +8,10 @@ Este servicio maneja:
 - Cálculos de impuestos centralizados
 - Formateo de información corporativa
 
+CORRECCIÓN APLICADA: Constructor corregido para usar inyección de dependencias
+Fecha corrección: 2025-07-10
+Problema resuelto: 'name Database is not defined' error
+
 Autor: Sistema TDD - FASE 3
 Fecha: 2025-06-25
 """
@@ -27,15 +31,21 @@ class CompanyService:
     
     Implementa patrón Singleton para garantizar una única configuración
     de empresa en el sistema.
+    
+    CORRECCIÓN APLICADA: Constructor ahora acepta db_connection como parámetro
+    para seguir patrón de inyección de dependencias consistente.
     """
     
     _instance = None
     _lock = threading.Lock()
     _config_cache = None
     
-    def __new__(cls):
+    def __new__(cls, db_connection=None):
         """
         Implementar patrón Singleton thread-safe.
+        
+        Args:
+            db_connection: Conexión de base de datos (requerida para nueva instancia)
         """
         if cls._instance is None:
             with cls._lock:
@@ -43,13 +53,19 @@ class CompanyService:
                     cls._instance = super().__new__(cls)
         return cls._instance
     
-    def __init__(self):
+    def __init__(self, db_connection=None):
         """
         Inicializar el servicio de configuración de empresa.
-        Solo se ejecuta una vez debido al patrón Singleton.
+        
+        CORRECCIÓN CRÍTICA: Constructor ahora acepta db_connection como parámetro
+        para seguir patrón de inyección de dependencias.
+        
+        Args:
+            db_connection: Conexión a base de datos (requerida)
         """
         if not hasattr(self, '_initialized'):
-            self.db = Database()
+            # CORRECCIÓN: Usar conexión proporcionada o obtener una nueva
+            self.db = db_connection or get_database_connection()
             self._initialized = True
     
     def _limpiar_cache(self) -> None:

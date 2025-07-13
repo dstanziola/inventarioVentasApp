@@ -1124,7 +1124,7 @@ class SalesWindow:
                 # Generar ticket
                 ticket = ticket_service.generar_ticket_venta(
                     id_venta=venta.id_venta,
-                    responsable=responsable
+                    generated_by=responsable
                 )
                 
                 messagebox.showinfo(
