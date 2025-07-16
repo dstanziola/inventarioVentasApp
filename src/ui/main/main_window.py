@@ -34,7 +34,8 @@ from ui.forms.category_form import CategoryWindow
 from ui.forms.product_form import ProductWindow
 from ui.forms.client_form import ClientWindow
 from ui.forms.sales_form import SalesWindow
-from ui.forms.movement_form import create_movement_window
+from ui.forms.movement_form import MovementForm
+
 from ui.forms.reports_form import ReportsForm  # FASE 2: Sistema de Reportes
 from ui.forms.ticket_preview_form import TicketPreviewForm  # FASE 3: Sistema de Tickets
 from ui.forms.company_config_form import CompanyConfigForm  # FASE 3: Configuración de Empresa
@@ -491,8 +492,8 @@ class MainWindow:
             return
             
         try:
-            # Crear nueva ventana de movimientos
-            movement_window = create_movement_window(self.root, self.db_connection)
+            # Crear nueva ventana de movimientos usando MovementForm
+            movement_window = MovementForm(self.root, self.db_connection)
             if movement_window:
                 window_manager.register_window('movements', movement_window)
                 self.logger.info("Ventana de movimientos abierta")

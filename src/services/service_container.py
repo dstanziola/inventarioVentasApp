@@ -676,6 +676,20 @@ def setup_default_container() -> ServiceContainer:
         except ImportError:
             pass
         
+        # SPRINT 2: Registrar ExportService - Sistema de exportación
+        try:
+            from services.export_service import ExportService
+            container.register(
+                'export_service',
+                lambda c: ExportService(
+                    movement_service=c.get('movement_service'),
+                    report_service=c.get('report_service')
+                ),
+                dependencies=['movement_service', 'report_service']
+            )
+        except ImportError:
+            pass
+        
         # Registrar InventoryService si está disponible
         try:
             from services.inventory_service import InventoryService

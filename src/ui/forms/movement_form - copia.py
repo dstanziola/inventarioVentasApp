@@ -204,137 +204,100 @@ class MovementForm:
             return []
     
     def _get_applied_filters(self) -> Dict[str, Any]:
-        """
-        Obtiene los filtros aplicados desde la interfaz gráfica,
-        incluyendo metadatos útiles para auditoría y exportación.
+        """Obtener filtros actualmente aplicados.
         
-        Retorna:
-            Un diccionario con los filtros aplicados y metadatos contextuales.
+        SPRINT 2: Información de filtros para incluir en exportación.
+        
+        Returns:
+            Diccionario con filtros aplicados
         """
         try:
-            filters = {
-                'fecha_generacion': datetime.now().strftime('%d/%m/%Y %H:%M'),
-                'usuario_generador': 'usuario_desconocido'
-            }
-
-            # Obtener usuario autenticado si está disponible
-            current_user = session_manager.get_current_user() if 'session_manager' in globals() else None
-            if current_user:
-                filters['usuario_generador'] = current_user.get('nombre_usuario', 'usuario')
-
-            # Filtro de producto
-            producto_filter = self.filter_producto_combo.get().strip()
-            if producto_filter and producto_filter.lower() != 'todos':
-                filters['producto'] = producto_filter
-
-            # Filtro de tipo de movimiento
-            tipo_filter = self.filter_tipo_combo.get().strip()
-            if tipo_filter and tipo_filter.lower() != 'todos':
-                filters['tipo_movimiento'] = tipo_filter
-
-            # Determinar el alcance si no hay filtros aplicados
-            if len(filters) == 2:  # Solo fecha y usuario
-                filters['alcance'] = 'Todos los movimientos disponibles'
-            else:
-                filtros_aplicados = ', '.join([f"{k}: {v}" for k, v in filters.items() if k not in ['fecha_generacion', 'usuario_generador']])
-                filters['alcance'] = f"Filtrado por {filtros_aplicados}"
-
-            return filters
-
-        except Exception as e:
-            logger.error(f"Error obteniendo filtros aplicados: {e}", exc_info=True)
             return {
-                'fecha_generacion': datetime.now().strftime('%d/%m/%Y %H:%M'),
-                'usuario_generador': 'error',
-                'alcance': 'No se pudieron recuperar los filtros'
+                'producto': self.filter_producto_combo.get(),
+                'tipo_movimiento': self.filter_tipo_combo.get(),
+                'fecha_aplicacion': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
             }
-
+        except Exception as e:
+            logger.error(f"Error obteniendo filtros: {e}")
+            return {}
     
-    def _show_export_progress(self, message: str = "Exportando datos...") -> tk.Toplevel:
-        """
-        Muestra una ventana modal de progreso con barra indeterminada durante exportaciones.
-
-        Combina:
-        - Uso de `self.parent` como ventana principal
-        - Centrado automático
-        - Barra de progreso animada
-        - Manejo de errores
-        - Diseño limpio con `ttk.Frame`
+    def _show_export_progress(self, message: str) -> tk.Toplevel:
+        """Mostrar ventana de progreso durante exportación.
+        
+        SPRINT 2: Feedback visual durante proceso de exportación.
         
         Args:
-            message (str): Mensaje a mostrar durante la exportación.
-
+            message: Mensaje a mostrar
+            
         Returns:
-            tk.Toplevel: Ventana de progreso activa.
+            Ventana de progreso
         """
         try:
             progress_window = tk.Toplevel(self.parent)
             progress_window.title("Exportando...")
             progress_window.geometry("300x100")
-            progress_window.resizable(False, False)
             progress_window.transient(self.parent)
             progress_window.grab_set()
-
+            
             # Centrar ventana
             progress_window.update_idletasks()
             x = (progress_window.winfo_screenwidth() // 2) - (300 // 2)
             y = (progress_window.winfo_screenheight() // 2) - (100 // 2)
             progress_window.geometry(f"300x100+{x}+{y}")
-
-            # Contenedor principal
-            main_frame = ttk.Frame(progress_window, padding=10)
+            
+            # Frame principal
+            main_frame = ttk.Frame(progress_window, padding=20)
             main_frame.pack(fill=tk.BOTH, expand=True)
-
-            # Etiqueta de mensaje
+            
+            # Mensaje
             ttk.Label(
                 main_frame,
                 text=message,
-                font=("Arial", 10),
-                anchor="center"
+                font=("Arial", 10)
             ).pack(pady=(0, 10))
-
+            
             # Barra de progreso indeterminada
             progress_bar = ttk.Progressbar(
                 main_frame,
-                mode='indeterminate',
-                length=250
+                mode='indeterminate'
             )
-            progress_bar.pack()
+            progress_bar.pack(fill=tk.X)
             progress_bar.start(10)
-
+            
+            # Actualizar ventana
             progress_window.update()
+            
             return progress_window
-
+            
         except Exception as e:
-            logger.error(f"Error creando ventana de progreso: {e}", exc_info=True)
+            logger.error(f"Error creando ventana de progreso: {e}")
+            # Retornar dummy window si hay error
             dummy = tk.Toplevel()
             dummy.withdraw()
             return dummy
-
     
     def _open_file(self, file_path: str):
-        """
-        Intenta abrir un archivo utilizando el programa predeterminado del sistema operativo.
-        Muestra mensajes adecuados según el resultado.
+        """Abrir archivo con aplicación predeterminada del sistema.
+        
+        SPRINT 2: Utilidad para abrir archivos exportados.
+        
+        Args:
+            file_path: Ruta del archivo a abrir
         """
         try:
-            system = platform.system()
-            
-            if system == 'Windows':
+            if platform.system() == 'Windows':
                 os.startfile(file_path)
-            elif system == 'Darwin':  # macOS
-                subprocess.run(['open', file_path], check=True)
-            else:  # Linux
-                subprocess.run(['xdg-open', file_path], check=True)
-
+            elif platform.system() == 'Darwin':
+                subprocess.run(['open', file_path])
+            else:
+                subprocess.run(['xdg-open', file_path])
+                
         except Exception as e:
-            logger.warning(f"No se pudo abrir archivo automáticamente: {e}")
-            messagebox.showinfo(
-                "Archivo Guardado",
-                f"El archivo fue generado exitosamente y se guardó en:\n{file_path}\n\n"
-                f"Puede abrir el archivo manualmente desde su explorador."
+            logger.error(f"Error abriendo archivo {file_path}: {e}")
+            messagebox.showerror(
+                "Error",
+                f"No se pudo abrir el archivo.\nUbicación: {file_path}"
             )
-
     
     def _offer_ticket_generation(self, movement_id: int, product_name: str, quantity: int, movement_type: str):
         """Ofrecer generar ticket para movimiento de inventario.
@@ -1986,6 +1949,151 @@ Tasa de éxito: {success_rate:.1f}%
             logger.error(f"Error mostrando resultados del lote: {e}")
             messagebox.showerror("Error", f"Error mostrando resultados: {e}")
     
+    def _export_batch_results(self, created: List[Dict], failed: List[Dict]):
+        """Exportar resultados del lote a archivo de texto - SPRINT 3.
+        
+        Generar archivo de texto con resumen completo
+        de la operación por lotes para auditoría.
+        
+        Args:
+            created: Movimientos exitosos
+            failed: Productos fallidos
+        """
+        try:
+            from tkinter import filedialog
+            
+            # Solicitar ubicación del archivo
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            default_filename = f"resultados_lote_{timestamp}.txt"
+            
+            file_path = filedialog.asksaveasfilename(
+                title="Guardar Resultados del Lote",
+                defaultextension=".txt",
+                filetypes=[("Archivos de texto", "*.txt"), ("Todos los archivos", "*.*")],
+                initialname=default_filename
+            )
+            
+            if file_path:
+                # Generar contenido del archivo
+                content = f"""RESULTADOS DE PROCESAMIENTO POR LOTES
+Sistema de Gestión de Inventario - Copy Point S.A.
+{'='*60}
+
+Fecha y hora: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+Archivo generado: {file_path}
+
+RESUMEN EJECUTIVO:
+Total productos procesados: {len(created) + len(failed)}
+Exitosos: {len(created)}
+Fallidos: {len(failed)}
+Tasa de éxito: {(len(created) / (len(created) + len(failed)) * 100):.1f}%
+
+"""
+                
+                if created:
+                    content += f"\nMOVIMIENTOS CREADOS EXITOSAMENTE ({len(created)}):\n"
+                    content += "-" * 50 + "\n"
+                    for item in created:
+                        content += f"ID Movimiento: {item['movimiento'].id_movimiento}\n"
+                        content += f"Producto: {item['producto']}\n"
+                        content += f"Cantidad: +{item['cantidad']} unidades\n"
+                        content += f"Timestamp: {datetime.now().strftime('%H:%M:%S')}\n"
+                        content += "-" * 30 + "\n"
+                
+                if failed:
+                    content += f"\nPRODUCTOS CON ERRORES ({len(failed)}):\n"
+                    content += "-" * 40 + "\n"
+                    for item in failed:
+                        content += f"Producto: {item['producto']}\n"
+                        content += f"Error: {item['error']}\n"
+                        content += f"Timestamp: {datetime.now().strftime('%H:%M:%S')}\n"
+                        content += "-" * 30 + "\n"
+                
+                content += f"\nFIN DEL REPORTE\nGenerado por: Sistema de Inventario v5.0\n"
+                
+                # Escribir archivo
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                
+                messagebox.showinfo(
+                    "Exportación Exitosa",
+                    f"Resultados exportados exitosamente a:\n{file_path}"
+                )
+                
+        except Exception as e:
+            logger.error(f"Error exportando resultados: {e}")
+            messagebox.showerror("Error de Exportación", f"No se pudo exportar: {e}")
+    
+    def _retry_failed_batch_items(self, failed: List[Dict], parent_window):
+        """Reintentar productos que fallaron en la creación por lotes - SPRINT 3.
+        
+        Permitir al usuario seleccionar productos fallidos
+        y reintentarlos después de corregir problemas.
+        
+        Args:
+            failed: Lista de productos que fallaron
+            parent_window: Ventana padre para cerrar
+        """
+        try:
+            if not failed:
+                return
+            
+            if messagebox.askyesno(
+                "Reintentar Productos Fallidos",
+                f"¿Desea agregar los {len(failed)} productos fallidos "
+                f"de vuelta al lote para corregir y reintentar?\n\n"
+                f"Esto cerrará esta ventana y los agregará al panel de lotes."
+            ):
+                # Cerrar ventana de resultados
+                parent_window.destroy()
+                
+                # Agregar productos fallidos de vuelta al lote
+                for item in failed:
+                    producto_nombre = item['producto']
+                    
+                    # Buscar producto por nombre en productos disponibles
+                    producto_found = None
+                    for producto in self.productos_disponibles:
+                        if producto['nombre'] == producto_nombre:
+                            producto_found = producto
+                            break
+                    
+                    if producto_found:
+                        # Agregar con cantidad por defecto (usuario puede ajustar)
+                        id_producto = producto_found['id_producto']
+                        self.batch_products[id_producto] = {
+                            'producto': producto_found.copy(),
+                            'cantidad': 1  # Cantidad por defecto para corrección
+                        }
+                
+                # Actualizar UI del lote
+                self._update_batch_tree()
+                self._update_batch_info()
+                self._validate_batch()
+                self._update_batch_panel_state()
+                
+                # Cambiar a modo batch si no está activo
+                if not self.batch_mode_enabled:
+                    self.batch_mode_var.set(True)
+                    self.toggle_batch_mode()
+                
+                messagebox.showinfo(
+                    "Productos Agregados al Lote",
+                    f"Se agregaron {len(failed)} productos al lote para corrección.\n"
+                    f"Revise las cantidades y vuelva a crear los movimientos."
+                )
+                
+        except Exception as e:
+            logger.error(f"Error reintentando productos fallidos: {e}")
+            messagebox.showerror("Error", f"Error reintentando productos: {e}")
+            return
+            
+            # Simular escaneo manual
+            self._on_barcode_scanned(code, is_valid=True)
+            
+        except Exception as e:
+            logger.error(f"Error en búsqueda manual: {e}")
+            messagebox.showerror("Error", f"Error en búsqueda manual: {e}")
     
     def _clear_barcode_field(self):
         """Limpiar campo de código de barras."""
@@ -2642,6 +2750,61 @@ Tasa de éxito: {success_rate:.1f}%
                 "Error de Exportación",
                 f"No se pudo generar PDF:\n{e}"
             )
+    
+    def _get_current_movements_data(self):
+        """Obtener datos de movimientos actuales del TreeView.
+        
+        Returns:
+            List[Dict[str, Any]]: Lista de movimientos en formato para exportación
+        """
+        movements_data = []
+        
+        # Obtener todos los items del TreeView
+        for item_id in self.movements_tree.get_children():
+            item_values = self.movements_tree.item(item_id)['values']
+            
+            if item_values:
+                # Convertir a diccionario usando headers de columnas
+                movement_dict = {
+                    'id_movimiento': item_values[0],
+                    'fecha_movimiento': item_values[1],
+                    'producto_nombre': item_values[2],
+                    'tipo_movimiento': item_values[3],
+                    'cantidad': item_values[4],
+                    'cantidad_anterior': item_values[5],
+                    'cantidad_nueva': item_values[6],
+                    'responsable': item_values[7]
+                }
+                movements_data.append(movement_dict)
+        
+        return movements_data
+    
+    def _get_applied_filters(self):
+        """Obtener filtros actualmente aplicados.
+        
+        Returns:
+            Dict[str, Any]: Filtros aplicados
+        """
+        filters = {
+            'fecha_generacion': datetime.now().strftime('%d/%m/%Y %H:%M'),
+            'usuario_generador': session_manager.get_current_user().get('nombre_usuario', 'usuario') if session_manager.get_current_user() else 'usuario'
+        }
+        
+        # Filtro de producto
+        producto_filter = self.filter_producto_combo.get()
+        if producto_filter and producto_filter != 'Todos':
+            filters['producto'] = producto_filter
+        
+        # Filtro de tipo
+        tipo_filter = self.filter_tipo_combo.get()
+        if tipo_filter and tipo_filter != 'Todos':
+            filters['tipo_movimiento'] = tipo_filter
+        
+        # Si no hay filtros específicos, indicar que son todos
+        if len(filters) == 2:  # Solo fecha y usuario
+            filters['alcance'] = 'Todos los movimientos disponibles'
+        
+        return filters
     
     def _show_export_progress(self, message: str):
         """Mostrar ventana de progreso durante exportación.
