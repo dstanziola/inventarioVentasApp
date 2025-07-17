@@ -36,6 +36,7 @@ from ui.forms.client_form import ClientWindow
 from ui.forms.sales_form import SalesWindow
 from ui.forms.movement_form import MovementForm
 
+
 from ui.forms.reports_form import ReportsForm  # FASE 2: Sistema de Reportes
 from ui.forms.ticket_preview_form import TicketPreviewForm  # FASE 3: Sistema de Tickets
 from ui.forms.company_config_form import CompanyConfigForm  # FASE 3: Configuración de Empresa
@@ -490,17 +491,17 @@ class MainWindow:
         if window_manager.is_window_open('movements'):
             window_manager.bring_to_front('movements')
             return
-            
+
         try:
-            # Crear nueva ventana de movimientos usando MovementForm
-            movement_window = MovementForm(self.root, self.db_connection)
-            if movement_window:
-                window_manager.register_window('movements', movement_window)
+            # Crear nueva ventana usando MovementForm
+            movement_form = MovementForm(self.root, self.db_connection)
+            if movement_form.window:
+                window_manager.register_window('movements', movement_form.window)
                 self.logger.info("Ventana de movimientos abierta")
         except Exception as e:
             self.logger.error(f"Error al abrir ventana de movimientos: {e}")
             messagebox.showerror("Error", f"No se pudo abrir la ventana de movimientos: {e}")
-    
+
     # FASE 2: Métodos del sistema de reportes
     def _open_reports_system(self):
         """Abre el sistema principal de reportes - FASE 2"""

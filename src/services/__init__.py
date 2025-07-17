@@ -1,41 +1,65 @@
 """
-Capa de servicios del sistema de inventario.
+Módulo Services - Capa de Aplicación
 
-Esta capa contiene la lógica de negocio pura, implementando casos de uso
-específicos del dominio sin depender de frameworks externos.
+Este módulo contiene todos los servicios de aplicación que implementan
+los casos de uso del sistema siguiendo principios de Clean Architecture.
 
-ARQUITECTURA LIMPIA:
-- Services: Contiene la lógica de aplicación y orquesta operaciones complejas
-- Models: Entidades de dominio (ya implementadas)
-- Database: Capa de persistencia (ya implementada)
+Servicios disponibles:
+- ProductService: Gestión de productos
+- CategoryService: Gestión de categorías
+- ClientService: Gestión de clientes
+- SalesService: Gestión de ventas
+- MovementService: Gestión de movimientos
+- ReportService: Generación de reportes
+- ExportService: Exportación de datos
+- AuthService: Autenticación y autorización
 
-SERVICIOS DISPONIBLES:
-- CategoryService: Gestión de categorías MATERIAL/SERVICIO
-- ProductService: Gestión de productos con cálculos financieros
-- ClientService: Gestión de clientes con validación de RUC
-- SalesService: Procesamiento completo de ventas con inventario
-- InventoryService: Movimientos de stock y auditoría
-- UserService: Gestión de usuarios y autenticación
-- ReportService: Generación de reportes y exportación a PDF (FASE 2)
+ServiceContainer:
+- Inyección de dependencias
+- Gestión del ciclo de vida de servicios
+- Lazy loading de dependencias
+- Configuración automática
+
+Fecha: 2025-07-17
+Estado: P03 - Corrección crítica importaciones
 """
 
-from .category_service import CategoryService
-from .product_service import ProductService
-from .client_service import ClientService
-from .sales_service import SalesService
-from .inventory_service import InventoryService
-from .user_service import UserService
-from .report_service import ReportService
+from .service_container import (
+    get_container, 
+    setup_default_container, 
+    cleanup_container,
+    ServiceContainer
+)
 
+__version__ = '2.0.0'
+__description__ = 'Capa de Aplicación - Servicios y Casos de Uso'
+
+# Exportar componentes principales
 __all__ = [
-    'CategoryService',
-    'ProductService', 
-    'ClientService',
-    'SalesService',
-    'InventoryService',
-    'UserService',
-    'ReportService'
+    'get_container',
+    'setup_default_container',
+    'cleanup_container', 
+    'ServiceContainer'
 ]
 
-# Versión de la capa de servicios
-__version__ = '1.1.0'  # Incrementada por FASE 2
+# Configuración de servicios por defecto
+DEFAULT_SERVICES = [
+    'product_service',
+    'category_service', 
+    'client_service',
+    'sales_service',
+    'movement_service',
+    'report_service',
+    'export_service',
+    'auth_service',
+    'user_service',
+    'ticket_service'
+]
+
+# Configuración del ServiceContainer
+CONTAINER_CONFIG = {
+    'lazy_loading': True,
+    'auto_register': True,
+    'singleton_by_default': True,
+    'thread_safe': True
+}

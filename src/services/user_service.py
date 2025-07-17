@@ -37,7 +37,7 @@ from models.usuario import Usuario
 class UserService:
     """Servicio para gestión de usuarios - OPTIMIZADO FASE 4A."""
     
-    def __init__(self, db_connection: DatabaseConnection):
+    def __init__(self, db_connection: DatabaseConnection, password_hasher):
         """
         Inicializa el servicio de usuarios con patrón FASE 3.
         
@@ -45,6 +45,7 @@ class UserService:
             db_connection: Conexión a la base de datos
         """
         # Patrón FASE 3: Inyección de helpers optimizados
+        self.password_hasher = password_hasher
         self.db_connection = db_connection
         self.db_helper = DatabaseHelper(db_connection)
         self.validator = ValidationHelper()
@@ -91,7 +92,7 @@ class UserService:
                 return None
                 
             # Hash de la contraseña para comparación
-            password_hash = self._hash_password(password)
+            password_hash = self.password_hasher.hash_password(password)
             
             # Buscar usuario usando DatabaseHelper - CONSULTA OPTIMIZADA
             query = """
@@ -106,7 +107,8 @@ class UserService:
             authentication_success = False
             user_object = None
             
-            if user_data and user_data.get('password_hash') == password_hash:
+            if user_data and self.password_hasher.verify_password(password, user_data['password_hash']):
+
                 # Crear objeto Usuario con los datos encontrados
                 user_object = Usuario(
                     id_usuario=user_data['id_usuario'],
@@ -181,7 +183,8 @@ class UserService:
                 raise ValueError(f"Usuario '{nombre_usuario}' ya existe")
                 
             # Hash seguro de la contraseña
-            password_hash = self._hash_password(password)
+            password_hash = self.password_hasher.hash_password(password)
+
             
             # Insertar nuevo usuario con DatabaseHelper
             query = """
@@ -367,19 +370,19 @@ class UserService:
             user = self.get_user_by_id(user_id)
             if not user:
                 return False
-                
+
             # Verificar contraseña actual
-            old_password_hash = self._hash_password(old_password)
-            password_correct = user.password_hash == old_password_hash
-            
+            password_correct = self.password_hasher.verify_password(old_password, user.password_hash)
+
             # Validar nueva contraseña independientemente del resultado anterior
             password_validation = self.validator.validate_password_strength(new_password)
             new_password_valid = password_validation['is_valid']
-            
+
             # Continuar procesamiento para evitar timing attacks
-            new_password_hash = self._hash_password(new_password) if new_password_valid else None
-            
+            new_password_hash = self.password_hasher.hash_password(new_password) if new_password_valid else None
+
             success = False
+
             if password_correct and new_password_valid:
                 # Actualizar contraseña
                 query = "UPDATE usuarios SET password_hash = ? WHERE id_usuario = ?"
@@ -635,7 +638,7 @@ class UserService:
             self.logger.error(f"Error verificando existencia de usuario {username}: {e}")
             return False
         
-    def _hash_password(self, password: str) -> str:
+    # def _hash_password(self, password: str) -> str:
         """
         Genera hash seguro de contraseña.
         
@@ -649,12 +652,44 @@ class UserService:
         Returns:
             Hash de la contraseña
         """
-        try:
-            return hashlib.sha256((password + self._salt).encode()).hexdigest()
-        except Exception as e:
-            self.logger.error(f"Error generando hash de contraseña: {e}")
-            raise ValueError("Error procesando contraseña")
+    #    try:
+    #        return hashlib.sha256((password + self._salt).encode()).hexdigest()
+    #    except Exception as e:
+    #        self.logger.error(f"Error generando hash de contraseña: {e}")
+    #        raise ValueError("Error procesando contraseña")
     
+    def get_by_username(self, username: str) -> Optional[Usuario]:
+        """
+        Buscar usuario por nombre de usuario (aunque esté inactivo).
+        
+        Returns:
+            Usuario si existe, None si no
+        """
+        try:
+            query = """
+                SELECT id_usuario, nombre_usuario, password_hash, rol, activo
+                FROM usuarios 
+                WHERE LOWER(nombre_usuario) = LOWER(?)
+                LIMIT 1
+            """
+            user_data = self.db_helper.safe_execute(query, (username,), 'one')
+            
+            if user_data:
+                return Usuario(
+                    id_usuario=user_data['id_usuario'],
+                    nombre_usuario=user_data['nombre_usuario'],
+                    password_hash=user_data['password_hash'],
+                    rol=user_data['rol'],
+                    activo=bool(user_data['activo'])
+                )
+            else:
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error en get_by_username({username}): {e}")
+            return None
+
+
     def _validate_username(self, username: str) -> bool:
         """
         Valida formato de nombre de usuario.

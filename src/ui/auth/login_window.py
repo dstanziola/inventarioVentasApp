@@ -1,20 +1,26 @@
 """
-Ventana de autenticación de usuarios.
+Ventana de autenticación de usuarios - Versión AuthService
 
 Esta clase implementa la interfaz gráfica para el login de usuarios,
-incluyendo validación de credenciales y manejo de errores.
+utilizando el AuthService del ServiceContainer para autenticación.
 
-FUNCIONALIDADES:
-- Formulario de login con usuario y contraseña
-- Validación en tiempo real
-- Integración con servicio de usuarios
-- Manejo de errores de autenticación
-- Retorna resultado de autenticación para flujo principal
+CARACTERÍSTICAS v2.0:
+- Integración completa con AuthService via ServiceContainer
+- Lazy loading de servicios siguiendo patrón arquitectónico
+- Validación empresarial con logging detallado
+- Manejo robusto de errores
+- Compliance con Clean Architecture
 
-CAMBIOS v1.1:
-- Eliminado callback, ahora retorna resultado del login
-- Simplificación del flujo de autenticación
-- Mejor integración con main.py
+PATRONES APLICADOS:
+- Dependency Injection via ServiceContainer
+- Service Layer para lógica de autenticación
+- MVP Pattern (esta clase como View)
+- Error Handling empresarial
+
+TDD Implementation:
+- Código refactorizado para pasar tests de integración
+- AuthService usado en lugar de UserService directo
+- Session management delegado a AuthService
 """
 
 import tkinter as tk
@@ -22,22 +28,32 @@ from tkinter import ttk, messagebox
 from typing import Optional
 import logging
 
-from db.database import get_database_connection
-from services.user_service import UserService
-from ui.auth.session_manager import session_manager
+from services.service_container import get_container
+
 
 class LoginWindow:
-    """Ventana de autenticación de usuarios."""
+    """
+    Ventana de autenticación de usuarios con AuthService.
+    
+    Responsabilidades:
+    - Presentar interfaz de login
+    - Validar entrada de usuario
+    - Delegar autenticación a AuthService
+    - Manejar resultado de autenticación
+    - Logging de eventos de seguridad
+    """
     
     def __init__(self):
         """
-        Inicializa la ventana de login.
+        Inicializar ventana de login con lazy loading de servicios.
         """
-        self.user_service = UserService(get_database_connection())
+        # Lazy loading de servicios via ServiceContainer
+        self._auth_service = None
         self.login_successful = False
         
         # Configurar logging
         self.logger = logging.getLogger(__name__)
+        self.logger.info("LoginWindow inicializado")
         
         # Crear ventana principal
         self.root = tk.Tk()
@@ -58,15 +74,37 @@ class LoginWindow:
         # Configurar eventos
         self._setup_events()
         
+    @property
+    def auth_service(self):
+        """
+        Lazy loading del AuthService via ServiceContainer.
+        
+        Returns:
+            AuthService instance del container
+            
+        Raises:
+            RuntimeError: Si no se puede obtener AuthService
+        """
+        if self._auth_service is None:
+            try:
+                container = get_container()
+                self._auth_service = container.get('auth_service')
+                self.logger.debug("AuthService obtenido del ServiceContainer")
+            except Exception as e:
+                self.logger.error(f"Error obteniendo AuthService: {e}")
+                raise RuntimeError(f"No se pudo obtener AuthService: {e}")
+        
+        return self._auth_service
+    
     def _center_window(self):
-        """Centra la ventana en la pantalla."""
+        """Centrar la ventana en la pantalla."""
         self.root.update_idletasks()
         x = (self.root.winfo_screenwidth() // 2) - (400 // 2)
         y = (self.root.winfo_screenheight() // 2) - (300 // 2)
         self.root.geometry(f"400x300+{x}+{y}")
         
     def _create_ui(self):
-        """Crea los elementos de la interfaz de usuario."""
+        """Crear los elementos de la interfaz de usuario."""
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -79,7 +117,7 @@ class LoginWindow:
         # Título
         title_label = ttk.Label(
             main_frame, 
-            text="Sistema de Inventario", 
+            text="Sistema de Inventario v5.0", 
             font=("Arial", 16, "bold")
         )
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
@@ -153,7 +191,7 @@ class LoginWindow:
         default_info.grid(row=8, column=0, columnspan=2, pady=(20, 0))
         
     def _setup_events(self):
-        """Configura eventos de la ventana."""
+        """Configurar eventos de la ventana."""
         # Enter key para login
         self.root.bind('<Return>', lambda event: self._handle_login())
         
@@ -171,7 +209,7 @@ class LoginWindow:
         self.root.protocol("WM_DELETE_WINDOW", self._handle_cancel)
         
     def _validate_form(self, *args):
-        """Valida el formulario en tiempo real."""
+        """Validar el formulario en tiempo real."""
         username = self.username_var.get().strip()
         password = self.password_var.get().strip()
         
@@ -183,13 +221,31 @@ class LoginWindow:
             self.login_button.config(state='disabled')
             
     def _handle_login(self):
-        """Maneja el proceso de autenticación."""
+        """
+        Manejar el proceso de autenticación usando AuthService.
+        
+        Implementa el flujo completo de autenticación:
+        1. Validar entrada
+        2. Usar AuthService para autenticar
+        3. Manejar resultado
+        4. Logging de eventos de seguridad
+        """
         username = self.username_var.get().strip()
         password = self.password_var.get().strip()
         
         # Validar campos obligatorios
         if not username or not password:
             self.status_label.config(text="Usuario y contraseña son obligatorios")
+            self.logger.warning("Intento de login con campos vacíos")
+            return
+        
+        # Validar longitud mínima
+        if len(username) < 3:
+            self.status_label.config(text="Usuario debe tener al menos 3 caracteres")
+            return
+            
+        if len(password) < 6:
+            self.status_label.config(text="Contraseña debe tener al menos 6 caracteres")
             return
             
         try:
@@ -198,27 +254,48 @@ class LoginWindow:
             self.cancel_button.config(state='disabled')
             self.root.update()
             
-            # Intentar autenticación
-            user = self.user_service.authenticate(username, password)
+            self.logger.info(f"Iniciando autenticación para usuario: {username}")
+            
+            # Usar AuthService para autenticación - DELEGACIÓN CORRECTA
+            user = self.auth_service.authenticate(username, password)
             
             if user:
-                # Login exitoso
-                session_manager.login(user)
-                self.logger.info(f"Usuario {username} autenticado exitosamente")
+                # Login exitoso - AuthService ya maneja session_manager.login()
+                self.logger.info(f"Autenticación exitosa para usuario: {username}")
                 
-                # Marcar como exitoso y cerrar
-                self.login_successful = True
-                self.root.quit()
-                
+                # Verificar que el usuario está realmente autenticado
+                if self.auth_service.is_authenticated():
+                    self.logger.info("Sesión establecida correctamente")
+                    
+                    # Marcar como exitoso y cerrar
+                    self.login_successful = True
+                    self.status_label.config(text="Login exitoso", foreground="green")
+                    self.root.after(500, self.root.quit)  # Pequeño delay para mostrar mensaje
+                else:
+                    # Error inesperado
+                    self.logger.error("AuthService retornó usuario pero no hay sesión activa")
+                    self.status_label.config(text="Error interno de autenticación")
+                    
             else:
                 # Credenciales inválidas
                 self.status_label.config(text="Usuario o contraseña incorrectos")
                 self.password_var.set("")  # Limpiar contraseña
                 self.password_entry.focus()
+                self.logger.warning(f"Autenticación fallida para usuario: {username}")
                 
+        except RuntimeError as e:
+            # Error de configuración del sistema
+            self.logger.error(f"Error de configuración durante autenticación: {e}")
+            self.status_label.config(text="Error de configuración del sistema")
+            messagebox.showerror("Error de Sistema", 
+                               f"Error de configuración: {e}")
+            
         except Exception as e:
-            self.logger.error(f"Error durante autenticación: {e}")
+            # Error inesperado
+            self.logger.error(f"Error inesperado durante autenticación: {e}")
             self.status_label.config(text="Error de conexión. Intente nuevamente.")
+            messagebox.showerror("Error", 
+                               f"Error durante autenticación: {e}")
             
         finally:
             # Rehabilitar botones
@@ -226,28 +303,53 @@ class LoginWindow:
             self.cancel_button.config(state='normal')
             
     def _handle_cancel(self):
-        """Maneja la cancelación del login."""
+        """Manejar la cancelación del login."""
+        self.logger.info("Login cancelado por usuario")
         self.login_successful = False
         self.root.quit()
         
     def show(self):
         """
-        Muestra la ventana de login y retorna el resultado.
+        Mostrar la ventana de login y retornar el resultado.
         
         Returns:
             bool: True si login exitoso, False si cancelado
         """
         try:
+            self.logger.info("Mostrando ventana de login")
             self.root.mainloop()
+            
+            self.logger.info(f"Login finalizado. Éxito: {self.login_successful}")
             return self.login_successful
+            
+        except Exception as e:
+            self.logger.error(f"Error durante show(): {e}")
+            return False
+            
         finally:
             # Asegurar que la ventana se destruya
             try:
                 self.root.destroy()
-            except:
-                pass
+                self.logger.debug("Ventana de login destruida")
+            except Exception as e:
+                self.logger.warning(f"Error destruyendo ventana: {e}")
         
     def destroy(self):
-        """Destruye la ventana de login."""
-        if self.root:
-            self.root.destroy()
+        """Destruir la ventana de login."""
+        try:
+            if self.root:
+                self.root.destroy()
+                self.logger.debug("LoginWindow destruido explícitamente")
+        except Exception as e:
+            self.logger.warning(f"Error en destroy(): {e}")
+
+
+# Función de compatibilidad para código existente
+def create_login_window():
+    """
+    Función de compatibilidad para crear LoginWindow.
+    
+    Returns:
+        LoginWindow instance
+    """
+    return LoginWindow()

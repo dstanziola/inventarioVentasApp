@@ -13,7 +13,7 @@ from tkinter import messagebox
 
 # Agregar src/ al path para imports correctos
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
+print("PATHS actuales:")
 # Configurar logging
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 if not os.path.exists(log_dir):
@@ -27,6 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Importar módulos necesarios con paths corregidos
+
 try:
     from db.database import get_database_connection, initialize_database
     from ui.auth.login_window import LoginWindow

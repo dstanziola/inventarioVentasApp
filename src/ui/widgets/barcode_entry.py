@@ -31,7 +31,7 @@ import traceback
 
 # Importaciones del sistema
 try:
-    from src.utils.barcode_utils import validate_barcode, BarcodeUtils
+    from utils.barcode_utils import validate_barcode, BarcodeUtils
 except ImportError:
     # Fallback si no están disponibles las utilidades
     def validate_barcode(code: str) -> bool:

@@ -1,5 +1,5 @@
 """
-Modelo de datos para Usuario.
+Modelo de datos para Usuario - Con compatibilidad AuthService.
 Representa usuarios del sistema de inventario con autenticación y roles.
 
 Este archivo fue implementado siguiendo TDD:
@@ -7,8 +7,8 @@ Este archivo fue implementado siguiendo TDD:
 - Implementación mínima para pasar tests (GREEN)
 - Refactorización manteniendo tests pasando
 
-Autor: Sistema TDD
-Fecha: 2025-05-26
+Autor: Sistema TDD + AuthService Integration
+Fecha: 2025-07-16
 """
 
 from typing import Optional
@@ -23,6 +23,11 @@ class Usuario:
     
     Los usuarios tienen roles (ADMIN, VENDEDOR) y manejo seguro de contraseñas.
     Incluye funcionalidades de autenticación y gestión de sesiones.
+    
+    COMPATIBILIDAD AUTHSERVICE:
+    - Propiedades alias: username <-> nombre_usuario
+    - Propiedades alias: id <-> id_usuario  
+    - Método es_activo() compatible
     """
     
     # Roles válidos del sistema
@@ -30,11 +35,14 @@ class Usuario:
     
     def __init__(
         self,
-        nombre_usuario: str,
-        password_hash: str,
-        rol: str,
+        nombre_usuario: str = None,
+        password_hash: str = None,
+        rol: str = None,
         activo: bool = True,
-        id_usuario: Optional[int] = None
+        id_usuario: Optional[int] = None,
+        # Parámetros alternativos para compatibilidad AuthService
+        username: str = None,
+        id: Optional[int] = None
     ):
         """
         Inicializar un nuevo usuario.
@@ -45,20 +53,54 @@ class Usuario:
             rol: Rol del usuario ('ADMIN' o 'VENDEDOR')
             activo: Si el usuario está activo (default: True)
             id_usuario: ID único (asignado por la base de datos)
+            username: Alias para nombre_usuario (compatibilidad)
+            id: Alias para id_usuario (compatibilidad)
             
         Raises:
             ValueError: Si el rol no es válido
         """
-        if rol not in self.ROLES_VALIDOS:
+        # Manejar parámetros de compatibilidad
+        if username is not None:
+            nombre_usuario = username
+        if id is not None:
+            id_usuario = id
+            
+        # Validaciones
+        if rol and rol not in self.ROLES_VALIDOS:
             raise ValueError(f"Rol '{rol}' no válido. Debe ser uno de: {', '.join(self.ROLES_VALIDOS)}")
         
+        # Asignar atributos
         self.id_usuario = id_usuario
         self.nombre_usuario = nombre_usuario.strip() if nombre_usuario else ""
-        self.password_hash = password_hash
-        self.rol = rol
+        self.password_hash = password_hash or ""
+        self.rol = rol or "VENDEDOR"
         self.activo = activo
         self.fecha_creacion = datetime.now()
         self.ultimo_login = None
+    
+    # PROPIEDADES DE COMPATIBILIDAD AUTHSERVICE
+    
+    @property
+    def username(self) -> str:
+        """Alias para nombre_usuario (compatibilidad AuthService)."""
+        return self.nombre_usuario
+    
+    @username.setter
+    def username(self, value: str) -> None:
+        """Setter para username (compatibilidad AuthService)."""
+        self.nombre_usuario = value
+    
+    @property
+    def id(self) -> Optional[int]:
+        """Alias para id_usuario (compatibilidad AuthService)."""
+        return self.id_usuario
+    
+    @id.setter
+    def id(self, value: Optional[int]) -> None:
+        """Setter para id (compatibilidad AuthService)."""
+        self.id_usuario = value
+    
+    # MÉTODOS DE AUTENTICACIÓN
     
     def set_password(self, password_plain: str) -> None:
         """
@@ -106,6 +148,8 @@ class Usuario:
         except Exception:
             return False
     
+    # MÉTODOS DE ROLES Y PERMISOS
+    
     def es_admin(self) -> bool:
         """
         Verificar si el usuario es administrador.
@@ -113,7 +157,7 @@ class Usuario:
         Returns:
             True si es ADMIN
         """
-        return self.rol == 'ADMIN'
+        return self.rol.upper() in ['ADMIN', 'ADMINISTRADOR']
     
     def es_vendedor(self) -> bool:
         """
@@ -122,7 +166,7 @@ class Usuario:
         Returns:
             True si es VENDEDOR
         """
-        return self.rol == 'VENDEDOR'
+        return self.rol.upper() == 'VENDEDOR'
     
     def es_activo(self) -> bool:
         """
@@ -200,6 +244,8 @@ class Usuario:
         
         return permisos_base
     
+    # MÉTODOS DE REPRESENTACIÓN
+    
     def __str__(self) -> str:
         """
         Representación string del usuario.
@@ -253,6 +299,8 @@ class Usuario:
         
         return hash(('Usuario', self.nombre_usuario))
     
+    # MÉTODOS DE SERIALIZACIÓN
+    
     def to_dict(self, incluir_password: bool = False) -> dict:
         """
         Convertir el usuario a diccionario.
@@ -289,11 +337,11 @@ class Usuario:
             Nueva instancia de Usuario
         """
         usuario = cls(
-            nombre_usuario=data['nombre_usuario'],
-            password_hash=data['password_hash'],
-            rol=data['rol'],
+            nombre_usuario=data.get('nombre_usuario') or data.get('username', ''),
+            password_hash=data.get('password_hash', ''),
+            rol=data.get('rol', 'VENDEDOR'),
             activo=data.get('activo', True),
-            id_usuario=data.get('id_usuario')
+            id_usuario=data.get('id_usuario') or data.get('id')
         )
         
         # Restaurar fechas si existen
@@ -304,6 +352,8 @@ class Usuario:
             usuario.ultimo_login = datetime.fromisoformat(data['ultimo_login'])
             
         return usuario
+    
+    # MÉTODOS DE FACTORY
     
     @classmethod
     def crear_admin(cls, nombre_usuario: str, password_plain: str) -> 'Usuario':
@@ -345,38 +395,7 @@ class Usuario:
         usuario.set_password(password_plain)
         return usuario
     
-    def cambiar_password(self, password_actual: str, password_nuevo: str) -> bool:
-        """
-        Cambiar la contraseña verificando la actual.
-        
-        Args:
-            password_actual: Contraseña actual en texto plano
-            password_nuevo: Nueva contraseña en texto plano
-            
-        Returns:
-            True si el cambio fue exitoso
-        """
-        if not self.verify_password(password_actual):
-            return False
-        
-        self.set_password(password_nuevo)
-        return True
-    
-    def obtener_info_resumida(self) -> dict:
-        """
-        Obtener información resumida del usuario (sin datos sensibles).
-        
-        Returns:
-            Diccionario con información básica
-        """
-        return {
-            'id_usuario': self.id_usuario,
-            'nombre_usuario': self.nombre_usuario,
-            'rol': self.rol,
-            'activo': self.activo,
-            'es_admin': self.es_admin(),
-            'ultimo_login': self.ultimo_login.isoformat() if self.ultimo_login else None
-        }
+    # MÉTODOS DE VALIDACIÓN
     
     def validar_datos(self) -> list:
         """
@@ -414,48 +433,3 @@ class Usuario:
             True si todos los datos son válidos
         """
         return len(self.validar_datos()) == 0
-    
-    def tiempo_desde_ultimo_login(self) -> Optional[str]:
-        """
-        Calcular tiempo transcurrido desde el último login.
-        
-        Returns:
-            String descriptivo del tiempo transcurrido o None si nunca hizo login
-        """
-        if not self.ultimo_login:
-            return None
-        
-        ahora = datetime.now()
-        diferencia = ahora - self.ultimo_login
-        
-        if diferencia.days > 0:
-            return f"hace {diferencia.days} días"
-        elif diferencia.seconds > 3600:
-            horas = diferencia.seconds // 3600
-            return f"hace {horas} horas"
-        elif diferencia.seconds > 60:
-            minutos = diferencia.seconds // 60
-            return f"hace {minutos} minutos"
-        else:
-            return "hace menos de un minuto"
-    
-    @classmethod
-    def validar_nombre_usuario_unico(cls, usuarios: list, nombre_usuario: str, excluir_id: Optional[int] = None) -> bool:
-        """
-        Validar que un nombre de usuario sea único.
-        
-        Args:
-            usuarios: Lista de usuarios existentes
-            nombre_usuario: Nombre a validar
-            excluir_id: ID de usuario a excluir de la validación (para edición)
-            
-        Returns:
-            True si el nombre es único
-        """
-        for usuario in usuarios:
-            if (isinstance(usuario, cls) and 
-                usuario.nombre_usuario == nombre_usuario and
-                usuario.id_usuario != excluir_id):
-                return False
-        
-        return True

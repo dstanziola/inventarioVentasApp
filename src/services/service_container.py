@@ -629,9 +629,13 @@ def setup_default_container() -> ServiceContainer:
         
         container.register(
             'user_service',
-            lambda c: UserService(c.get('database')),
-            dependencies=['database']
+            lambda c: UserService(
+                db_connection=c.get('database'),
+                password_hasher=c.get('password_hasher')
+            ),
+            dependencies=['database', 'password_hasher']
         )
+
         
         # Registrar CompanyService con corrección aplicada
         try:
@@ -700,6 +704,44 @@ def setup_default_container() -> ServiceContainer:
             )
         except ImportError:
             pass
+        
+        # CRITICAL: Registrar AuthService y dependencias de seguridad
+        try:
+            from infrastructure.security.password_hasher import create_password_hasher
+            from shared.session.session_manager import SessionManager
+            from application.services.auth_service import create_auth_service
+            
+            # Registrar PasswordHasher (sin dependencias)
+            container.register(
+                'password_hasher',
+                lambda: create_password_hasher(),
+                dependencies=[]
+            )
+            
+            # Registrar SessionManager mejorado
+            container.register(
+                'session_manager',
+                lambda: SessionManager(),
+                dependencies=[]
+            )
+            
+            # Registrar AuthService (con todas sus dependencias)
+            container.register(
+                'auth_service',
+                lambda c: create_auth_service(
+                    user_repository=c.get('user_service'),
+                    session_manager=c.get('session_manager'),
+                    password_hasher=c.get('password_hasher')
+                ),
+                dependencies=['user_service', 'session_manager', 'password_hasher']
+            )
+            
+            logging.getLogger("ServiceContainer").info("✅ AuthService registrado exitosamente en container")
+            
+        except ImportError as e:
+            logging.getLogger("ServiceContainer").error(f"❌ AuthService no disponible - Error crítico: {e}")
+            # Re-lanzar excepción porque AuthService es crítico
+            raise ServiceRegistrationError(f"AuthService es requerido para el sistema: {e}")
         
         logging.getLogger("ServiceContainer").info("Container por defecto configurado exitosamente")
         
