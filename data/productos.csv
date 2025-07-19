@@ -1,0 +1,103 @@
+id_producto;categoría;tipo_categoria;producto;stock; costo_unitario ; precio_de_venta 
+1;adornos y regalos;materiales;BANDERAS DE PANAMA;15;; 1.00 
+2;materiales y utiles escolares;materiales;BARRA DE GOMA CALIENTE DELGADA;47;; 0.25 
+3;materiales y utiles escolares;materiales;BARRA DE GOMA CALIENTE GRUESA;26; 0.26 ; 0.50 
+4;materiales y utiles escolares;materiales;BLOCK DE HOJAS BLANCAS LARGA;1; 6.50 ; 8.00 
+5;materiales y utiles escolares;materiales;BLOCK DE HOJAS DE RAYA;4;; 4.25 
+6;materiales y utiles escolares;materiales;BLOCK DE PAGINAS BLANCAS CORTAS;10; 3.60 ; 4.50 
+7;materiales y utiles escolares;materiales;BOLIGRAFO CAPIBARA CUATRO COLORES;6; 0.62 ; 1.25 
+8;materiales y utiles escolares;materiales;BOLITAS DE FOAM 20MM;6; 0.37 ; 1.00 
+9;materiales y utiles escolares;materiales;BOLITAS DE FOAM 60MM;6; 0.75 ; 1.50 
+10;materiales y utiles escolares;materiales;BOLITAS DE FOAM 70MM;6; 0.66 ; 1.00 
+11;materiales y utiles escolares;materiales;BOLITAS DE FOAM 80MM;6; 0.62 ; 0.75 
+12;adornos y regalos;materiales;BOLSITAS PARA REGALO  ;15;; 1.00 
+13;materiales y utiles escolares;materiales;BORRADORES BLANCOS- CHICOS/ CAJA;30; 0.08 ; 0.25 
+14;materiales y utiles escolares;materiales;CANVA PARA MANUALIDAD;32;; 1.00 
+15;materiales y utiles escolares;materiales;CARTULINA ;25; 0.20 ; 0.40 
+16;materiales y utiles escolares;materiales;CARTULINA DE LINO ( PARA TARJETAS);100; 0.03 ; 0.50 
+17;materiales y utiles escolares;materiales;CD;33;; 1.00 
+18;materiales y utiles escolares;materiales;CORRECTOR 4ML;12; 0.29 ; 0.60 
+19;materiales y utiles escolares;materiales;CRAYONES JUMBO;6; 1.25 ; 2.00 
+20;materiales y utiles escolares;materiales;CUADERNO 200PAG. RAYA ANCHA;18; 1.00 ; 2.00 
+21;materiales y utiles escolares;materiales;CUADERNO 96 PAG. / NIÑOS ;12;; 0.60 
+22;materiales y utiles escolares;materiales;CUADERNO 96 PAG. /NIÑAS ;6; 0.30 ; 0.50 
+23;materiales y utiles escolares;materiales;CUADERNO DE CUADRITOS 200 PAG.;6; 1.00 ; 2.00 
+24;materiales y utiles escolares;materiales;CUADERNOS DE DOBLE RAYA;6; 1.25 ; 2.25 
+25;materiales y utiles escolares;materiales;ENGRAPADORAS CHICAS;2;; 2.00 
+26;materiales y utiles escolares;materiales;ESCARCHA PAQUETITOS;12; 0.13 ; 0.35 
+27;materiales y utiles escolares;materiales;ESQUINERA CHICA;1; 0.65 ; 1.00 
+28;materiales y utiles escolares;materiales;ESQUINERA GRANDE ;1; 1.00 ; 1.50 
+29;materiales y utiles escolares;materiales;FLAUTA DULCE;2;; 5.00 
+30;materiales y utiles escolares;materiales;FOAMY GRANDE ESCARCHADO;6; 1.00 ; 1.75 
+31;materiales y utiles escolares;materiales;FOAMY GRANDE LISO;12; 0.75 ; 1.50 
+32;materiales y utiles escolares;materiales;FOLDER CON DISEÑO ;1;; 1.95 
+33;materiales y utiles escolares;materiales;FOLDER CREMA CHICO ;24; 0.08 ; 0.25 
+34;materiales y utiles escolares;materiales;FOLDER CREMA LARGO;62;; 0.30 
+35;materiales y utiles escolares;materiales;FOLDER DE COLOR ;10;; 0.30 
+36;materiales y utiles escolares;materiales;FOLDER TRANSPARENTE CON VARILLA ;4;; 1.00 
+37;materiales y utiles escolares;materiales;GANCHO ESCOLAR AZUL;6; 0.20 ; 0.30 
+38;materiales y utiles escolares;materiales;GANCHO ESCOLAR BLANCO;6; 0.17 ; 0.25 
+39;materiales y utiles escolares;materiales;GANCHO PARA EL CABELLO CHICO;12; 0.04 ; 0.25 
+40;materiales y utiles escolares;materiales;GANCHO PARA EL CABELLO MEDIANO;12; 0.08 ; 0.50 
+41;materiales y utiles escolares;materiales;GANCHO PARA ENGARGOLAR GRANDE ;23;; 0.50 
+42;materiales y utiles escolares;materiales;GANCHO PARA FOLDER- COLORES/ CAJA;50; 0.04 ; 0.15 
+43;materiales y utiles escolares;materiales;GANCHOS  PARA EL CABELLOS COLORES PASTELES;12; 0.34 ; 1.00 
+44;materiales y utiles escolares;materiales;GANCHOS PARA ENGARGOLAR CHICO;18;; 0.30 
+45;materiales y utiles escolares;materiales;GANCHOS PARA ENGARGOLAR MEDIANO;50;; 0.40 
+46;snacks;materiales;GOLOSINA  CARAMELO BESO;24; 0.06 ; 0.15 
+47;snacks;materiales;GOLOSINA CARAMELO BOM BOM;24; 0.09 ; 0.25 
+48;snacks;materiales;GOLOSINA CARAMELO CORAZON ;40; 0.06 ; 0.15 
+49;snacks;materiales;GOLOSINA GELATINA ;40; 0.11 ; 0.30 
+50;materiales y utiles escolares;materiales;GOMA BLANCA 60 ML;12; 0.29 ; 0.60 
+51;materiales y utiles escolares;materiales;GOMA CALIENTE GRANDE ;25; 0.20 ; 0.50 
+52;materiales y utiles escolares;materiales;GOMA FRIA 60ML;12; 0.63 ; 1.00 
+53;materiales y utiles escolares;materiales;HILO DE MADEJA;73;; 1.00 
+54;materiales y utiles escolares;materiales;HILO LANA;9;; 0.65 
+55;materiales y utiles escolares;materiales;HOJA DE CARTULINA;145;; 0.25 
+56;materiales y utiles escolares;materiales;HOJA DE FIETRO;49;; 0.50 
+57;materiales y utiles escolares;materiales;HOJA DE FOAMI SIN ESCARCHA;44;; 0.30 
+58;materiales y utiles escolares;materiales;HOJA FOAMI ESCARCHADO ;15;; 0.50 
+59;materiales y utiles escolares;materiales;HOJAS DE COLORES;149;; 0.05 
+60;materiales y utiles escolares;materiales;LAPIZ COLORES MAPEC;6; 2.25 ; 3.00 
+61;materiales y utiles escolares;materiales;LAPIZ DE DIBUJO 2B Y 6B;24; 0.25 ; 0.60 
+62;materiales y utiles escolares;materiales;LAPIZ INFINITO MODELOS SURTIDOS;24; 0.63 ; 1.00 
+63;materiales y utiles escolares;materiales;LAPIZ MONGOL;24; 0.21 ; 0.30 
+64;materiales y utiles escolares;materiales;LIBRETAS DE RAYAS ;3;; 1.90 
+65;materiales y utiles escolares;materiales;LIBROS COLOREAR;6; 0.75 ; 1.50 
+66;materiales y utiles escolares;materiales;LIMPIA PIPAS COLORES SURTIDOS 100 UND X 12 PAQT ;1200; 0.02 ; 0.15 
+67;snacks;materiales;MALVA;50; 0.04 ; 0.10 
+68;materiales y utiles escolares;materiales;MAMPARA CHICO;6; 2.00 ; 3.50 
+69;materiales y utiles escolares;materiales;MAMPARA GRANDE;4; 3.50 ; 4.50 
+70;materiales y utiles escolares;materiales;MASILLA 4 COLORES ( POTESITO);3; 1.00 ; 2.50 
+71;materiales y utiles escolares;materiales;MASILLA 8 COLORES;6; 0.75 ; 1.75 
+72;materiales y utiles escolares;materiales;OJITOS MOVILES TAMAÑOS SURTIDOS;12; 0.13 ; 0.30 
+73;materiales y utiles escolares;materiales;PAGINAS DE ENGARGOLAR ;34;; 0.10 
+74;materiales y utiles escolares;materiales;PALITOS DE PALETA COLOR MADERA Y COLORES 6 CAJITAS;25; 0.18 ; 0.50 
+75;materiales y utiles escolares;materiales;PAPEL CONTRUCCION ;48; 0.03 ; 0.15 
+76;materiales y utiles escolares;materiales;PAPEL CORRUGADO;35;; 0.65 
+77;materiales y utiles escolares;materiales;PAPEL CRESPON COLORES SURTIDOS;24; 0.21 ; 0.35 
+78;materiales y utiles escolares;materiales;PAPEL ENGOMADO TRANSPARENTE;6; 1.50 ; 2.00 
+79;materiales y utiles escolares;materiales;PAPEL FOTOGRAFICO 230G;20; 0.13 ; 0.50 
+80;materiales y utiles escolares;materiales;PAPEL FOTOGRAFICO CON ADHESIVO;20; 0.15 ; 0.25 
+81;materiales y utiles escolares;materiales;PAPPEL ENGOMADO COLORES;6; 1.75 ; 2.50 
+82;materiales y utiles escolares;materiales;PILOTO DOBLE PUNTA ( AZAUL, NEGRO);12; 0.38 ; 1.50 
+83;materiales y utiles escolares;materiales;PINCEL SURTIDOS ( 2 PAQUETES);12; 0.21 ; 0.25 
+84;adornos y regalos;materiales;PINES DE CORBATIN ;12; 0.21 ; 1.00 
+85;adornos y regalos;materiales;PISA CORBATA;20; 0.37 ; 1.00 
+86;adornos y regalos;materiales;PLATOS CON HUEVOS DE PASCUA ;10;; 2.50 
+87;materiales y utiles escolares;materiales;PLUMAS BIC AZUL;12; 0.17 ; 0.35 
+88;materiales y utiles escolares;materiales;PLUMAS BIC NEGRA;12; 0.17 ; 0.35 
+89;materiales y utiles escolares;materiales;PLUMAS BIC ROJA;12; 0.17 ; 0.35 
+90;materiales y utiles escolares;materiales;PLUMAS POINTER;30; 0.05 ; 0.25 
+91;materiales y utiles escolares;materiales;PLUMAS STICH ;12; 0.50 ; 1.00 
+92;materiales y utiles escolares;materiales;PROTECTOR DE HOJAS PLASTICOS TRANSPARENTE;100; 0.04 ; 0.30 
+93;materiales y utiles escolares;materiales;REGLAS FLEXIBLE;6; 0.29 ; 0.75 
+94;materiales y utiles escolares;materiales;REGLAS PLASTICA;12; 0.13 ; 0.50 
+95;materiales y utiles escolares;materiales;RESALTADOR;6; 0.42 ; 1.50 
+96;materiales y utiles escolares;materiales;"ROLLO DE CINTA TRICOLOR 1""";25;; 1.00 
+97;materiales y utiles escolares;materiales;ROLLO DE CINTA TRICOLOR 3/4;25;; 0.75 
+98;materiales y utiles escolares;materiales;SACAPUNTA;12; 0.29 ; 0.75 
+99;materiales y utiles escolares;materiales;STICKER DE CARITA;12; 0.09 ; 0.50 
+100;materiales y utiles escolares;materiales;TAPE CHICOS;8; 0.25 ; 0.50 
+101;materiales y utiles escolares;materiales;TEMPERA 6 COLORES;6; 1.25 ; 1.75 
+102;materiales y utiles escolares;materiales;TIJERAS ;10;; 0.75 

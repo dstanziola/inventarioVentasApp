@@ -1,4 +1,21 @@
-# Requerimientos del Sistema de Gestión de Inventario: vers.5.0 - Optimizado
+# Requerimientos del Sistema de Gestión de Inventario: vers.6.0
+
+# Necesidades del usuario
+- Sistema para llevar el control de inventario y ventas.
+- Para ser instalada en computadora personal con Windows versiones 10 u 11.
+- Uso en una tienda pequeña: promedio 1000 transacciones por día
+- Interfase intuitiva y amigable: Pocas opciones por ventana. La aplicación debe ser tan clara y fácil de usar como sea posible, mostrando solo lo necesario en cada pantalla
+- Numero de usuarios:maximo 20
+- Perfil de usuarios: habilidades informáticas mínimas o nulas 
+- Roles de usuario: administrador, vendedor
+- formularios: principal, clientes, productos, categorias, ventas, ajustes, historial, reportes, código de barras
+- Entrada de datos por teclado y lector de código de barras con entrada de datos tipo teclado
+- Generacion de reportes:
+  - Reporte de ventas: petición diaria
+  - Reporte de stock bajo:petición semanal
+  - Reporte de analisis de ventas: petición mensual
+    - este reporte debe contribuir de identificar el estado de ganancias o pérdidas y los productos estrella.
+  - otros reportes: por demanda
 
 ## **1. Arquitectura del Sistema**
 

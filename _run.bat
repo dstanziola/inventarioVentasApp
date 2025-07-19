@@ -24,6 +24,7 @@ if not exist "venv" (
     call venv\Scripts\activate
     echo Instalando dependencias...
     python -m pip install --upgrade pip
+    pip install black flake8 pylint isort
     pip install sqlalchemy
     py -m pip install pandas
     pip install -r requirements.txt
