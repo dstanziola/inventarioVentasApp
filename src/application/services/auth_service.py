@@ -172,9 +172,11 @@ class AuthService(IAuthService):
         Implementación TDD para:
         - test_is_authenticated_true
         - test_is_authenticated_false
+        
+        CORRECCIÓN: SessionManager.is_authenticated es @property, no método.
         """
         try:
-            return self._session_manager.is_authenticated()
+            return self._session_manager.is_authenticated
         except Exception as e:
             self._logger.error(f"Error verificando autenticación: {e}")
             return False

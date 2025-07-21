@@ -55,15 +55,15 @@ class MainWindow:
             RuntimeError: Si no hay usuario autenticado
             ConnectionError: Si hay problemas con la base de datos
         """
-        # Inicializar servicios primero
+        # CORRECCIÓN: Configurar logging ANTES de _initialize_services()
+        self.logger = logging.getLogger(__name__)
+        
+        # Inicializar servicios después de configurar logger
         self._initialize_services()
         
         # Verificar autenticación usando ServiceContainer
         if not self.session_manager.is_authenticated:
             raise RuntimeError("Debe autenticarse antes de acceder al sistema principal")
-            
-        # Configurar logging
-        self.logger = logging.getLogger(__name__)
         
         # (servicios ya inicializados en verificación de autenticación)
         

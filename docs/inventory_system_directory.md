@@ -354,6 +354,64 @@ src/compliance/
 
 ## ✅ Correcciones Críticas Adicionales Completadas Hoy
 
+### Error AttributeError 'MainWindow' object has no attribute 'logger' (2025-07-20)
+
+**Problema:** Error crítico en inicialización MainWindow: "'MainWindow' object has no attribute 'logger'"  
+**Estado:** ✅ RESUELTO COMPLETAMENTE
+
+#### Causa Raíz:
+- MainWindow.__init__() llama self._initialize_services() ANTES de configurar self.logger
+- _initialize_services() intenta usar self.logger.info() y self.logger.error() (líneas 138,141)
+- AttributeError porque self.logger no existe cuando se necesita
+
+#### Solución Implementada:
+- **Reorden inicialización:** self.logger configurado ANTES de self._initialize_services()
+- **Líneas corregidas:** main_window.py:59-64 secuencia corregida
+- **Orden correcto:** logger → servicios → autenticación → UI
+- **Test TDD:** Suite completa para prevenir regresión futura
+
+#### Archivos Afectados:
+- `src/ui/main/main_window.py` - 🔧 CORREGIDO (líneas 59-64 reorden inicialización)
+- `tests/integration/test_main_window_logger_initialization.py` - ✅ NUEVO (suite TDD detección bug)
+- `tests/integration/test_main_window_logger_fix_validation.py` - ✅ NUEVO (validación corrección)
+
+#### Validaciones Realizadas:
+- ✅ MainWindow.__init__() funciona sin AttributeError
+- ✅ self.logger disponible durante _initialize_services()
+- ✅ Logging de servicios inicializados funciona correctamente
+- ✅ Manejo de errores con logger disponible
+- ✅ Orden inicialización lógico: dependencias → funcionalidad
+- ✅ Ventana principal se crea correctamente tras login
+
+### Error 'bool' object is not callable en AuthService.is_authenticated() (2025-07-20)
+
+**Problema:** Error crítico durante login: "'bool' object is not callable"  
+**Estado:** ✅ RESUELTO COMPLETAMENTE
+
+#### Causa Raíz:
+- AuthService.is_authenticated() llama self._session_manager.is_authenticated() 
+- SessionManager.is_authenticated es @property, no método
+- TypeError al intentar llamar property como función durante verificación autenticación
+
+#### Solución Implementada:
+- **Corrección sintaxis:** self._session_manager.is_authenticated() → self._session_manager.is_authenticated
+- **Property access correcto:** Eliminados paréntesis () para acceso a @property
+- **Línea específica:** auth_service.py:179 corregida
+- **Test TDD:** Suite completa para prevenir regresión futura
+
+#### Archivos Afectados:
+- `src/application/services/auth_service.py` - 🔧 CORREGIDO (línea 179 sintaxis property)
+- `tests/integration/test_auth_session_property_fix.py` - ✅ NUEVO (suite TDD detección bug)
+- `tests/integration/test_auth_service_property_fix_validation.py` - ✅ NUEVO (validación corrección)
+
+#### Validaciones Realizadas:
+- ✅ SessionManager.is_authenticated confirmado como @property
+- ✅ AuthService.is_authenticated() funciona sin TypeError
+- ✅ Login admin/vendedor flujo end-to-end operativo
+- ✅ Estados autenticación (login/logout) correctos
+- ✅ Performance property access optimizada vs method call
+- ✅ Thread safety y consistencia validadas
+
 ### Desconexión Sistemas Autenticación LoginWindow ↔ MainWindow (2025-07-19)
 
 **Problema:** Falla crítica - RuntimeError "Debe autenticarse antes de iniciar la aplicación principal"  

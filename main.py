@@ -13,7 +13,7 @@ from tkinter import messagebox
 
 # Agregar src/ al path para imports correctos
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-print("PATHS actuales:")
+# print("PATHS actuales:")
 # Configurar logging
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 if not os.path.exists(log_dir):
