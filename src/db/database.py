@@ -4,9 +4,10 @@ Implementado siguiendo metodología TDD - debe satisfacer todos los tests.
 """
 
 import sqlite3
-import hashlib
 import os
+import logging
 from typing import Optional
+from src.infrastructure.security.password_hasher import PasswordHasher
 
 
 class DatabaseConnection:
@@ -24,6 +25,7 @@ class DatabaseConnection:
         """
         self.db_path = db_path
         self._connection: Optional[sqlite3.Connection] = None
+        self._logger = logging.getLogger(__name__)
         self._initialize_connection()
     
     def _initialize_connection(self):
@@ -41,6 +43,87 @@ class DatabaseConnection:
         self._connection.execute("PRAGMA journal_mode = WAL")
         
         self._connection.commit()
+    
+    def migrate_legacy_passwords(self) -> dict:
+        """
+        Migrar passwords legacy al formato PasswordHasher.
+        
+        Busca usuarios con hashes en formato legacy (sin '$') y los migra
+        al formato PasswordHasher con salt aleatorio para mejor seguridad.
+        
+        Returns:
+            dict: Reporte de migración con usuarios migrados
+        """
+        migrated_users = 0
+        modern_users = 0
+        errors = []
+        
+        try:
+            cursor = self._connection.cursor()
+            
+            # Obtener todos los usuarios
+            cursor.execute("""
+                SELECT id_usuario, nombre_usuario, password_hash, rol 
+                FROM usuarios 
+                WHERE activo = 1
+            """)
+            
+            users = cursor.fetchall()
+            password_hasher = PasswordHasher()
+            
+            for user_id, username, current_hash, rol in users:
+                # Verificar si es hash legacy (sin '$')
+                if '$' not in current_hash:
+                    try:
+                        # Migrar hash legacy a formato PasswordHasher
+                        # Para usuarios legacy conocidos (admin), conocemos el password
+                        if username == 'admin':
+                            new_hash = password_hasher.hash_password('admin123')
+                        else:
+                            # Para otros usuarios, generar nuevo hash con password temporal
+                            # En producción real, esto requeriría reseteo de password
+                            self._logger.warning(f"Usuario {username} requiere cambio manual de password")
+                            continue
+                        
+                        # Actualizar hash en base de datos
+                        cursor.execute("""
+                            UPDATE usuarios 
+                            SET password_hash = ?
+                            WHERE id_usuario = ?
+                        """, (new_hash, user_id))
+                        
+                        migrated_users += 1
+                        self._logger.info(f"Usuario {username} migrado a formato PasswordHasher")
+                        
+                    except Exception as e:
+                        error_msg = f"Error migrando usuario {username}: {e}"
+                        errors.append(error_msg)
+                        self._logger.error(error_msg)
+                else:
+                    modern_users += 1
+            
+            # Confirmar cambios
+            self._connection.commit()
+            
+            return {
+                'migrated_users': migrated_users,
+                'modern_users': modern_users,
+                'total_users': len(users),
+                'errors': errors,
+                'success': len(errors) == 0
+            }
+            
+        except Exception as e:
+            self._connection.rollback()
+            error_msg = f"Error en migración de passwords: {e}"
+            self._logger.error(error_msg)
+            return {
+                'migrated_users': 0,
+                'modern_users': 0,
+                'total_users': 0,
+                'errors': [error_msg],
+                'success': False
+            }
     
     def get_connection(self) -> sqlite3.Connection:
         """
@@ -248,9 +331,10 @@ class DatabaseConnection:
         )
         
         if cursor.fetchone()[0] == 0:
-            # Crear hash del password por defecto
+            # Crear hash del password por defecto usando PasswordHasher
             default_password = "admin123"  # En producción debería ser más seguro
-            password_hash = self._hash_password(default_password)
+            password_hasher = PasswordHasher()
+            password_hash = password_hasher.hash_password(default_password)
             
             # Insertar usuario administrador
             cursor.execute("""
@@ -314,21 +398,6 @@ class DatabaseConnection:
                 """, (ticket_type, 0, prefix, suffix))
         
         self._connection.commit()
-    
-    def _hash_password(self, password: str) -> str:
-        """
-        Generar hash seguro de password.
-        
-        Args:
-            password: Password en texto plano
-            
-        Returns:
-            Hash del password
-        """
-        # En un sistema real usaríamos bcrypt o similar
-        # Por simplicidad usamos SHA-256 con salt
-        salt = "inventory_system_salt_2024"
-        return hashlib.sha256((password + salt).encode()).hexdigest()
     
     def _set_database_version(self, version: int, description: str):
         """

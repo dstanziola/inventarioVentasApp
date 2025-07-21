@@ -122,19 +122,20 @@ class PasswordHasher:
     
     def _verify_legacy_password(self, password: str, hashed_password: str) -> bool:
         """
-        Verificar passwords legacy sin salt (compatibilidad).
+        Verificar passwords legacy con salt específico del sistema (compatibilidad).
         
         Args:
             password (str): Password en texto plano
-            hashed_password (str): Hash legacy sin salt
+            hashed_password (str): Hash legacy del sistema de inventario
             
         Returns:
             bool: True si password correcto
         """
         try:
-            # Hash simple sin salt (legacy)
+            # Hash legacy con salt específico del sistema de inventario
+            legacy_salt = "inventory_system_salt_2024"
             hash_obj = hashlib.new(self._algorithm)
-            hash_obj.update(password.encode('utf-8'))
+            hash_obj.update((password + legacy_salt).encode('utf-8'))
             computed_hash = hash_obj.hexdigest()
             
             is_valid = secrets.compare_digest(computed_hash, hashed_password)

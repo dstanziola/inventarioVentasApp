@@ -40,7 +40,8 @@ from ui.forms.movement_form import MovementForm
 from ui.forms.reports_form import ReportsForm  # FASE 2: Sistema de Reportes
 from ui.forms.ticket_preview_form import TicketPreviewForm  # FASE 3: Sistema de Tickets
 from ui.forms.company_config_form import CompanyConfigForm  # FASE 3: Configuración de Empresa
-from ui.auth.session_manager import session_manager
+# from ui.auth.session_manager import session_manager  # DEPRECATED: Usar ServiceContainer
+from services.service_container import get_container
 from ui.utils.window_manager import window_manager
 
 class MainWindow:
@@ -54,15 +55,17 @@ class MainWindow:
             RuntimeError: Si no hay usuario autenticado
             ConnectionError: Si hay problemas con la base de datos
         """
-        # Verificar autenticación
-        if not session_manager.is_authenticated:
+        # Inicializar servicios primero
+        self._initialize_services()
+        
+        # Verificar autenticación usando ServiceContainer
+        if not self.session_manager.is_authenticated:
             raise RuntimeError("Debe autenticarse antes de acceder al sistema principal")
             
         # Configurar logging
         self.logger = logging.getLogger(__name__)
         
-        # Inicializar servicios
-        self._initialize_services()
+        # (servicios ya inicializados en verificación de autenticación)
         
         # Crear ventana principal
         self.root = tk.Tk()
@@ -114,6 +117,11 @@ class MainWindow:
         """Obtiene SalesService del container (lazy)."""
         return self.container.get('sales_service')
         
+    @property
+    def session_manager(self):
+        """Obtiene SessionManager del container (lazy)."""
+        return self.container.get('session_manager')
+        
     def _initialize_services(self):
         """Inicializa los servicios usando Service Container."""
         try:
@@ -152,7 +160,7 @@ class MainWindow:
         menubar.add_cascade(label="Archivo", menu=file_menu)
         file_menu.add_command(label="Cambiar Usuario", command=self._change_user)
         file_menu.add_separator()
-        if session_manager.has_permission('admin'):
+        if self.session_manager.has_permission('admin'):
             file_menu.add_command(label="⚙️ Configuración de Empresa", command=self._open_company_config)
             file_menu.add_separator()
         file_menu.add_command(label="Salir", command=self._exit_application)
@@ -161,7 +169,7 @@ class MainWindow:
         manage_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Gestión", menu=manage_menu)
         
-        if session_manager.has_permission('admin'):
+        if self.session_manager.has_permission('admin'):
             manage_menu.add_command(label="Categorías", command=self._open_categories)
             manage_menu.add_command(label="Productos", command=self._open_products)
             manage_menu.add_separator()
@@ -171,7 +179,7 @@ class MainWindow:
         manage_menu.add_command(label="Procesar Venta", command=self._open_sales)
         
         # Menú Inventario (solo administradores)
-        if session_manager.has_permission('admin'):
+        if self.session_manager.has_permission('admin'):
             inventory_menu = tk.Menu(menubar, tearoff=0)
             menubar.add_cascade(label="Inventario", menu=inventory_menu)
             inventory_menu.add_command(label="Movimientos", command=self._open_movements)
@@ -179,7 +187,7 @@ class MainWindow:
             inventory_menu.add_command(label="Ver Inventario Actual", command=self._open_inventory_report)
         
         # Menú Reportes (solo administradores) - FASE 2
-        if session_manager.has_permission('admin'):
+        if self.session_manager.has_permission('admin'):
             reports_menu = tk.Menu(menubar, tearoff=0)
             menubar.add_cascade(label="Reportes", menu=reports_menu)
             reports_menu.add_command(label="📊 Sistema de Reportes", command=self._open_reports_system)
@@ -193,7 +201,7 @@ class MainWindow:
         tickets_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Tickets", menu=tickets_menu)
         tickets_menu.add_command(label="🎫 Generar Ticket de Venta", command=self._generate_sales_ticket)
-        if session_manager.has_permission('admin'):
+        if self.session_manager.has_permission('admin'):
             tickets_menu.add_command(label="📦 Generar Ticket de Entrada", command=self._generate_entry_ticket)
             tickets_menu.add_separator()
             tickets_menu.add_command(label="🔍 Buscar Tickets", command=self._search_tickets)
@@ -229,7 +237,7 @@ class MainWindow:
         ).pack(side=tk.LEFT, padx=5)
         
         # Botones de administración (solo para administradores)
-        if session_manager.has_permission('admin'):
+        if self.session_manager.has_permission('admin'):
 
             ttk.Button(
                 toolbar,
@@ -277,7 +285,7 @@ class MainWindow:
         welcome_frame.pack(fill=tk.BOTH, expand=True)
         
         # Título de bienvenida
-        user_info = session_manager.get_user_info()
+        user_info = self.session_manager.get_user_info()
         welcome_title = ttk.Label(
             welcome_frame,
             text=f"Bienvenido, {user_info['nombre_usuario']}",
@@ -295,7 +303,7 @@ class MainWindow:
         info_label.pack(pady=(0, 20))
         
         # Información de usuario
-        user_info = session_manager.get_user_info()
+        user_info = self.session_manager.get_user_info()
         user_label = ttk.Label(
             welcome_frame,
             text=f"Usuario: {user_info['nombre_usuario']} ({user_info['rol']})",
@@ -358,7 +366,7 @@ class MainWindow:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         
         # Información de usuario
-        user_info = session_manager.get_user_info()
+        user_info = self.session_manager.get_user_info()
         self.user_status = ttk.Label(
             self.status_bar,
             text=f"Usuario: {user_info['nombre_usuario']} | Rol: {user_info['rol']}"
@@ -415,7 +423,7 @@ class MainWindow:
     # Métodos de navegación
     def _open_categories(self):
         """Abre la ventana de gestión de categorías."""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -434,7 +442,7 @@ class MainWindow:
             
     def _open_products(self):
         """Abre la ventana de gestión de productos."""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -483,7 +491,7 @@ class MainWindow:
             
     def _open_movements(self):
         """Abre la ventana de movimientos de inventario."""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -505,7 +513,7 @@ class MainWindow:
     # FASE 2: Métodos del sistema de reportes
     def _open_reports_system(self):
         """Abre el sistema principal de reportes - FASE 2"""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -597,7 +605,7 @@ class MainWindow:
     
     def _open_company_config(self):
         """Abre configuración de empresa - FASE 3"""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -648,8 +656,8 @@ class MainWindow:
             ):
                 # Generar ticket
                 ticket = ticket_service.generar_ticket_venta(
-                    id_venta=ultima_venta.id_venta,
-                    responsable=session_manager.get_user_info()['nombre_usuario']
+                id_venta=ultima_venta.id_venta,
+                responsable=self.session_manager.get_user_info()['nombre_usuario']
                 )
                 
                 messagebox.showinfo(
@@ -677,7 +685,7 @@ class MainWindow:
     
     def _generate_entry_ticket(self):
         """Generar ticket para último movimiento de entrada"""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -711,7 +719,7 @@ class MainWindow:
                 # Generar ticket
                 ticket = ticket_service.generar_ticket_entrada(
                     id_movimiento=ultimo_movimiento.id_movimiento,
-                    responsable=session_manager.get_user_info()['nombre_usuario']
+                    responsable=self.session_manager.get_user_info()['nombre_usuario']
                 )
                 
                 messagebox.showinfo(
@@ -739,7 +747,7 @@ class MainWindow:
     
     def _search_tickets(self):
         """Buscar tickets existentes"""
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
             return
             
@@ -1014,8 +1022,8 @@ Desarrollado siguiendo metodología TDD"""
             window_manager.close_all_windows()
             
             # Cerrar sesión
-            user_info = session_manager.get_user_info()
-            session_manager.logout()
+            user_info = self.session_manager.get_user_info()
+            self.session_manager.logout()
             self.logger.info(f"Sesión cerrada para usuario: {user_info['nombre_usuario']}")
             
             # Cerrar ventana principal
@@ -1052,6 +1060,10 @@ def start_main_window():
     Raises:
         RuntimeError: Si no hay usuario autenticado
     """
+    # Usar session_manager del ServiceContainer para verificación
+    container = get_container()
+    session_manager = container.get('session_manager')
+    
     if not session_manager.is_authenticated:
         raise RuntimeError("Debe autenticarse antes de iniciar la aplicación principal")
         

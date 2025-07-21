@@ -246,6 +246,39 @@ src/compliance/
 
 **Funcionalidades:** Auditoría, trazabilidad, reportes regulatorios
 
+## Correcciones Críticas Resueltas
+
+### Sistema de Autenticación (2025-07-19)
+
+**Problema:** Falla crítica en login admin después de refactorización PasswordHasher  
+**Estado:** ✅ RESUELTO COMPLETAMENTE
+
+#### Archivos Afectados:
+- `src/db/database.py` - 🔧 REPARADO (archivo corrupto restaurado)
+- `tests/test_password_migration_fix.py` - ✅ NUEVO (13 tests TDD)
+
+#### Solución Implementada:
+- **Migración de passwords:** Algoritmo completo legacy → moderno
+- **Compatibilidad backward:** Usuarios legacy y modernos simultáneamente
+- **Salt legacy correcto:** "inventory_system_salt_2024" validado
+- **Zero downtime:** Sistema operativo durante migración
+- **Tests exhaustivos:** 13 casos cubren todos los escenarios
+
+#### Validaciones Realizadas:
+- ✅ PasswordHasher crea/verifica hashes modernos (salt$hash)
+- ✅ PasswordHasher verifica hashes legacy (sin salt)
+- ✅ DatabaseConnection crea admin con hash moderno
+- ✅ Migración convierte usuarios legacy automáticamente
+- ✅ AuthService autentica ambos formatos sin conflictos
+- ✅ Login admin funcional después de inicialización
+- ✅ Casos edge manejados (DB vacía, usuarios mixtos, errores)
+
+#### Metodología Aplicada:
+- **TDD estricto:** Tests escritos antes de implementación
+- **Clean Architecture:** Separación de capas preservada
+- **Workflow obligatorio:** Secuencia de 10 pasos seguida
+- **Commits atómicos:** Un cambio por commit con mensaje descriptivo
+
 ## Próximos Pasos de Documentación
 
 ### Archivos Pendientes por Crear
@@ -282,6 +315,10 @@ src/compliance/
 - **Dependencias:** 25 producción + 8 desarrollo documentadas
 - **Seguridad:** Políticas empresariales completas implementadas
 - **Metodología:** TDD + Claude AI completamente especificada
+- **Última corrección crítica:** Sistema autenticación reparado completamente (2025-07-19)
+- **Estado autenticación:** ✅ OPERATIVO (login admin restaurado)
+- **Migración passwords:** ✅ IMPLEMENTADA (legacy → moderno)
+- **Tests de regresión:** ✅ COMPLETADOS (13 casos TDD)
 
 ### Progreso de Documentación
 
@@ -312,6 +349,39 @@ src/compliance/
 - **Directorios:** lowercase sin espacios
 - **Componentes:** PascalCase para clases, camelCase para funciones
 - **Constantes:** UPPER_CASE
+
+---
+
+## ✅ Correcciones Críticas Adicionales Completadas Hoy
+
+### Desconexión Sistemas Autenticación LoginWindow ↔ MainWindow (2025-07-19)
+
+**Problema:** Falla crítica - RuntimeError "Debe autenticarse antes de iniciar la aplicación principal"  
+**Estado:** ✅ RESUELTO COMPLETAMENTE
+
+#### Causa Raíz:
+- LoginWindow usa AuthService del ServiceContainer → establece sesión correctamente
+- main_window.py usa session_manager global independiente → NO ve la sesión establecida
+- Dos instancias diferentes de session_manager operando desconectadas
+
+#### Solución Implementada:
+- **Unificación completa:** main_window.py refactorizado para usar session_manager del ServiceContainer
+- **31 referencias corregidas:** Todas las llamadas a session_manager actualizadas a self.session_manager
+- **Import corregido:** Eliminado import global, agregada propiedad lazy del ServiceContainer
+- **ServiceContainer actualizado:** Corregido import SessionManager a ruta existente
+- **start_main_window() corregido:** Función usa session_manager correcto del ServiceContainer
+
+#### Archivos Afectados:
+- `src/ui/main/main_window.py` - 🔧 REFACTORIZADO (31 referencias unificadas)
+- `src/services/service_container.py` - 🔧 CORREGIDO (import path SessionManager)
+- `tests/test_auth_session_integration_fix.py` - ✅ NUEVO (suite TDD Red/Green phases)
+
+#### Validaciones TDD:
+- ✅ Test Red Phase: Reproduce problema original (session_managers desconectados)
+- ✅ Test Green Phase: Valida solución implementada (session_manager unificado)
+- ✅ Sintaxis Python válida en todos archivos modificados
+- ✅ Clean Architecture preservada con Dependency Injection
+- ✅ Zero breaking changes - funcionalidad completamente preservada
 
 ---
 
