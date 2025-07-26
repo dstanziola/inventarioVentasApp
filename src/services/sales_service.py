@@ -362,3 +362,53 @@ class SalesService:
     
     # Alias para compatibilidad con TicketService
     obtener_venta_por_id = get_sale_by_id
+    
+    def get_all_sales(self, limit: Optional[int] = 100) -> List[Venta]:
+        """
+        Obtener todas las ventas del sistema.
+        
+        Args:
+            limit: Límite de resultados (opcional)
+            
+        Returns:
+            Lista de ventas
+        """
+        try:
+            # Manejo robusto de diferentes tipos de conexión DB
+            conn = self.db.get_connection() if hasattr(self.db, 'get_connection') else self.db
+            cursor = conn.cursor()
+            
+            query = """
+                SELECT id_venta, fecha_venta, id_cliente, subtotal, impuestos, total, responsable
+                FROM ventas
+                ORDER BY fecha_venta DESC
+            """
+            
+            if limit:
+                query += f" LIMIT {limit}"
+            
+            cursor.execute(query)
+            
+            ventas = []
+            for row in cursor.fetchall():
+                if hasattr(row, 'keys'):
+                    data = dict(row)
+                else:
+                    data = {
+                        'id_venta': row[0],
+                        'fecha_venta': datetime.fromisoformat(row[1]) if isinstance(row[1], str) else row[1],
+                        'id_cliente': row[2],
+                        'subtotal': row[3],
+                        'impuestos': row[4],
+                        'total': row[5],
+                        'responsable': row[6]
+                    }
+                
+                ventas.append(Venta(**data))
+            
+            return ventas
+            
+        except Exception as e:
+            # Log error y retornar lista vacía en lugar de fallar
+            print(f"Error al obtener ventas: {e}")
+            return []

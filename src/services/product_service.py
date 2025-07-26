@@ -793,6 +793,87 @@ class ProductService:
             )
             return []
     
+    def search_products(self, search_term: str) -> List[Dict[str, Any]]:
+        """
+        Buscar productos por nombre o ID.
+        
+        NUEVO MÉTODO FASE 3:
+        - Búsqueda por nombre (LIKE) o ID exacto
+        - Optimizado para ProductSearchWidget
+        - Retorna formato compatible con UI
+        
+        Args:
+            search_term: Término de búsqueda (nombre o ID)
+            
+        Returns:
+            Lista de diccionarios con datos de productos para UI
+        """
+        try:
+            if not search_term or not search_term.strip():
+                return []
+            
+            search_term = search_term.strip()
+            
+            # Si es numérico, buscar por ID también
+            if search_term.isdigit():
+                query = """
+                    SELECT p.id_producto as id, p.nombre, p.stock, p.precio, 
+                           p.id_categoria, c.nombre as categoria_nombre
+                    FROM productos p
+                    LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+                    WHERE (p.id_producto = ? OR LOWER(p.nombre) LIKE LOWER(?)) 
+                    AND p.activo = 1
+                    ORDER BY 
+                        CASE WHEN p.id_producto = ? THEN 0 ELSE 1 END,
+                        p.nombre
+                    LIMIT 20
+                """
+                search_param = f"%{search_term}%"
+                params = (int(search_term), search_param, int(search_term))
+            else:
+                # Búsqueda solo por nombre
+                query = """
+                    SELECT p.id_producto as id, p.nombre, p.stock, p.precio,
+                           p.id_categoria, c.nombre as categoria_nombre
+                    FROM productos p
+                    LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+                    WHERE LOWER(p.nombre) LIKE LOWER(?) AND p.activo = 1
+                    ORDER BY p.nombre
+                    LIMIT 20
+                """
+                search_param = f"%{search_term}%"
+                params = (search_param,)
+            
+            results = self.db_helper.safe_execute(query, params, 'all')
+            
+            if not results:
+                return []
+            
+            # Convertir a formato compatible con ProductSearchWidget
+            productos = []
+            for row in results:
+                producto = {
+                    'id': row['id'],
+                    'nombre': row['nombre'],
+                    'stock': row['stock'] if row['stock'] is not None else 0,
+                    'stock_actual': row['stock'] if row['stock'] is not None else 0,
+                    'precio': float(row['precio']) if row['precio'] is not None else 0.0,
+                    'id_categoria': row['id_categoria'],
+                    'categoria_nombre': row['categoria_nombre'] or 'Sin categoría'
+                }
+                productos.append(producto)
+            
+            self.logger.debug(f"Búsqueda '{search_term}': {len(productos)} productos encontrados")
+            return productos
+            
+        except Exception as e:
+            LoggingHelper.log_error_with_context(
+                self.logger, 
+                e, 
+                {'operation': 'search_products', 'search_term': search_term}
+            )
+            return []
+    
     def get_product_statistics(self) -> Dict[str, Any]:
         """
         Obtener estadísticas de productos del sistema.
@@ -875,3 +956,62 @@ class ProductService:
                 'generated_at': datetime.now().isoformat(),
                 'error': str(e)
             }
+    
+    def buscar_por_codigo(self, codigo: str) -> List[Dict[str, Any]]:
+        """
+        Buscar producto por código exacto (optimizado para lectores de código de barras).
+        
+        NUEVO MÉTODO OPTIMIZADO: Para búsqueda exacta por código/ID
+        usado en autoselección de ProductSearchWidget.
+        
+        Args:
+            codigo: Código del producto (ID numérico)
+            
+        Returns:
+            Lista con producto encontrado o vacía
+        """
+        try:
+            if not codigo or not codigo.strip():
+                return []
+            
+            codigo = codigo.strip()
+            
+            # Solo buscar por ID numérico exacto
+            if not codigo.isdigit():
+                return []
+            
+            query = """
+                SELECT p.id_producto as id, p.nombre, p.stock, p.precio, 
+                       p.id_categoria, c.nombre as categoria_nombre, c.tipo as categoria_tipo
+                FROM productos p
+                LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+                WHERE p.id_producto = ? AND p.activo = 1
+            """
+            
+            result = self.db_helper.safe_execute(query, (int(codigo),), 'one')
+            
+            if result:
+                producto = {
+                    'id': result['id'],
+                    'nombre': result['nombre'],
+                    'stock': result['stock'] if result['stock'] is not None else 0,
+                    'stock_actual': result['stock'] if result['stock'] is not None else 0,
+                    'precio': float(result['precio']) if result['precio'] is not None else 0.0,
+                    'id_categoria': result['id_categoria'],
+                    'categoria_nombre': result['categoria_nombre'] or 'Sin categoría',
+                    'categoria_tipo': result['categoria_tipo'] or 'UNKNOWN'
+                }
+                
+                self.logger.debug(f"Producto encontrado por código {codigo}: {producto['nombre']}")
+                return [producto]  # Lista con un elemento para compatibilidad
+            else:
+                self.logger.debug(f"No se encontró producto con código: {codigo}")
+                return []
+                
+        except Exception as e:
+            LoggingHelper.log_error_with_context(
+                self.logger, 
+                e, 
+                {'operation': 'buscar_por_codigo', 'codigo': codigo}
+            )
+            return []

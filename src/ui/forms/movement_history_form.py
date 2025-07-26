@@ -49,6 +49,8 @@ class MovementHistoryForm:
         self._movement_service = None
         self._product_service = None
         self._export_service = None
+        self._session_manager = None
+        self._container = None
         
         # Estado del formulario
         self.current_movements = []
@@ -73,9 +75,7 @@ class MovementHistoryForm:
             bool: True si tiene permisos, False caso contrario
         """
         try:
-            from services import session_manager
-            
-            if not session_manager.has_permission('admin'):
+            if not self.session_manager.has_permission('admin'):
                 messagebox.showerror(
                     "Acceso Denegado",
                     "Solo los administradores pueden acceder al historial de movimientos"
@@ -311,13 +311,34 @@ class MovementHistoryForm:
     # ===============================
     
     @property
+    def container(self):
+        """Lazy loading ServiceContainer"""
+        if self._container is None:
+            try:
+                from services.service_container import get_container
+                self._container = get_container()
+            except Exception as e:
+                logger.error(f"Error cargando ServiceContainer: {e}")
+                raise
+        return self._container
+    
+    @property
+    def session_manager(self):
+        """Lazy loading SessionManager"""
+        if self._session_manager is None:
+            try:
+                self._session_manager = self.container.get('session_manager')
+            except Exception as e:
+                logger.error(f"Error cargando SessionManager: {e}")
+                raise
+        return self._session_manager
+    
+    @property
     def movement_service(self):
         """Lazy loading MovementService"""
         if self._movement_service is None:
             try:
-                from services.service_container import get_container
-                container = get_container()
-                self._movement_service = container.get('movement_service')
+                self._movement_service = self.container.get('movement_service')
             except Exception as e:
                 logger.error(f"Error cargando MovementService: {e}")
                 raise
@@ -328,9 +349,7 @@ class MovementHistoryForm:
         """Lazy loading ProductService"""
         if self._product_service is None:
             try:
-                from services.service_container import get_container
-                container = get_container()
-                self._product_service = container.get('product_service')
+                self._product_service = self.container.get('product_service')
             except Exception as e:
                 logger.error(f"Error cargando ProductService: {e}")
                 raise
@@ -341,9 +360,7 @@ class MovementHistoryForm:
         """Lazy loading ExportService"""
         if self._export_service is None:
             try:
-                from services.service_container import get_container
-                container = get_container()
-                self._export_service = container.get('export_service')
+                self._export_service = self.container.get('export_service')
             except Exception as e:
                 logger.error(f"Error cargando ExportService: {e}")
                 raise

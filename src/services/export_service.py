@@ -489,6 +489,194 @@ class ExportService:
         """
         return self.export_base_path
     
+    def generate_entry_ticket(self, ticket_data: Dict[str, Any]) -> str:
+        """
+        Generar ticket de entrada de inventario con PDF.
+        
+        Args:
+            ticket_data: Diccionario con datos del ticket
+                - ticket_number: Número del ticket
+                - tipo: Tipo de movimiento ('ENTRADA')
+                - fecha: Fecha del movimiento
+                - responsable: Usuario responsable
+                - productos: Lista de productos del movimiento
+                - id_movimiento: ID del movimiento (opcional)
+        
+        Returns:
+            str: Ruta al archivo PDF generado
+        
+        Raises:
+            ValueError: Si los datos del ticket son inválidos
+            Exception: Para errores de generación o exportación
+        """
+        try:
+            # Validar datos de entrada
+            self._validate_ticket_data(ticket_data)
+            
+            # Preparar datos para generación de PDF
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ticket_entrada_{ticket_data.get('ticket_number', timestamp)}.pdf"
+            file_path = os.path.join(self.export_base_path, filename)
+            
+            # Formatear productos para el ticket
+            formatted_products = self._format_products_for_ticket(ticket_data.get('productos', []))
+            
+            # Crear datos del template para PDF
+            template_data = self._create_ticket_template_data(
+                ticket_data,
+                formatted_products,
+                'ENTRADA'
+            )
+            
+            # Generar PDF usando PDFExporter
+            self.pdf_exporter.create_entry_ticket_pdf(
+                template_data=template_data,
+                file_path=file_path
+            )
+            
+            # Si hay ID de movimiento, usar TicketService para persistir
+            if ticket_data.get('id_movimiento'):
+                self._persist_ticket_entry(
+                    ticket_data.get('id_movimiento'),
+                    ticket_data.get('ticket_number'),
+                    ticket_data.get('responsable'),
+                    file_path
+                )
+            
+            logger.info(f"Ticket de entrada generado exitosamente: {file_path}")
+            return file_path
+            
+        except ValueError as e:
+            logger.error(f"Error validando datos del ticket: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error generando ticket de entrada: {e}")
+            raise Exception(f"Error al generar ticket de entrada: {e}")
+    
+    def _validate_ticket_data(self, ticket_data: Dict[str, Any]) -> None:
+        """
+        Validar datos del ticket de entrada.
+        
+        Args:
+            ticket_data: Datos del ticket a validar
+        
+        Raises:
+            ValueError: Si los datos son inválidos
+        """
+        if not isinstance(ticket_data, dict):
+            raise ValueError("ticket_data debe ser un diccionario")
+        
+        required_fields = ['ticket_number', 'responsable', 'productos']
+        missing_fields = [field for field in required_fields if field not in ticket_data]
+        
+        if missing_fields:
+            raise ValueError(f"Campos requeridos faltantes: {missing_fields}")
+        
+        if not ticket_data.get('productos'):
+            raise ValueError("La lista de productos no puede estar vacía")
+        
+        # Validar que el número de ticket tenga formato válido
+        ticket_number = ticket_data.get('ticket_number', '')
+        if not ticket_number or len(ticket_number.strip()) == 0:
+            raise ValueError("El número de ticket es requerido")
+        
+        logger.debug(f"Datos del ticket validados: {ticket_number}")
+    
+    def _format_products_for_ticket(self, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Formatear productos para mostrar en el ticket.
+        
+        Args:
+            products: Lista de productos originales
+        
+        Returns:
+            List[Dict[str, Any]]: Productos formateados para ticket
+        """
+        formatted = []
+        
+        for product in products:
+            formatted_product = {
+                'nombre': product.get('nombre', 'Producto sin nombre'),
+                'cantidad': product.get('cantidad', 0),
+                'codigo': product.get('id', product.get('codigo', 'N/A')),
+                'observaciones': product.get('observaciones', '')
+            }
+            formatted.append(formatted_product)
+        
+        return formatted
+    
+    def _create_ticket_template_data(self, ticket_data: Dict[str, Any], products: List[Dict[str, Any]], tipo: str) -> Dict[str, Any]:
+        """
+        Crear datos del template para el ticket PDF.
+        
+        Args:
+            ticket_data: Datos básicos del ticket
+            products: Productos formateados
+            tipo: Tipo de ticket ('ENTRADA')
+        
+        Returns:
+            Dict[str, Any]: Datos completos para el template
+        """
+        fecha_ticket = ticket_data.get('fecha', datetime.now())
+        if isinstance(fecha_ticket, str):
+            try:
+                fecha_ticket = datetime.fromisoformat(fecha_ticket.replace('Z', '+00:00'))
+            except:
+                fecha_ticket = datetime.now()
+        
+        template_data = {
+            'title': f'Ticket de {tipo.title()}',
+            'ticket_info': {
+                'numero': ticket_data.get('ticket_number', 'N/A'),
+                'tipo': tipo,
+                'fecha': fecha_ticket.strftime('%d/%m/%Y %H:%M:%S'),
+                'responsable': ticket_data.get('responsable', 'No especificado')
+            },
+            'productos': products,
+            'resumen': {
+                'total_productos': len(products),
+                'total_cantidad': sum(p.get('cantidad', 0) for p in products),
+                'observaciones_generales': ticket_data.get('observaciones', '')
+            },
+            'empresa': {
+                'nombre': 'Copy Point S.A.',
+                'direccion': 'Las Lajas, Las Cumbres, Panamá',
+                'telefono': '6342-9218',
+                'email': 'tus_amigos@copypoint.online'
+            }
+        }
+        
+        return template_data
+    
+    def _persist_ticket_entry(self, id_movimiento: int, ticket_number: str, responsable: str, pdf_path: str) -> None:
+        """
+        Persistir información del ticket usando TicketService.
+        
+        Args:
+            id_movimiento: ID del movimiento asociado
+            ticket_number: Número del ticket
+            responsable: Usuario responsable
+            pdf_path: Ruta del archivo PDF
+        """
+        try:
+            # Importar TicketService dinámicamente para evitar dependencias circulares
+            from services.ticket_service import TicketService
+            
+            ticket_service = TicketService()
+            
+            # Generar ticket usando el servicio especializado
+            ticket = ticket_service.generar_ticket_entrada(
+                id_movimiento=id_movimiento,
+                generated_by=responsable,
+                pdf_path=pdf_path
+            )
+            
+            logger.info(f"Ticket persistido: ID={ticket.id_ticket}, Número={ticket_number}")
+            
+        except Exception as e:
+            # No fallar la generación del PDF si hay error en persistencia
+            logger.warning(f"Error al persistir ticket (PDF generado exitosamente): {e}")
+
     def cleanup_old_exports(self, days_old: int = 7) -> int:
         """
         Limpiar archivos de exportación antiguos.

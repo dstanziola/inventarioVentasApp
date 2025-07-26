@@ -545,6 +545,616 @@ class ReportService:
             self.logger.error(f"Error generando reporte de rentabilidad: {e}")
             raise
     
+    def generate_low_stock_report(
+        self,
+        categoria_id: Optional[int] = None,
+        threshold_multiplier: float = 1.0,
+        include_zero_stock: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Genera reporte de productos con stock bajo configurable
+        
+        Args:
+            categoria_id: Filtrar por categoría específica
+            threshold_multiplier: Multiplicador del stock mínimo (ej: 1.5 = 150% del mínimo)
+            include_zero_stock: Incluir productos agotados
+            
+        Returns:
+            Dict con productos que requieren reposición
+        """
+        try:
+            with self._get_connection() as conn:
+                query = """
+                SELECT 
+                    p.id_producto,
+                    p.nombre as producto_nombre,
+                    c.nombre as categoria_nombre,
+                    p.stock as stock_actual,
+                    p.stock_minimo,
+                    p.costo,
+                    p.precio,
+                    CASE 
+                        WHEN p.stock_minimo > 0 THEN (p.stock_minimo * 2) - p.stock
+                        ELSE 10 - p.stock
+                    END as cantidad_sugerida,
+                    CASE 
+                        WHEN p.stock = 0 THEN 'AGOTADO'
+                        WHEN p.stock < (p.stock_minimo * 0.5) THEN 'CRÍTICO'
+                        ELSE 'BAJO'
+                    END as criticidad
+                FROM productos p
+                JOIN categorias c ON p.id_categoria = c.id_categoria
+                WHERE p.activo = 1 
+                AND p.stock < (p.stock_minimo * ?)
+                """
+                
+                params = [threshold_multiplier]
+                filters_applied = {'threshold_multiplier': threshold_multiplier}
+                
+                if not include_zero_stock:
+                    query += " AND p.stock > 0"
+                    filters_applied['include_zero_stock'] = False
+                
+                if categoria_id:
+                    query += " AND p.id_categoria = ?"
+                    params.append(categoria_id)
+                    filters_applied['categoria_id'] = categoria_id
+                
+                query += " ORDER BY criticidad DESC, p.stock ASC"
+                
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # Procesar datos
+                data = []
+                productos_agotados = 0
+                valor_reposicion_total = Decimal('0')
+                
+                for row in rows:
+                    cantidad_sugerida = max(0, row['cantidad_sugerida']) if row['cantidad_sugerida'] else 10
+                    valor_reposicion = cantidad_sugerida * Decimal(str(row['costo']))
+                    
+                    item = {
+                        'producto_id': row['id_producto'],
+                        'producto_nombre': row['producto_nombre'],
+                        'categoria_nombre': row['categoria_nombre'],
+                        'stock_actual': row['stock_actual'],
+                        'stock_minimo': row['stock_minimo'],
+                        'cantidad_sugerida': cantidad_sugerida,
+                        'costo_unitario': float(row['costo']),
+                        'valor_reposicion': float(valor_reposicion),
+                        'criticidad': row['criticidad']
+                    }
+                    data.append(item)
+                    
+                    if row['stock_actual'] == 0:
+                        productos_agotados += 1
+                    
+                    valor_reposicion_total += valor_reposicion
+                
+                summary = {
+                    'productos_bajo_minimo': len(data),
+                    'productos_agotados': productos_agotados,
+                    'valor_reposicion_sugerida': float(valor_reposicion_total),
+                    'threshold_aplicado': threshold_multiplier
+                }
+                
+                return {
+                    'data': data,
+                    'summary': summary,
+                    'generated_at': datetime.now(),
+                    'filters_applied': filters_applied
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error generando reporte de stock bajo: {e}")
+            raise
+    
+    def generate_top_selling_products_report(
+        self,
+        fecha_inicio: date,
+        fecha_fin: date,
+        top_n: int = 10,
+        order_by: str = 'quantity',
+        categoria_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Genera reporte de productos más vendidos
+        
+        Args:
+            fecha_inicio: Fecha de inicio del período
+            fecha_fin: Fecha de fin del período
+            top_n: Número de productos a incluir
+            order_by: Criterio de ordenamiento ('quantity' o 'revenue')
+            categoria_id: Filtrar por categoría específica
+            
+        Returns:
+            Dict con productos más vendidos
+        """
+        self._validate_date_range(fecha_inicio, fecha_fin)
+        
+        try:
+            with self._get_connection() as conn:
+                # Ordenamiento dinámico
+                order_field = "cantidad_vendida" if order_by == 'quantity' else "ingresos_generados"
+                
+                query = f"""
+                SELECT 
+                    p.id_producto,
+                    p.nombre as producto_nombre,
+                    c.nombre as categoria_nombre,
+                    SUM(ABS(m.cantidad)) as cantidad_vendida,
+                    SUM(ABS(m.cantidad) * p.precio) as ingresos_generados,
+                    SUM(ABS(m.cantidad) * p.costo) as costo_total,
+                    (SUM(ABS(m.cantidad) * p.precio) - SUM(ABS(m.cantidad) * p.costo)) as ganancia_bruta,
+                    p.precio as precio_unitario,
+                    COUNT(DISTINCT DATE(m.fecha_movimiento)) as dias_con_ventas
+                FROM movimientos m
+                JOIN productos p ON m.id_producto = p.id_producto
+                JOIN categorias c ON p.id_categoria = c.id_categoria
+                WHERE m.tipo_movimiento = 'VENTA'
+                AND DATE(m.fecha_movimiento) >= ? AND DATE(m.fecha_movimiento) <= ?
+                """
+                
+                params = [fecha_inicio.isoformat(), fecha_fin.isoformat()]
+                filters_applied = {
+                    'fecha_inicio': fecha_inicio.isoformat(),
+                    'fecha_fin': fecha_fin.isoformat(),
+                    'order_by': order_by,
+                    'top_n': top_n
+                }
+                
+                if categoria_id:
+                    query += " AND p.id_categoria = ?"
+                    params.append(categoria_id)
+                    filters_applied['categoria_id'] = categoria_id
+                
+                query += f" GROUP BY p.id_producto ORDER BY {order_field} DESC LIMIT ?"
+                params.append(top_n)
+                
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # Procesar datos
+                data = []
+                total_ingresos = Decimal('0')
+                total_cantidad = 0
+                
+                for row in rows:
+                    ingresos = Decimal(str(row['ingresos_generados']))
+                    ganancia = Decimal(str(row['ganancia_bruta']))
+                    
+                    # Calcular margen de ganancia
+                    margen_porcentaje = 0
+                    if ingresos > 0:
+                        margen_porcentaje = float((ganancia / ingresos) * 100)
+                    
+                    item = {
+                        'producto_id': row['id_producto'],
+                        'producto_nombre': row['producto_nombre'],
+                        'categoria_nombre': row['categoria_nombre'],
+                        'cantidad_vendida': row['cantidad_vendida'],
+                        'ingresos_generados': float(ingresos),
+                        'costo_total': float(row['costo_total']),
+                        'ganancia_bruta': float(ganancia),
+                        'margen_porcentaje': round(margen_porcentaje, 2),
+                        'precio_unitario': float(row['precio_unitario']),
+                        'dias_con_ventas': row['dias_con_ventas'],
+                        'promedio_diario': round(row['cantidad_vendida'] / max(1, row['dias_con_ventas']), 2)
+                    }
+                    data.append(item)
+                    
+                    total_ingresos += ingresos
+                    total_cantidad += row['cantidad_vendida']
+                
+                summary = {
+                    'productos_analizados': len(data),
+                    'total_cantidad_vendida': total_cantidad,
+                    'total_ingresos_generados': float(total_ingresos),
+                    'periodo': f"{fecha_inicio.isoformat()} - {fecha_fin.isoformat()}"
+                }
+                
+                return {
+                    'data': data,
+                    'summary': summary,
+                    'period': summary['periodo'],
+                    'generated_at': datetime.now(),
+                    'filters_applied': filters_applied
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error generando reporte productos más vendidos: {e}")
+            raise
+    
+    def generate_trends_analysis_report(
+        self,
+        fecha_inicio: date,
+        fecha_fin: date,
+        period_type: str = 'month',
+        producto_id: Optional[int] = None,
+        categoria_id: Optional[int] = None,
+        predict_periods: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Genera análisis de tendencias de ventas
+        
+        Args:
+            fecha_inicio: Fecha de inicio del análisis
+            fecha_fin: Fecha de fin del análisis
+            period_type: Tipo de período ('day', 'week', 'month', 'year')
+            producto_id: Analizar producto específico
+            categoria_id: Analizar categoría específica
+            predict_periods: Número de períodos futuros a predecir
+            
+        Returns:
+            Dict con análisis de tendencias y predicciones
+        """
+        self._validate_date_range(fecha_inicio, fecha_fin)
+        
+        try:
+            with self._get_connection() as conn:
+                # Formateo de fecha según tipo de período
+                if period_type == 'day':
+                    date_format = "DATE(m.fecha_movimiento)"
+                    date_group = "DATE(m.fecha_movimiento)"
+                elif period_type == 'week':
+                    date_format = "strftime('%Y-W%W', m.fecha_movimiento)"
+                    date_group = "strftime('%Y-W%W', m.fecha_movimiento)"
+                elif period_type == 'month':
+                    date_format = "strftime('%Y-%m', m.fecha_movimiento)"
+                    date_group = "strftime('%Y-%m', m.fecha_movimiento)"
+                elif period_type == 'year':
+                    date_format = "strftime('%Y', m.fecha_movimiento)"
+                    date_group = "strftime('%Y', m.fecha_movimiento)"
+                else:
+                    raise ValueError(f"Tipo de período no válido: {period_type}")
+                
+                query = f"""
+                SELECT 
+                    {date_format} as periodo,
+                    SUM(ABS(m.cantidad)) as cantidad_vendida,
+                    SUM(ABS(m.cantidad) * p.precio) as ingresos_generados,
+                    COUNT(DISTINCT m.id_movimiento) as numero_transacciones,
+                    AVG(ABS(m.cantidad)) as promedio_cantidad_por_transaccion
+                FROM movimientos m
+                JOIN productos p ON m.id_producto = p.id_producto
+                WHERE m.tipo_movimiento = 'VENTA'
+                AND DATE(m.fecha_movimiento) >= ? AND DATE(m.fecha_movimiento) <= ?
+                """
+                
+                params = [fecha_inicio.isoformat(), fecha_fin.isoformat()]
+                filters_applied = {
+                    'fecha_inicio': fecha_inicio.isoformat(),
+                    'fecha_fin': fecha_fin.isoformat(),
+                    'period_type': period_type
+                }
+                
+                if producto_id:
+                    query += " AND m.id_producto = ?"
+                    params.append(producto_id)
+                    filters_applied['producto_id'] = producto_id
+                
+                if categoria_id:
+                    query += " AND p.id_categoria = ?"
+                    params.append(categoria_id)
+                    filters_applied['categoria_id'] = categoria_id
+                
+                query += f" GROUP BY {date_group} ORDER BY periodo"
+                
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # Procesar datos temporales
+                data = []
+                valores_cantidad = []
+                
+                for i, row in enumerate(rows):
+                    item = {
+                        'periodo': row['periodo'],
+                        'cantidad_vendida': row['cantidad_vendida'],
+                        'ingresos_generados': float(row['ingresos_generados']),
+                        'numero_transacciones': row['numero_transacciones'],
+                        'promedio_cantidad_transaccion': round(row['promedio_cantidad_por_transaccion'], 2),
+                        'index': i
+                    }
+                    data.append(item)
+                    valores_cantidad.append(row['cantidad_vendida'])
+                
+                # Análisis de tendencias
+                trends = self._analyze_trend(valores_cantidad)
+                
+                # Predicciones si se solicitan
+                predictions = []
+                if predict_periods > 0 and len(data) >= 2:
+                    predictions = self._generate_predictions(data, predict_periods, period_type)
+                
+                summary = {
+                    'periodos_analizados': len(data),
+                    'total_cantidad_vendida': sum(valores_cantidad),
+                    'promedio_por_periodo': round(sum(valores_cantidad) / len(valores_cantidad), 2) if valores_cantidad else 0
+                }
+                
+                return {
+                    'data': data,
+                    'trends': trends,
+                    'predictions': predictions,
+                    'summary': summary,
+                    'generated_at': datetime.now(),
+                    'filters_applied': filters_applied
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error generando análisis de tendencias: {e}")
+            raise
+    
+    def _analyze_trend(self, values: List[int]) -> Dict[str, Any]:
+        """Analiza tendencia de una serie de valores"""
+        if len(values) < 2:
+            return {'direction': 'INSUFICIENTE_DATA', 'growth_rate': 0, 'correlation_coefficient': 0}
+        
+        # Cálculo simple de tendencia
+        n = len(values)
+        x_values = list(range(n))
+        
+        # Correlación simple
+        mean_x = sum(x_values) / n
+        mean_y = sum(values) / n
+        
+        numerator = sum((x - mean_x) * (y - mean_y) for x, y in zip(x_values, values))
+        denominator_x = sum((x - mean_x) ** 2 for x in x_values)
+        denominator_y = sum((y - mean_y) ** 2 for y in values)
+        
+        if denominator_x == 0 or denominator_y == 0:
+            correlation = 0
+        else:
+            correlation = numerator / (denominator_x * denominator_y) ** 0.5
+        
+        # Tasa de crecimiento promedio
+        if values[0] != 0:
+            growth_rate = ((values[-1] / values[0]) ** (1 / (n - 1)) - 1) * 100
+        else:
+            growth_rate = 0
+        
+        # Dirección de tendencia
+        if correlation > 0.3:
+            direction = 'CRECIENTE'
+        elif correlation < -0.3:
+            direction = 'DECRECIENTE'
+        else:
+            direction = 'ESTABLE'
+        
+        return {
+            'direction': direction,
+            'growth_rate': round(growth_rate, 2),
+            'correlation_coefficient': round(correlation, 3)
+        }
+    
+    def _generate_predictions(self, data: List[Dict], periods: int, period_type: str) -> List[Dict]:
+        """Genera predicciones basadas en tendencia histórica"""
+        predictions = []
+        
+        if len(data) < 2:
+            return predictions
+        
+        # Predicción lineal simple
+        values = [item['cantidad_vendida'] for item in data]
+        n = len(values)
+        
+        # Calcular pendiente promedio
+        if n >= 2:
+            slope = (values[-1] - values[0]) / (n - 1)
+        else:
+            slope = 0
+        
+        # Generar predicciones
+        last_value = values[-1]
+        last_period = data[-1]['periodo']
+        
+        for i in range(1, periods + 1):
+            predicted_value = max(0, last_value + (slope * i))
+            
+            # Calcular próximo período
+            next_period = self._get_next_period(last_period, i, period_type)
+            
+            predictions.append({
+                'periodo': next_period,
+                'cantidad_predicha': round(predicted_value),
+                'confianza': 'MEDIA' if i <= 2 else 'BAJA'
+            })
+        
+        return predictions
+    
+    def _get_next_period(self, last_period: str, increment: int, period_type: str) -> str:
+        """Calcula el siguiente período basado en el tipo"""
+        if period_type == 'month':
+            # Formato: YYYY-MM
+            year, month = map(int, last_period.split('-'))
+            for _ in range(increment):
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
+            return f"{year}-{month:02d}"
+        
+        # Para otros tipos, implementación básica
+        return f"{last_period}+{increment}"
+    
+    def generate_detailed_movements_report(
+        self,
+        fecha_inicio: date,
+        fecha_fin: date,
+        include_sales_details: bool = True,
+        include_lot_tracking: bool = False,
+        tipo_movimiento: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Genera reporte detallado de movimientos con información expandida
+        
+        Args:
+            fecha_inicio: Fecha de inicio del período
+            fecha_fin: Fecha de fin del período
+            include_sales_details: Incluir detalles de ventas relacionadas
+            include_lot_tracking: Incluir seguimiento de lotes
+            tipo_movimiento: Filtrar por tipo específico
+            
+        Returns:
+            Dict con movimientos detallados y análisis
+        """
+        self._validate_date_range(fecha_inicio, fecha_fin)
+        
+        try:
+            with self._get_connection() as conn:
+                # Query base expandida (ajustada al schema real)
+                query = """
+                SELECT 
+                    m.id_movimiento,
+                    m.fecha_movimiento,
+                    m.tipo_movimiento,
+                    m.cantidad,
+                    m.responsable,
+                    m.observaciones,
+                    COALESCE(m.id_venta, '') as id_venta_relacionada,
+                    p.id_producto,
+                    p.nombre as producto_nombre,
+                    c.nombre as categoria_nombre,
+                    p.precio,
+                    p.costo,
+                    (ABS(m.cantidad) * COALESCE(m.costo_unitario, p.costo)) as valor_costo,
+                    (ABS(m.cantidad) * p.precio) as valor_precio
+                FROM movimientos m
+                JOIN productos p ON m.id_producto = p.id_producto
+                JOIN categorias c ON p.id_categoria = c.id_categoria
+                WHERE DATE(m.fecha_movimiento) >= ? AND DATE(m.fecha_movimiento) <= ?
+                """
+                
+                params = [fecha_inicio.isoformat(), fecha_fin.isoformat()]
+                filters_applied = {
+                    'fecha_inicio': fecha_inicio.isoformat(),
+                    'fecha_fin': fecha_fin.isoformat(),
+                    'include_sales_details': include_sales_details,
+                    'include_lot_tracking': include_lot_tracking
+                }
+                
+                if tipo_movimiento:
+                    query += " AND m.tipo_movimiento = ?"
+                    params.append(tipo_movimiento)
+                    filters_applied['tipo_movimiento'] = tipo_movimiento
+                
+                query += " ORDER BY m.fecha_movimiento DESC"
+                
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # Procesar movimientos detallados
+                data = []
+                balance_entradas = 0
+                balance_salidas = 0
+                lot_tracking = {}
+                
+                for row in rows:
+                    # Información básica del movimiento (ajustada al schema real)
+                    item = {
+                        'id_movimiento': row['id_movimiento'],
+                        'fecha_movimiento': row['fecha_movimiento'],
+                        'tipo_movimiento': row['tipo_movimiento'],
+                        'producto_id': row['id_producto'],
+                        'producto_nombre': row['producto_nombre'],
+                        'categoria_nombre': row['categoria_nombre'],
+                        'cantidad': row['cantidad'],
+                        'responsable': row['responsable'],
+                        'observaciones': row['observaciones'] or '',
+                        'id_venta_relacionada': row['id_venta_relacionada'] or '',
+                        'valor_costo': float(row['valor_costo']),
+                        'valor_precio': float(row['valor_precio'])
+                    }
+                    
+                    # Detalles de venta si se solicita
+                    if include_sales_details and row['tipo_movimiento'] == 'VENTA' and row['id_venta_relacionada']:
+                        item['venta_detalle'] = self._get_sale_details(conn, str(row['id_venta_relacionada']))
+                    
+                    data.append(item)
+                    
+                    # Calcular balance
+                    if row['cantidad'] > 0:
+                        balance_entradas += row['cantidad']
+                    else:
+                        balance_salidas += abs(row['cantidad'])
+                    
+                    # Tracking por tipo de movimiento (en lugar de lotes)
+                    if include_lot_tracking:
+                        mov_type = row['tipo_movimiento']
+                        if mov_type not in lot_tracking:
+                            lot_tracking[mov_type] = {
+                                'total_entrada': 0,
+                                'total_salida': 0,
+                                'balance': 0,
+                                'movimientos': []
+                            }
+                        
+                        if row['cantidad'] > 0:
+                            lot_tracking[mov_type]['total_entrada'] += row['cantidad']
+                        else:
+                            lot_tracking[mov_type]['total_salida'] += abs(row['cantidad'])
+                        
+                        lot_tracking[mov_type]['balance'] = lot_tracking[mov_type]['total_entrada'] - lot_tracking[mov_type]['total_salida']
+                        lot_tracking[mov_type]['movimientos'].append(row['id_movimiento'])
+                
+                # Resumen de balance
+                balance_summary = {
+                    'total_entradas': balance_entradas,
+                    'total_salidas': balance_salidas,
+                    'balance_neto': balance_entradas - balance_salidas,
+                    'total_movimientos': len(data)
+                }
+                
+                summary = {
+                    'movimientos_analizados': len(data),
+                    'periodo': f"{fecha_inicio.isoformat()} - {fecha_fin.isoformat()}"
+                }
+                
+                result = {
+                    'data': data,
+                    'balance_summary': balance_summary,
+                    'summary': summary,
+                    'generated_at': datetime.now(),
+                    'filters_applied': filters_applied
+                }
+                
+                if include_lot_tracking:
+                    result['lot_tracking'] = lot_tracking
+                
+                return result
+                
+        except Exception as e:
+            self.logger.error(f"Error generando reporte movimientos detallados: {e}")
+            raise
+    
+    def _get_sale_details(self, conn: sqlite3.Connection, id_venta: str) -> Optional[Dict[str, Any]]:
+        """Obtiene detalles de venta por ID de venta"""
+        try:
+            # Buscar venta por ID
+            cursor = conn.execute("""
+                SELECT id_venta, numero_factura, fecha_venta, total, responsable
+                FROM ventas 
+                WHERE id_venta = ?
+            """, [id_venta])
+            
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id_venta': row['id_venta'],
+                    'numero_factura': row['numero_factura'],
+                    'fecha_venta': row['fecha_venta'],
+                    'total_factura': float(row['total']),
+                    'responsable_venta': row['responsable']
+                }
+            
+            return None
+            
+        except Exception:
+            # Si hay error, retornar None
+            return None
+    
     def get_summary_statistics(self) -> Dict[str, Any]:
         """
         Obtiene estadísticas resumen generales del sistema
@@ -585,8 +1195,16 @@ class ReportService:
                 stats['ventas_mes_actual'] = row['total']
                 stats['ingresos_mes_actual'] = float(row['suma']) if row['suma'] else 0
                 
-                # TODO: Implementar productos más vendidos
-                stats['productos_mas_vendidos'] = []
+                # Productos más vendidos (usando nuevo método)
+                try:
+                    top_products = self.generate_top_selling_products_report(
+                        fecha_inicio=primer_dia_mes,
+                        fecha_fin=date.today(),
+                        top_n=5
+                    )
+                    stats['productos_mas_vendidos'] = top_products['data']
+                except:
+                    stats['productos_mas_vendidos'] = []
                 
                 return stats
                 

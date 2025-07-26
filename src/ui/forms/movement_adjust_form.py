@@ -218,7 +218,7 @@ class MovementAdjustForm:
         )
         
         current_user = self.session_manager.get_current_user()
-        self.responsible_var.set(current_user['username'] if current_user else "")
+        self.responsible_var.set(current_user.nombre_usuario if current_user else "")
         
         responsible_entry = ttk.Entry(
             details_frame,
@@ -446,7 +446,7 @@ class MovementAdjustForm:
         
         # Mantener responsable actual
         current_user = self.session_manager.get_current_user()
-        self.responsible_var.set(current_user['username'] if current_user else "")
+        self.responsible_var.set(current_user.nombre_usuario if current_user else "")
         
         self.logger.debug("Formulario limpiado")
     

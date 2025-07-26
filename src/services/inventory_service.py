@@ -132,7 +132,37 @@ class InventoryService:
             
             movimientos.append(Movimiento(**data))
         
-        return movimientos
+    def get_all_inventory(self) -> List[Dict[str, Any]]:
+        """
+        Obtener estado actual del inventario.
+        
+        Returns:
+            Lista de inventario con stock actual por producto
+        """
+        cursor = self.db.get_connection().cursor()
+        cursor.execute("""
+            SELECT p.id_producto, p.nombre, p.stock, c.nombre as categoria
+            FROM productos p
+            LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+            WHERE p.activo = 1
+            ORDER BY p.nombre
+        """)
+        
+        inventario = []
+        for row in cursor.fetchall():
+            if hasattr(row, 'keys'):
+                data = dict(row)
+            else:
+                data = {
+                    'id_producto': row[0],
+                    'nombre': row[1],
+                    'stock': row[2],
+                    'categoria': row[3] or 'Sin categoría'
+                }
+            
+            inventario.append(data)
+        
+        return inventario
     
     def get_all_movements(self, limit: Optional[int] = 100) -> List[Movimiento]:
         """
@@ -196,3 +226,35 @@ class InventoryService:
             return int(count) > 0
         except (TypeError, ValueError):
             return bool(count)  # Fallback para mocks complejos
+    
+    def get_all_inventory(self) -> List[Dict[str, Any]]:
+        """
+        Obtener estado actual del inventario.
+        
+        Returns:
+            Lista de inventario con stock actual por producto
+        """
+        cursor = self.db.get_connection().cursor()
+        cursor.execute("""
+            SELECT p.id_producto, p.nombre, p.stock, c.nombre as categoria
+            FROM productos p
+            LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+            WHERE p.activo = 1
+            ORDER BY p.nombre
+        """)
+        
+        inventario = []
+        for row in cursor.fetchall():
+            if hasattr(row, 'keys'):
+                data = dict(row)
+            else:
+                data = {
+                    'id_producto': row[0],
+                    'nombre': row[1],
+                    'stock': row[2],
+                    'categoria': row[3] or 'Sin categoría'
+                }
+            
+            inventario.append(data)
+        
+        return inventario

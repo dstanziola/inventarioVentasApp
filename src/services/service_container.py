@@ -708,7 +708,7 @@ def setup_default_container() -> ServiceContainer:
         # CRITICAL: Registrar AuthService y dependencias de seguridad
         try:
             from infrastructure.security.password_hasher import create_password_hasher
-            from ui.auth.session_manager import SessionManager  # Usar SessionManager existente
+            from shared.session.session_manager import create_session_manager  # CORRECCIÓN: Usar SessionManager correcto
             from application.services.auth_service import create_auth_service
             
             # Registrar PasswordHasher (sin dependencias)
@@ -721,7 +721,7 @@ def setup_default_container() -> ServiceContainer:
             # Registrar SessionManager mejorado
             container.register(
                 'session_manager',
-                lambda: SessionManager(),
+                lambda: create_session_manager(),
                 dependencies=[]
             )
             

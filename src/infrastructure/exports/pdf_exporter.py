@@ -672,6 +672,317 @@ class PDFExporter:
         
         return True
     
+    def create_entry_ticket_pdf(self, template_data: Dict[str, Any], file_path: str) -> None:
+        """
+        Crear documento PDF para ticket de entrada de inventario.
+        
+        Args:
+            template_data: Datos formateados del ticket
+                - title: Título del ticket
+                - ticket_info: Información básica del ticket
+                - productos: Lista de productos
+                - resumen: Resumen del ticket
+                - empresa: Información corporativa
+            file_path: Ruta donde guardar el archivo PDF
+        
+        Raises:
+            ValueError: Si los datos no tienen formato correcto
+            IOError: Si no se puede escribir el archivo
+            Exception: Para otros errores de creación
+        """
+        try:
+            # Validar datos específicos para ticket
+            self._validate_ticket_pdf_data(template_data)
+            
+            # Crear documento PDF con tamaño de página más compacto para tickets
+            doc = SimpleDocTemplate(
+                file_path,
+                pagesize=self.page_config['pagesize'],
+                topMargin=1.5*cm,
+                bottomMargin=1.5*cm,
+                leftMargin=1.5*cm,
+                rightMargin=1.5*cm
+            )
+            
+            # Construir contenido del ticket
+            story = []
+            
+            # Header del ticket
+            self._add_ticket_header(story, template_data)
+            
+            # Información del ticket
+            self._add_ticket_info(story, template_data.get('ticket_info', {}))
+            
+            # Tabla de productos
+            if template_data.get('productos'):
+                self._add_ticket_products_table(story, template_data['productos'])
+            
+            # Resumen del ticket
+            if template_data.get('resumen'):
+                self._add_ticket_summary(story, template_data['resumen'])
+            
+            # Footer del ticket
+            self._add_ticket_footer(story, template_data)
+            
+            # Generar PDF
+            doc.build(story, onFirstPage=self._create_ticket_page_header, 
+                     onLaterPages=self._create_ticket_page_header)
+            
+            logger.info(f"Ticket PDF creado exitosamente: {file_path}")
+            
+        except ValueError as e:
+            logger.error(f"Datos inválidos para ticket PDF: {e}")
+            raise
+        except IOError as e:
+            logger.error(f"Error escribiendo ticket PDF: {e}")
+            raise IOError(f"No se pudo guardar ticket PDF: {e}")
+        except Exception as e:
+            logger.error(f"Error inesperado creando ticket PDF: {e}")
+            raise Exception(f"Error creando ticket PDF: {e}")
+    
+    def _validate_ticket_pdf_data(self, template_data: Dict[str, Any]) -> None:
+        """
+        Validar que los datos del ticket tienen la estructura correcta para PDF.
+        
+        Args:
+            template_data: Datos a validar
+        
+        Raises:
+            ValueError: Si la estructura no es válida
+        """
+        if not isinstance(template_data, dict):
+            raise ValueError("template_data debe ser un diccionario")
+        
+        required_keys = ['title', 'ticket_info']
+        for key in required_keys:
+            if key not in template_data:
+                raise ValueError(f"Clave requerida '{key}' faltante en template_data")
+        
+        # Validar información del ticket
+        ticket_info = template_data.get('ticket_info', {})
+        if not ticket_info.get('numero'):
+            raise ValueError("Número de ticket es requerido")
+        
+        logger.debug(f"Datos de ticket PDF validados: {ticket_info.get('numero', 'Sin número')}")
+    
+    def _add_ticket_header(self, story: List, template_data: Dict[str, Any]) -> None:
+        """
+        Agregar header del ticket al documento.
+        
+        Args:
+            story: Lista de elementos del documento
+            template_data: Datos del ticket
+        """
+        # Información de la empresa
+        empresa = template_data.get('empresa', self.company_info)
+        
+        # Nombre de la empresa
+        company_name = Paragraph(
+            f"<b>{empresa.get('nombre', 'Copy Point S.A.')}</b>",
+            self.styles['CorporateTitle']
+        )
+        story.append(company_name)
+        
+        # Dirección y contacto
+        company_details = Paragraph(
+            f"{empresa.get('direccion', 'Las Lajas, Las Cumbres, Panamá')}<br/>"
+            f"Tel: {empresa.get('telefono', '6342-9218')} | Email: {empresa.get('email', 'tus_amigos@copypoint.online')}",
+            self.styles['CompanyInfo']
+        )
+        story.append(company_details)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Título del ticket
+        ticket_title = Paragraph(
+            f"<b>{template_data.get('title', 'Ticket de Entrada')}</b>",
+            self.styles['CorporateSubtitle']
+        )
+        story.append(ticket_title)
+        story.append(Spacer(1, 0.2*inch))
+    
+    def _add_ticket_info(self, story: List, ticket_info: Dict[str, Any]) -> None:
+        """
+        Agregar información básica del ticket.
+        
+        Args:
+            story: Lista de elementos del documento
+            ticket_info: Información del ticket
+        """
+        # Crear tabla con información del ticket
+        info_data = [
+            ['Número de Ticket:', str(ticket_info.get('numero', 'N/A'))],
+            ['Tipo:', str(ticket_info.get('tipo', 'ENTRADA'))],
+            ['Fecha y Hora:', str(ticket_info.get('fecha', 'No especificada'))],
+            ['Responsable:', str(ticket_info.get('responsable', 'No especificado'))]
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 3*inch])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [self.colors['white'], self.colors['light_gray']]),
+            ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 0.2*inch))
+    
+    def _add_ticket_products_table(self, story: List, productos: List[Dict[str, Any]]) -> None:
+        """
+        Agregar tabla de productos al ticket.
+        
+        Args:
+            story: Lista de elementos del documento
+            productos: Lista de productos
+        """
+        # Título de productos
+        products_title = Paragraph(
+            "<b>PRODUCTOS</b>",
+            self.styles['CorporateSubtitle']
+        )
+        story.append(products_title)
+        
+        # Preparar datos para la tabla
+        headers = ['Código', 'Nombre del Producto', 'Cantidad', 'Observaciones']
+        table_data = [headers]
+        
+        for producto in productos:
+            row = [
+                str(producto.get('codigo', 'N/A')),
+                str(producto.get('nombre', 'Producto sin nombre')),
+                str(producto.get('cantidad', 0)),
+                str(producto.get('observaciones', ''))[:30] + ('...' if len(str(producto.get('observaciones', ''))) > 30 else '')
+            ]
+            table_data.append(row)
+        
+        # Crear tabla
+        products_table = Table(table_data, colWidths=[1*inch, 2.5*inch, 0.8*inch, 1.7*inch])
+        
+        # Aplicar estilo
+        products_table.setStyle(TableStyle([
+            # Header
+            ('BACKGROUND', (0, 0), (-1, 0), self.colors['primary']),
+            ('TEXTCOLOR', (0, 0), (-1, 0), self.colors['white']),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            
+            # Data rows
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Código
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Nombre
+            ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Cantidad
+            ('ALIGN', (3, 1), (3, -1), 'LEFT'),    # Observaciones
+            
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [self.colors['white'], self.colors['light_gray']]),
+            
+            # Borders
+            ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(products_table)
+        story.append(Spacer(1, 0.2*inch))
+    
+    def _add_ticket_summary(self, story: List, resumen: Dict[str, Any]) -> None:
+        """
+        Agregar resumen del ticket.
+        
+        Args:
+            story: Lista de elementos del documento
+            resumen: Datos de resumen
+        """
+        # Título de resumen
+        summary_title = Paragraph(
+            "<b>RESUMEN</b>",
+            self.styles['CorporateSubtitle']
+        )
+        story.append(summary_title)
+        
+        # Datos del resumen
+        summary_data = [
+            ['Total de Productos:', str(resumen.get('total_productos', 0))],
+            ['Cantidad Total:', str(resumen.get('total_cantidad', 0))]
+        ]
+        
+        # Agregar observaciones si existen
+        if resumen.get('observaciones_generales'):
+            summary_data.append(['Observaciones:', str(resumen['observaciones_generales'])])
+        
+        summary_table = Table(summary_data, colWidths=[2*inch, 3*inch])
+        summary_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BACKGROUND', (0, 0), (-1, -1), self.colors['light_gray']),
+            ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
+        ]))
+        
+        story.append(summary_table)
+        story.append(Spacer(1, 0.3*inch))
+    
+    def _add_ticket_footer(self, story: List, template_data: Dict[str, Any]) -> None:
+        """
+        Agregar footer del ticket.
+        
+        Args:
+            story: Lista de elementos del documento
+            template_data: Datos del template
+        """
+        # Línea de separación
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Nota del sistema
+        footer_note = Paragraph(
+            "<i>Este ticket fue generado automáticamente por el Sistema de Gestión de Inventario.</i>",
+            self.styles['CompanyInfo']
+        )
+        story.append(footer_note)
+        
+        # Fecha de generación
+        generation_info = Paragraph(
+            f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}",
+            self.styles['CompanyInfo']
+        )
+        story.append(generation_info)
+    
+    def _create_ticket_page_header(self, canvas, doc) -> None:
+        """
+        Crear header de página para tickets (más simple que reportes).
+        
+        Args:
+            canvas: Canvas de ReportLab
+            doc: Documento
+        """
+        canvas.saveState()
+        
+        # Línea superior más fina para tickets
+        canvas.setStrokeColor(self.colors['secondary'])
+        canvas.setLineWidth(1)
+        canvas.line(doc.leftMargin, doc.height + doc.topMargin - 10,
+                   doc.width + doc.leftMargin, doc.height + doc.topMargin - 10)
+        
+        # Número de página en footer (más discreto para tickets)
+        page_num = canvas.getPageNumber()
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(self.colors['dark_gray'])
+        canvas.drawRightString(
+            doc.width + doc.leftMargin,
+            doc.bottomMargin - 15,
+            f"Página {page_num}"
+        )
+        
+        canvas.restoreState()
+
     def get_page_size_options(self) -> Dict[str, Tuple[float, float]]:
         """
         Obtener opciones de tamaño de página disponibles.

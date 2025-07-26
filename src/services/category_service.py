@@ -252,6 +252,78 @@ class CategoryService:
         
         return cursor.rowcount > 0
     
+    def get_material_categories(self) -> List[dict]:
+        """
+        Obtener todas las categorías de tipo MATERIAL activas.
+        
+        Returns:
+            Lista de categorías tipo MATERIAL
+        """
+        try:
+            cursor = self.db.get_connection().cursor()
+            cursor.execute(
+                "SELECT id_categoria, nombre, tipo, descripcion, activo FROM categorias WHERE tipo = 'MATERIAL' AND activo = 1 ORDER BY nombre"
+            )
+            
+            categories = []
+            for row in cursor.fetchall():
+                if hasattr(row, 'keys') and callable(getattr(row, 'keys', None)):
+                    # Es un Row de SQLite con método keys()
+                    data = dict(row)
+                else:
+                    # Es una tupla o mock - usar indexación posicional
+                    data = {
+                        'id': row[0],
+                        'name': row[1],
+                        'type': row[2],
+                        'description': row[3] if len(row) > 3 else None,
+                        'active': row[4] if len(row) > 4 else True
+                    }
+                
+                categories.append(data)
+            
+            return categories
+            
+        except Exception as e:
+            print(f"❌ Error obteniendo categorías MATERIAL: {e}")
+            return []
+    
+    def get_service_categories(self) -> List[dict]:
+        """
+        Obtener todas las categorías de tipo SERVICIO activas.
+        
+        Returns:
+            Lista de categorías tipo SERVICIO
+        """
+        try:
+            cursor = self.db.get_connection().cursor()
+            cursor.execute(
+                "SELECT id_categoria, nombre, tipo, descripcion, activo FROM categorias WHERE tipo = 'SERVICIO' AND activo = 1 ORDER BY nombre"
+            )
+            
+            categories = []
+            for row in cursor.fetchall():
+                if hasattr(row, 'keys') and callable(getattr(row, 'keys', None)):
+                    # Es un Row de SQLite con método keys()
+                    data = dict(row)
+                else:
+                    # Es una tupla o mock - usar indexación posicional
+                    data = {
+                        'id': row[0],
+                        'name': row[1],
+                        'type': row[2],
+                        'description': row[3] if len(row) > 3 else None,
+                        'active': row[4] if len(row) > 4 else True
+                    }
+                
+                categories.append(data)
+            
+            return categories
+            
+        except Exception as e:
+            print(f"❌ Error obteniendo categorías SERVICIO: {e}")
+            return []
+    
     def _category_exists(self, nombre: str) -> bool:
         """Verificar si existe una categoría con el nombre dado."""
         cursor = self.db.get_connection().cursor()

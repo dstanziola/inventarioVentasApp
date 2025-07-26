@@ -17,6 +17,7 @@ import os
 from services.service_container import get_container
 from ui.components.base_form import BaseForm
 from ui.widgets.data_grid import DataGrid
+from utils.logger import get_logger
 
 
 class MovementStockForm(BaseForm):
@@ -47,7 +48,9 @@ class MovementStockForm(BaseForm):
         self._export_service = None
         self._session_manager = None
         self._window_manager = None
-        self._logger = None
+        
+        # Logger directo (no del container)
+        self.logger = get_logger(__name__)
         
         # Variables UI
         self.window = None
@@ -111,14 +114,6 @@ class MovementStockForm(BaseForm):
             container = get_container()
             self._window_manager = container.get('window_manager')
         return self._window_manager
-    
-    @property
-    def logger(self):
-        """Lazy loading Logger"""
-        if self._logger is None:
-            container = get_container()
-            self._logger = container.get('logger')
-        return self._logger
 
     # ========== MÉTODOS PÚBLICOS ==========
     
@@ -473,24 +468,31 @@ class MovementStockForm(BaseForm):
 
     def _load_categories(self, combo: ttk.Combobox) -> None:
         """Cargar categorías en combobox"""
+        # Inicializar category_mapping siempre para evitar AttributeError
+        self.category_mapping = {0: None}  # Mapping para "Todas las categorías"
+        
         try:
             # Obtener solo categorías tipo MATERIAL
             material_categories = self.category_service.get_material_categories()
             
             # Preparar valores combobox
             category_values = ["Todas las categorías"]
-            self.category_mapping = {0: None}  # Mapping para "Todas"
             
-            for category in material_categories:
+            for i, category in enumerate(material_categories, 1):
                 category_values.append(category['name'])
-                self.category_mapping[len(category_values) - 1] = category['id']
+                self.category_mapping[i] = category['id']
             
             combo['values'] = category_values
             combo.current(0)  # Seleccionar "Todas las categorías"
             
+            self.logger.info(f"Cargadas {len(material_categories)} categorías MATERIAL")
+            
         except Exception as e:
             self.logger.error(f"Error cargando categorías: {e}")
-            combo['values'] = ["Error cargando categorías"]
+            # Valores de fallback
+            combo['values'] = ["Todas las categorías", "Error cargando categorías"]
+            combo.current(0)
+            # category_mapping ya está inicializado con valor por defecto
 
     def _update_data_grid(self) -> None:
         """Actualizar DataGrid con datos filtrados"""
@@ -517,9 +519,15 @@ class MovementStockForm(BaseForm):
     def _on_category_filter_changed(self, event) -> None:
         """Handler cambio filtro categoría"""
         try:
+            # Asegurar que category_mapping existe
+            if not hasattr(self, 'category_mapping') or self.category_mapping is None:
+                self.logger.warning("category_mapping no inicializado, inicializando con valor por defecto")
+                self.category_mapping = {0: None}
+            
             selected_index = event.widget.current()
             category_id = self.category_mapping.get(selected_index)
             self.apply_category_filter(category_id)
+            
         except Exception as e:
             self.logger.error(f"Error en cambio filtro categoría: {e}")
 

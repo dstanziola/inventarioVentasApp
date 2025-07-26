@@ -10,7 +10,6 @@ import logging
 
 # Importaciones del sistema
 from services.service_container import get_container
-from ui.auth.session_manager import session_manager
 from utils.logger import get_logger
 
 # Importaciones de subformularios (lazy loading)
@@ -47,10 +46,12 @@ class MovementForm:
         self.window = None
         self.logger = get_logger(__name__)
         
-        # Lazy loading de servicios
+        # Lazy loading de servicios usando ServiceContainer
         self._movement_service = None
         self._product_service = None
         self._export_service = None
+        self._session_manager = None
+        self._container = None
         
         # Validar permisos de administrador
         self._validate_admin_permissions()
@@ -67,12 +68,12 @@ class MovementForm:
         Raises:
             PermissionError: Si el usuario no tiene permisos de administrador
         """
-        current_user = session_manager.get_current_user()
+        current_user = self.session_manager.get_current_user()
         
         if not current_user:
             raise PermissionError("No hay usuario autenticado")
         
-        if not session_manager.has_permission('admin'):
+        if not self.session_manager.has_permission('admin'):
             raise PermissionError("Acceso denegado. Solo administradores pueden gestionar movimientos")
     
     def _create_main_interface(self):
@@ -173,8 +174,8 @@ class MovementForm:
         status_frame = ttk.Frame(self.window)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM)
         
-        current_user = session_manager.get_current_user()
-        user_text = f"Usuario: {current_user['username']}" if current_user else "Usuario: Sin autenticar"
+        current_user = self.session_manager.get_current_user()
+        user_text = f"Usuario: {current_user.nombre_usuario}" if current_user else "Usuario: Sin autenticar"
         
         status_label = ttk.Label(status_frame, text=user_text)
         status_label.pack(side=tk.LEFT, padx=10, pady=5)
@@ -187,29 +188,40 @@ class MovementForm:
         )
         close_btn.pack(side=tk.RIGHT, padx=10, pady=5)
     
-    # Lazy loading de servicios
+    # Lazy loading de servicios usando ServiceContainer
+    @property
+    def container(self):
+        """Lazy loading del ServiceContainer"""
+        if self._container is None:
+            self._container = get_container()
+        return self._container
+    
+    @property
+    def session_manager(self):
+        """Lazy loading del SessionManager desde ServiceContainer"""
+        if self._session_manager is None:
+            self._session_manager = self.container.get('session_manager')
+        return self._session_manager
+    
     @property
     def movement_service(self):
         """Lazy loading del MovementService"""
         if self._movement_service is None:
-            container = get_container()
-            self._movement_service = container.get('movement_service')
+            self._movement_service = self.container.get('movement_service')
         return self._movement_service
     
     @property
     def product_service(self):
         """Lazy loading del ProductService"""
         if self._product_service is None:
-            container = get_container()
-            self._product_service = container.get('product_service')
+            self._product_service = self.container.get('product_service')
         return self._product_service
     
     @property
     def export_service(self):
         """Lazy loading del ExportService"""
         if self._export_service is None:
-            container = get_container()
-            self._export_service = container.get('export_service')
+            self._export_service = self.container.get('export_service')
         return self._export_service
     
     # Métodos para abrir subformularios
@@ -261,7 +273,7 @@ class MovementForm:
             self.logger.info("Abriendo formulario de stock bajo")
             
             # Validación adicional de permisos específica
-            if not session_manager.has_permission('admin'):
+            if not self.session_manager.has_permission('admin'):
                 messagebox.showwarning(
                     "Acceso Denegado", 
                     "Solo administradores pueden acceder a gestión de stock bajo"

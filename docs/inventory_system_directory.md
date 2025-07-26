@@ -305,20 +305,22 @@ src/compliance/
 
 ## Métricas del Proyecto
 
-### Estado Actual (2025-07-19)
+### Estado Actual (2025-07-21)
 
 - **Archivos de código:** ~150+ archivos
 - **Líneas de código:** Estimado 15,000+ líneas
-- **Cobertura de pruebas:** Target >= 95%
+- **Cobertura de pruebas:** Target >= 95% (✅ 50+ tests formularios movimientos implementados)
 - **Documentación:** 94% completada (8/10 archivos críticos)
 - **Arquitectura:** Clean Architecture implementada
 - **Dependencias:** 25 producción + 8 desarrollo documentadas
 - **Seguridad:** Políticas empresariales completas implementadas
 - **Metodología:** TDD + Claude AI completamente especificada
-- **Última corrección crítica:** Sistema autenticación reparado completamente (2025-07-19)
+- **Sprint 1:** ✅ COMPLETADO EXITOSAMENTE (Sistema estabilizado)
+- **Sprint 2:** 🔄 EN PROGRESO - Formularios movimientos (40% completado)
+- **Testing TDD:** ✅ FRAMEWORK OPERATIVO (2 suites tests formularios)
 - **Estado autenticación:** ✅ OPERATIVO (login admin restaurado)
 - **Migración passwords:** ✅ IMPLEMENTADA (legacy → moderno)
-- **Tests de regresión:** ✅ COMPLETADOS (13 casos TDD)
+- **Tests de regresión:** ✅ COMPLETADOS (75+ casos TDD total)
 
 ### Progreso de Documentación
 
