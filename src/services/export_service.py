@@ -84,14 +84,77 @@ class ExportService:
         self.pdf_exporter = PDFExporter()
         self.report_templates = ReportTemplates()
         
-        # Configuración del servicio
-        self.temp_dir = tempfile.gettempdir()
-        self.export_base_path = os.path.join(self.temp_dir, "inventario_exports")
+        # Configuración del servicio - Rutas específicas para Copy Point S.A.
+        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # D:\inventario_app2
+        self.data_dir = os.path.join(self.project_root, "data")
         
-        # Crear directorio de exportación si no existe
-        os.makedirs(self.export_base_path, exist_ok=True)
+        # Rutas específicas por tipo de documento
+        self.tickets_entrada_path = os.path.join(self.data_dir, "tickets_entrada")
+        self.tickets_venta_path = os.path.join(self.data_dir, "tickets_venta")
+        self.tickets_ajuste_path = os.path.join(self.data_dir, "tickets_ajuste")
+        self.reportes_path = os.path.join(self.data_dir, "reportes")
+        
+        # Mantener compatibilidad con export_base_path para reportes generales
+        self.export_base_path = self.reportes_path
+        
+        # Crear todos los directorios necesarios
+        self._create_required_directories()
         
         logger.info("ExportService inicializado con dependencias y exportadores")
+    
+    def _create_required_directories(self) -> None:
+        r"""
+        Crear todos los directorios necesarios para almacenar tickets y reportes.
+        
+        Crea la estructura:
+        - D:\inventario_app2\data\tickets_entrada\
+        - D:\inventario_app2\data\tickets_venta\
+        - D:\inventario_app2\data\tickets_ajuste\
+        - D:\inventario_app2\data\reportes\
+        """
+        directories_to_create = [
+            self.data_dir,
+            self.tickets_entrada_path,
+            self.tickets_venta_path, 
+            self.tickets_ajuste_path,
+            self.reportes_path
+        ]
+        
+        for directory in directories_to_create:
+            try:
+                os.makedirs(directory, exist_ok=True)
+                logger.debug(f"Directorio creado/verificado: {directory}")
+            except OSError as e:
+                logger.error(f"Error creando directorio {directory}: {e}")
+                raise Exception(f"No se pudo crear directorio requerido: {directory}")
+                
+        logger.info(f"Estructura de directorios configurada en: {self.data_dir}")
+    
+    def _get_ticket_directory(self, ticket_type: str) -> str:
+        """
+        Obtener directorio específico según tipo de ticket.
+        
+        Args:
+            ticket_type: Tipo de ticket ('ENTRADA', 'VENTA', 'AJUSTE')
+            
+        Returns:
+            str: Ruta al directorio específico
+            
+        Raises:
+            ValueError: Si el tipo de ticket no es válido
+        """
+        ticket_type = ticket_type.upper()
+        
+        ticket_directories = {
+            'ENTRADA': self.tickets_entrada_path,
+            'VENTA': self.tickets_venta_path,
+            'AJUSTE': self.tickets_ajuste_path
+        }
+        
+        if ticket_type not in ticket_directories:
+            raise ValueError(f"Tipo de ticket no válido: {ticket_type}. Debe ser: {list(ticket_directories.keys())}")
+            
+        return ticket_directories[ticket_type]
     
     def export_movements_to_excel(self, movements: List[Dict[str, Any]], filters: Dict[str, Any]) -> str:
         """
@@ -482,12 +545,43 @@ class ExportService:
     
     def get_export_directory(self) -> str:
         """
-        Obtener directorio base de exportación.
+        Obtener directorio base de exportación (reportes generales).
         
         Returns:
-            str: Ruta al directorio de exportación
+            str: Ruta al directorio de reportes
         """
         return self.export_base_path
+    
+    def get_tickets_directory(self, ticket_type: str = None) -> str:
+        """
+        Obtener directorio de tickets específico o base.
+        
+        Args:
+            ticket_type: Tipo de ticket ('ENTRADA', 'VENTA', 'AJUSTE') o None para directorio base
+            
+        Returns:
+            str: Ruta al directorio solicitado
+        """
+        if ticket_type is None:
+            return self.data_dir
+        
+        return self._get_ticket_directory(ticket_type)
+    
+    def get_directory_info(self) -> Dict[str, str]:
+        """
+        Obtener información completa de directorios configurados.
+        
+        Returns:
+            Dict[str, str]: Mapeo de tipo de directorio a ruta
+        """
+        return {
+            'proyecto': self.project_root,
+            'data': self.data_dir,
+            'tickets_entrada': self.tickets_entrada_path,
+            'tickets_venta': self.tickets_venta_path, 
+            'tickets_ajuste': self.tickets_ajuste_path,
+            'reportes': self.reportes_path
+        }
     
     def generate_entry_ticket(self, ticket_data: Dict[str, Any]) -> str:
         """
@@ -513,10 +607,14 @@ class ExportService:
             # Validar datos de entrada
             self._validate_ticket_data(ticket_data)
             
-            # Preparar datos para generación de PDF
+            # Preparar datos para generación de PDF - Usar directorio específico para entradas
+            ticket_type = ticket_data.get('tipo', 'ENTRADA').upper()
+            ticket_directory = self._get_ticket_directory(ticket_type)
+            
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"ticket_entrada_{ticket_data.get('ticket_number', timestamp)}.pdf"
-            file_path = os.path.join(self.export_base_path, filename)
+            ticket_number = ticket_data.get('ticket_number', timestamp)
+            filename = f"ticket_{ticket_type.lower()}_{ticket_number}.pdf"
+            file_path = os.path.join(ticket_directory, filename)
             
             # Formatear productos para el ticket
             formatted_products = self._format_products_for_ticket(ticket_data.get('productos', []))
@@ -544,6 +642,7 @@ class ExportService:
                 )
             
             logger.info(f"Ticket de entrada generado exitosamente: {file_path}")
+            print(f"[DEBUG] Archivo generado en: {file_path}")
             return file_path
             
         except ValueError as e:
@@ -677,40 +776,63 @@ class ExportService:
             # No fallar la generación del PDF si hay error en persistencia
             logger.warning(f"Error al persistir ticket (PDF generado exitosamente): {e}")
 
-    def cleanup_old_exports(self, days_old: int = 7) -> int:
+    def cleanup_old_exports(self, days_old: int = 7, include_tickets: bool = False) -> Dict[str, int]:
         """
-        Limpiar archivos de exportación antiguos.
+        Limpiar archivos de exportación antiguos en todos los directorios.
         
         Args:
             days_old: Días de antigüedad para considerar archivo viejo
+            include_tickets: Si incluir limpieza de tickets (default: False por seguridad)
         
         Returns:
-            int: Número de archivos eliminados
+            Dict[str, int]: Número de archivos eliminados por directorio
         """
-        try:
-            if not os.path.exists(self.export_base_path):
-                return 0
-            
-            files_deleted = 0
-            cutoff_time = datetime.now().timestamp() - (days_old * 24 * 60 * 60)
-            
-            for filename in os.listdir(self.export_base_path):
-                file_path = os.path.join(self.export_base_path, filename)
+        results = {}
+        cutoff_time = datetime.now().timestamp() - (days_old * 24 * 60 * 60)
+        
+        # Directorios a limpiar
+        directories_to_clean = {
+            'reportes': self.reportes_path
+        }
+        
+        # Agregar directorios de tickets si se solicita
+        if include_tickets:
+            directories_to_clean.update({
+                'tickets_entrada': self.tickets_entrada_path,
+                'tickets_venta': self.tickets_venta_path,
+                'tickets_ajuste': self.tickets_ajuste_path
+            })
+            logger.warning(f"Limpieza de tickets habilitada para archivos más antiguos de {days_old} días")
+        
+        for dir_name, dir_path in directories_to_clean.items():
+            try:
+                if not os.path.exists(dir_path):
+                    results[dir_name] = 0
+                    continue
                 
-                if os.path.isfile(file_path):
-                    file_time = os.path.getmtime(file_path)
+                files_deleted = 0
+                
+                for filename in os.listdir(dir_path):
+                    file_path = os.path.join(dir_path, filename)
                     
-                    if file_time < cutoff_time:
-                        try:
-                            os.remove(file_path)
-                            files_deleted += 1
-                            logger.debug(f"Archivo eliminado: {filename}")
-                        except OSError as e:
-                            logger.warning(f"No se pudo eliminar {filename}: {e}")
-            
-            logger.info(f"Limpieza completada: {files_deleted} archivos eliminados")
-            return files_deleted
-            
-        except Exception as e:
-            logger.error(f"Error en limpieza de archivos: {e}")
-            return 0
+                    if os.path.isfile(file_path):
+                        file_time = os.path.getmtime(file_path)
+                        
+                        if file_time < cutoff_time:
+                            try:
+                                os.remove(file_path)
+                                files_deleted += 1
+                                logger.debug(f"Archivo eliminado de {dir_name}: {filename}")
+                            except OSError as e:
+                                logger.warning(f"No se pudo eliminar {filename} de {dir_name}: {e}")
+                
+                results[dir_name] = files_deleted
+                logger.info(f"Limpieza en {dir_name}: {files_deleted} archivos eliminados")
+                
+            except Exception as e:
+                logger.error(f"Error en limpieza de directorio {dir_name}: {e}")
+                results[dir_name] = 0
+        
+        total_deleted = sum(results.values())
+        logger.info(f"Limpieza completada: {total_deleted} archivos eliminados en total")
+        return results

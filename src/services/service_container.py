@@ -681,18 +681,87 @@ def setup_default_container() -> ServiceContainer:
             pass
         
         # SPRINT 2: Registrar ExportService - Sistema de exportación
+        # CORRECCIÓN CRÍTICA: Manejo robusto de errores con validación específica
         try:
+            # Validar que el módulo se puede importar
             from services.export_service import ExportService
+            
+            # Validar que las dependencias están disponibles
+            required_deps = ['movement_service', 'report_service']
+            missing_deps = [dep for dep in required_deps if not container.is_registered(dep)]
+            
+            if missing_deps:
+                raise ServiceRegistrationError(
+                    f"ExportService requiere dependencias no registradas: {missing_deps}"
+                )
+            
+            # Registrar ExportService con factory que valida dependencias
+            def create_export_service(c):
+                try:
+                    movement_service = c.get('movement_service')
+                    report_service = c.get('report_service')
+                    
+                    if not movement_service:
+                        raise ValueError("MovementService no disponible para ExportService")
+                    if not report_service:
+                        raise ValueError("ReportService no disponible para ExportService")
+                    
+                    return ExportService(
+                        movement_service=movement_service,
+                        report_service=report_service
+                    )
+                except Exception as create_error:
+                    logging.getLogger("ServiceContainer").error(
+                        f"❌ Error creando instancia ExportService: {create_error}"
+                    )
+                    raise ServiceRegistrationError(
+                        f"No se pudo crear ExportService: {create_error}"
+                    )
+            
             container.register(
                 'export_service',
-                lambda c: ExportService(
-                    movement_service=c.get('movement_service'),
-                    report_service=c.get('report_service')
-                ),
-                dependencies=['movement_service', 'report_service']
+                create_export_service,
+                dependencies=required_deps
             )
-        except ImportError:
-            pass
+            
+            # Verificar que el registro fue exitoso
+            test_service = container.get('export_service')
+            if not test_service:
+                raise ServiceRegistrationError("ExportService se registró pero get() retorna None")
+            
+            # Verificar que tiene método crítico para tickets
+            if not hasattr(test_service, 'generate_entry_ticket'):
+                raise ServiceRegistrationError(
+                    "ExportService no tiene método generate_entry_ticket requerido"
+                )
+            
+            logging.getLogger("ServiceContainer").info(
+                "✅ ExportService registrado y validado exitosamente en container"
+            )
+            
+        except ImportError as e:
+            error_msg = f"ExportService no se puede importar - Módulo no encontrado: {e}"
+            logging.getLogger("ServiceContainer").error(f"❌ {error_msg}")
+            
+            # CRÍTICO: ExportService es requerido para tickets de entrada
+            raise ServiceRegistrationError(
+                f"CRÍTICO: {error_msg}. "
+                f"ExportService es requerido para generar tickets de entrada. "
+                f"Verifique que existe src/services/export_service.py"
+            )
+            
+        except ServiceRegistrationError:
+            # Re-lanzar errores de registro sin modificar
+            raise
+            
+        except Exception as e:
+            error_msg = f"Error inesperado registrando ExportService: {e}"
+            logging.getLogger("ServiceContainer").error(f"❌ {error_msg}")
+            
+            raise ServiceRegistrationError(
+                f"CRÍTICO: {error_msg}. "
+                f"ExportService es requerido para el sistema de tickets."
+            )
         
         # Registrar InventoryService si está disponible
         try:

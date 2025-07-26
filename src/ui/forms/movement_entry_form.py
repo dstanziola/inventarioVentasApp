@@ -6,6 +6,7 @@ REFACTORIZACIÓN: Integración con Event Bus para eliminar dependencias circular
 Patrón: Event Listener via Event Bus + Mediator coordination
 """
 
+import os
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
@@ -149,10 +150,38 @@ class MovementEntryForm:
 
     @property
     def export_service(self):
-        """Lazy loading del ExportService"""
+        """Lazy loading del ExportService con validación robusta"""
         if self._export_service is None:
-            container = get_container()
-            self._export_service = container.get('export_service')
+            try:
+                container = get_container()
+                self._export_service = container.get('export_service')
+                
+                # CORRECCIÓN CRÍTICA: Validar que el servicio no es None
+                if self._export_service is None:
+                    self.logger.error(
+                        "CRÍTICO: ExportService no está registrado en ServiceContainer. "
+                        "No se podrán generar tickets de entrada."
+                    )
+                    raise ValueError(
+                        "ExportService no disponible. Verifique la configuración del sistema."
+                    )
+                    
+                # Validar que tiene método crítico
+                if not hasattr(self._export_service, 'generate_entry_ticket'):
+                    self.logger.error(
+                        "CRÍTICO: ExportService no tiene método generate_entry_ticket"
+                    )
+                    raise ValueError(
+                        "ExportService no tiene funcionalidad de tickets requerida"
+                    )
+                
+                self.logger.debug("ExportService cargado y validado exitosamente")
+                
+            except Exception as e:
+                self.logger.error(f"Error obteniendo ExportService: {e}")
+                # Mantener None para detectar en generate_ticket
+                self._export_service = None
+                
         return self._export_service
 
     @property
@@ -436,7 +465,8 @@ class MovementEntryForm:
                 error_text = "\n".join(error_messages)
                 messagebox.showerror(
                     "Error de Validación",
-                    f"Error en {field_name}:\n\n{error_text}"
+                    f"Error en {field_name}:\n\n{error_text}",
+                    parent=self.window
                 )
                 
                 self.logger.warning(f"Error de validación via Event Bus: {field_name}")
@@ -461,12 +491,14 @@ class MovementEntryForm:
                 if is_blocking:
                     messagebox.showerror(
                         "Regla de Negocio Violada",
-                        f"No se puede continuar:\n\n{warning_text}"
+                        f"No se puede continuar:\n\n{warning_text}",
+                        parent=self.window
                     )
                 else:
                     messagebox.showwarning(
                         "Advertencia de Regla de Negocio",
-                        f"Advertencia:\n\n{warning_text}\n\nPuede continuar pero tenga en cuenta estas restricciones."
+                        f"Advertencia:\n\n{warning_text}\n\nPuede continuar pero tenga en cuenta estas restricciones.",
+                        parent=self.window
                     )
                 
                 self.logger.info(f"Regla de negocio via Event Bus: {'BLOQUEANTE' if is_blocking else 'ADVERTENCIA'}")
@@ -499,7 +531,8 @@ class MovementEntryForm:
         if not self._validate_quantity(quantity_str):
             messagebox.showerror(
                 "Cantidad Inválida", 
-                "Ingrese una cantidad válida (número entero positivo)\n\nEjemplo: 1, 5, 10"
+                "Ingrese una cantidad válida (número entero positivo)\n\nEjemplo: 1, 5, 10",
+                parent=self.window
             )
             self.quantity_entry.focus()
             self.quantity_entry.select_range(0, tk.END)
@@ -522,7 +555,7 @@ class MovementEntryForm:
             
         except Exception as e:
             self.logger.error(f"Error al agregar producto: {e}")
-            messagebox.showerror("Error", f"Error al agregar producto: {e}")
+            messagebox.showerror("Error", f"Error al agregar producto: {e}", parent=self.window)
 
     def _publish_validation_request_event(self):
         """Publicar evento de solicitud de validación"""
@@ -715,7 +748,7 @@ class MovementEntryForm:
         """Remover producto seleccionado de la lista"""
         selection = self.products_tree.selection()
         if not selection:
-            messagebox.showwarning("Advertencia", "Seleccione un producto para remover")
+            messagebox.showwarning("Advertencia", "Seleccione un producto para remover", parent=self.window)
             return
         
         item = selection[0]
@@ -755,11 +788,11 @@ class MovementEntryForm:
     def _on_register_clicked(self):
         """Manejar click en registrar entrada"""
         if not self.selected_products:
-            messagebox.showwarning("Advertencia", "Agregue productos antes de registrar")
+            messagebox.showwarning("Advertencia", "Agregue productos antes de registrar", parent=self.window)
             return
         
         if self._register_entry():
-            messagebox.showinfo("Éxito", "Entrada registrada exitosamente")
+            messagebox.showinfo("Éxito", "Entrada registrada exitosamente", parent=self.window)
             self._clear_form()
 
     def _register_entry(self) -> bool:
@@ -774,7 +807,7 @@ class MovementEntryForm:
                 error_msg += "\n\nCorrija los errores antes de continuar."
                 
                 self.logger.error(f"Pre-validación falló: {len(errores_validacion)} errores")
-                messagebox.showerror("Error de Validación", error_msg)
+                messagebox.showerror("Error de Validación", error_msg, parent=self.window)
                 return False
             
             # CORRECCIÓN CRÍTICA: Obtener usuario actual correctamente
@@ -841,7 +874,7 @@ class MovementEntryForm:
         except Exception as e:
             error_msg = self._handle_entry_registration_error(e)
             self.logger.error(f"Error al registrar entrada: {e}")
-            messagebox.showerror("Error", error_msg)
+            messagebox.showerror("Error", error_msg, parent=self.window)
             return False
 
     def _clear_form(self):
@@ -873,7 +906,8 @@ class MovementEntryForm:
             if not id_categoria:
                 messagebox.showerror(
                     "Error de Validación", 
-                    f"El producto '{product.get('nombre', 'UNKNOWN')}' no tiene categoría asignada."
+                    f"El producto '{product.get('nombre', 'UNKNOWN')}' no tiene categoría asignada.",
+                    parent=self.window
                 )
                 return False
             
@@ -884,7 +918,8 @@ class MovementEntryForm:
             if not categoria:
                 messagebox.showerror(
                     "Error de Validación", 
-                    f"No se pudo obtener información de la categoría para '{product.get('nombre', 'UNKNOWN')}'"
+                    f"No se pudo obtener información de la categoría para '{product.get('nombre', 'UNKNOWN')}'",
+                    parent=self.window
                 )
                 return False
             
@@ -894,7 +929,8 @@ class MovementEntryForm:
                     f"\"{ product.get('nombre', 'UNKNOWN')}\" es un SERVICIO.\n\n"
                     f"❌ Los SERVICIOS no pueden agregarse al inventario.\n"
                     f"✅ Solo productos de tipo MATERIAL pueden tener stock.\n\n"
-                    f"Los servicios generan ventas pero no requieren inventario."
+                    f"Los servicios generan ventas pero no requieren inventario.",
+                    parent=self.window
                 )
                 self.logger.warning(f"Intento de agregar SERVICIO al inventario: {product.get('nombre')} (ID: {product.get('id')})")
                 return False
@@ -905,7 +941,8 @@ class MovementEntryForm:
             
             messagebox.showerror(
                 "Error de Categoría", 
-                f"El producto '{product.get('nombre', 'UNKNOWN')}' tiene un tipo de categoría no reconocido: {categoria.tipo}"
+                f"El producto '{product.get('nombre', 'UNKNOWN')}' tiene un tipo de categoría no reconocido: {categoria.tipo}",
+                parent=self.window
             )
             return False
             
@@ -913,7 +950,8 @@ class MovementEntryForm:
             self.logger.error(f"Error validando producto para inventario: {e}")
             messagebox.showerror(
                 "Error de Validación", 
-                f"No se pudo validar el producto '{product.get('nombre', 'UNKNOWN')}': {e}"
+                f"No se pudo validar el producto '{product.get('nombre', 'UNKNOWN')}': {e}",
+                parent=self.window
             )
             return False
 
@@ -971,24 +1009,28 @@ class MovementEntryForm:
         if action == 'search_required':
             messagebox.showwarning(
                 "Sin Productos", 
-                f"{message}\n\nIngrese un código o nombre de producto."
+                f"{message}\n\nIngrese un código o nombre de producto.",
+                parent=self.window
             )
             self.search_widget.set_focus()
         elif action == 'selection_required':
             messagebox.showwarning(
                 "Selección Requerida", 
-                f"{message}.\n\nSeleccione uno de la lista para continuar."
+                f"{message}.\n\nSeleccione uno de la lista para continuar.",
+                parent=self.window
             )
         elif action == 'auto_select_failed':
             messagebox.showwarning(
                 "Error de Autoselección", 
-                f"{message}\n\nIntente buscar nuevamente."
+                f"{message}\n\nIntente buscar nuevamente.",
+                parent=self.window
             )
             self.search_widget.set_focus()
         else:
             messagebox.showerror(
                 "Error de Selección", 
-                f"Error en selección de producto: {message}"
+                f"Error en selección de producto: {message}",
+                parent=self.window
             )
 
     def _pre_validate_products_for_entry(self) -> Tuple[bool, List[str]]:
@@ -1066,13 +1108,51 @@ class MovementEntryForm:
         return f"Error al registrar entrada: {error}"
 
     def _generate_ticket(self, ticket_number: str, products: List[Dict]) -> str:
-        """Generar ticket PDF (CORRECCIÓN: Acceso correcto a Usuario)"""
+        """Generar ticket PDF con validación robusta y notificación al usuario"""
         try:
-            # CORRECCIÓN CRÍTICA: Acceso correcto a objeto Usuario
+            # CORRECCIÓN CRÍTICA 1: Validar ExportService antes de usar
+            if self.export_service is None:
+                error_msg = (
+                    "Sistema de Tickets No Disponible\n\n"
+                    "El servicio de exportación no está configurado correctamente. "
+                    "No se puede generar el ticket de entrada.\n\n"
+                    "Contacte al administrador del sistema para resolver este problema."
+                )
+                
+                self.logger.error(
+                    "CRÍTICO: No se puede generar ticket - ExportService es None"
+                )
+                
+                # Notificar al usuario del problema
+                messagebox.showerror("Error de Sistema", error_msg, parent=self.window)
+                return ""
+            
+            # CORRECCIÓN CRÍTICA 2: Validar usuario autenticado
             current_user_obj = self.session_manager.get_current_user()
             if not current_user_obj:
-                raise ValueError("No hay usuario autenticado para generar ticket")
+                error_msg = (
+                    "Error de Autenticación\n\n"
+                    "No hay usuario autenticado para generar el ticket. "
+                    "Inicie sesión nuevamente."
+                )
+                
+                self.logger.error("Error generando ticket: Usuario no autenticado")
+                messagebox.showerror("Error de Autenticación", error_msg, parent=self.window)
+                return ""
             
+            # CORRECCIÓN CRÍTICA 3: Validar lista de productos
+            if not products or len(products) == 0:
+                error_msg = (
+                    "Error de Datos\n\n"
+                    "No hay productos para incluir en el ticket. "
+                    "Agregue productos antes de generar el ticket."
+                )
+                
+                self.logger.warning("Intento de generar ticket sin productos")
+                messagebox.showwarning("Datos Incompletos", error_msg, parent=self.window)
+                return ""
+            
+            # Preparar datos del ticket con validación
             ticket_data = {
                 'ticket_number': ticket_number,
                 'tipo': 'ENTRADA',
@@ -1081,11 +1161,58 @@ class MovementEntryForm:
                 'productos': products
             }
             
+            self.logger.info(
+                f"Generando ticket: {ticket_number} para {len(products)} productos "
+                f"por usuario {current_user_obj.username}"
+            )
+            
+            # Generar ticket usando ExportService
             ticket_path = self.export_service.generate_entry_ticket(ticket_data)
+            
+            # Validar que se generó el archivo
+            if not ticket_path or not os.path.exists(ticket_path):
+                error_msg = (
+                    "Error de Generación\n\n"
+                    "El ticket se procesó pero no se pudo crear el archivo PDF. "
+                    "Verifique los permisos del sistema."
+                )
+                
+                self.logger.error(f"Ticket procesado pero archivo no existe: {ticket_path}")
+                messagebox.showerror("Error de Archivo", error_msg, parent=self.window)
+                return ""
+            
+            self.logger.info(f"Ticket generado exitosamente: {ticket_path}")
+            
+            # Opcional: Notificar éxito al usuario
+            success_msg = (
+                f"Ticket Generado Exitosamente\n\n"
+                f"Número: {ticket_number}\n"
+                f"Archivo: {os.path.basename(ticket_path)}\n\n"
+                f"El ticket PDF ha sido guardado en el sistema."
+            )
+            
+            messagebox.showinfo("Ticket Generado", success_msg, parent=self.window)
+            
             return ticket_path
             
+        except ValueError as ve:
+            # Errores de validación ya manejados arriba
+            self.logger.error(f"Error de validación generando ticket: {ve}")
+            return ""
+            
         except Exception as e:
-            self.logger.error(f"Error al generar ticket: {e}")
+            # CORRECCIÓN CRÍTICA 4: Manejo robusto de errores con notificación
+            error_msg = (
+                f"Error Inesperado Generando Ticket\n\n"
+                f"Ocurrió un error técnico al generar el ticket de entrada:\n"
+                f"{str(e)}\n\n"
+                f"La entrada fue registrada correctamente, pero el ticket no "
+                f"se pudo generar. Contacte al administrador del sistema."
+            )
+            
+            self.logger.error(f"Error inesperado al generar ticket: {e}")
+            messagebox.showerror("Error de Sistema", error_msg, parent=self.window)
+            
             return ""
 
     def _on_import_excel(self):
@@ -1101,11 +1228,11 @@ class MovementEntryForm:
                 
         except Exception as e:
             self.logger.error(f"Error en importación Excel: {e}")
-            messagebox.showerror("Error", f"Error al importar Excel: {e}")
+            messagebox.showerror("Error", f"Error al importar Excel: {e}", parent=self.window)
 
     def _import_from_excel(self, file_path: str):
         """Importar desde Excel (placeholder)"""
-        messagebox.showinfo("Info", "Funcionalidad de importación Excel en desarrollo")
+        messagebox.showinfo("Info", "Funcionalidad de importación Excel en desarrollo", parent=self.window)
 
     def _validate_quantity_input(self, *args):
         """Validar entrada de cantidad en tiempo real"""

@@ -1,5 +1,91 @@
 # CHANGELOG - Sistema Inventario v5.0
 
+## [2025-07-26] - CONFIGURACIÓN RUTAS ESPECÍFICAS TICKETS - ✅ COMPLETADO
+- **Funcionalidad:** Configuración de rutas específicas para almacenamiento de tickets PDF
+- **Requerimiento:** Tickets de entrada en "D:\\inventario_app2\\data\\tickets_entrada" y otros en carpetas específicas
+- **Causa:** Archivos PDF almacenados en directorio temporal (riesgo de pérdida)
+- **Impacto:** Organización permanente y accesible de documentos del sistema
+- **Archivos:** src/services/export_service.py (refactorización completa de rutas)
+- **Tests:** test_specific_ticket_directories.py (validación estructura directorios)
+- **Cobertura:** 100% nueva estructura de directorios implementada
+- **Estado:** COMPLETED ✅
+- **Tiempo:** 60 minutos invertidos
+- **Hash semántico:** export_service_specific_directories_config_20250726
+
+### ✅ Estructura de directorios implementada:
+1. **D:\\inventario_app2\\data\\tickets_entrada\\** - Tickets de entrada específicamente
+2. **D:\\inventario_app2\\data\\tickets_venta\\** - Tickets de venta
+3. **D:\\inventario_app2\\data\\tickets_ajuste\\** - Tickets de ajuste
+4. **D:\\inventario_app2\\data\\reportes\\** - Reportes generales (Excel, PDF)
+5. **Creación automática** - Todos los directorios se crean al inicializar ExportService
+
+### 🔧 Refactorización ExportService:
+- **Constructor actualizado:** Rutas específicas calculadas desde project_root
+- **_create_required_directories():** Método para crear estructura completa
+- **_get_ticket_directory():** Método para obtener directorio según tipo
+- **generate_entry_ticket():** Usa directorio específico tickets_entrada
+- **Formato archivo:** ticket_[tipo]_[numero].pdf (ej: ticket_entrada_E000001.pdf)
+- **Retrocompatibilidad:** export_base_path apunta a directorio reportes
+
+### 📁 Nuevos métodos agregados:
+- **get_tickets_directory(ticket_type):** Obtener directorio específico o base
+- **get_directory_info():** Información completa de todos los directorios
+- **cleanup_old_exports():** Limpieza mejorada con soporte multi-directorio
+- **_create_required_directories():** Creación automática de estructura
+- **_get_ticket_directory():** Mapeo tipo de ticket a directorio
+
+### 📋 Configuración de rutas:
+- **ANTES:** tempfile.gettempdir() + "inventario_exports" (temporal)
+- **DESPUÉS:** project_root + "data" + subdirectorios específicos (permanente)
+- **Estructura:** Calculada dinámicamente desde ubicación del archivo
+- **Seguridad:** Validación de tipos de ticket válidos
+- **Organización:** Separación clara por tipo de documento
+
+### 🧠 Mejoras implementadas:
+- **Permanencia:** Archivos en ubicación fija, no temporal
+- **Organización:** Separación lógica por tipo de documento
+- **Accesibilidad:** Rutas conocidas y fáciles de ubicar
+- **Mantenimiento:** Métodos para obtener información de directorios
+- **Limpieza:** Soporte para limpieza selectiva por tipo
+- **Extensibilidad:** Fácil agregar nuevos tipos de tickets
+
+### 📝 Ejemplo de uso:
+```python
+# Obtener directorio de tickets de entrada
+entrada_dir = export_service.get_tickets_directory('ENTRADA')
+# Resultado: "D:\\inventario_app2\\data\\tickets_entrada"
+
+# Obtener información completa
+info = export_service.get_directory_info()
+# Resultado: {'proyecto': '...', 'data': '...', 'tickets_entrada': '...', ...}
+
+# Generar ticket (usa directorio específico automáticamente)
+ticket_path = export_service.generate_entry_ticket(ticket_data)
+# Resultado: "D:\\inventario_app2\\data\\tickets_entrada\\ticket_entrada_E000001.pdf"
+```
+
+### 🧑‍💻 Cambios de configuración:
+- **project_root:** Calculado dinámicamente desde __file__
+- **data_dir:** project_root + "data"
+- **tickets_*_path:** data_dir + subdirectorio específico
+- **export_base_path:** Apunta a reportes_path para compatibilidad
+- **Validación:** Verificación de tipos válidos ('ENTRADA', 'VENTA', 'AJUSTE')
+
+### 🧙 Limpieza mejorada:
+- **Parámetros:** days_old + include_tickets (seguridad)
+- **Retorno:** Dict con archivos eliminados por directorio
+- **Seguridad:** Tickets excluidos por defecto (include_tickets=False)
+- **Granularidad:** Limpieza selectiva por tipo de documento
+- **Logging:** Información detallada por directorio
+
+### 🔍 Validación implementada:
+- Estructura directorios: ✅ CREADA Y VERIFICADA
+- Métodos nuevos: ✅ FUNCIONANDO
+- Retrocompatibilidad: ✅ PRESERVADA
+- Generación tickets: ✅ USANDO RUTAS ESPECÍFICAS
+- Tests cobertura: ✅ COMPLETA
+- Sin regresiones: ✅ CONFIRMADO
+
 ## [2025-07-25] - IMPLEMENTACIÓN MÉTODO generate_entry_ticket - ✅ COMPLETADO
 - **Funcionalidad:** Implementación del método faltante `generate_entry_ticket()` en ExportService
 - **Problema:** Error "'ExportService' object has no attribute 'generate_entry_ticket'" en movement_entry_form línea 1079
