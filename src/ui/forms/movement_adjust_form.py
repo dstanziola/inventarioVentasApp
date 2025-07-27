@@ -3,6 +3,7 @@ MovementAdjustForm - Formulario de ajustes individuales de producto
 Arquitectura: Clean Architecture - Capa Presentación
 Patrón: MVP + Service Layer + TDD
 Requerimientos: Sección 3.2 - Ajustes de Producto
+FLUJO DIRECTO SIMPLIFICADO
 """
 
 import tkinter as tk
@@ -10,6 +11,8 @@ from tkinter import ttk, messagebox
 from typing import Dict, Optional
 import logging
 from datetime import datetime
+import subprocess
+import os
 
 # Importaciones del sistema
 from services.service_container import get_container
@@ -22,15 +25,16 @@ from ui.widgets.product_search_widget import ProductSearchWidget
 class MovementAdjustForm:
     """
     Formulario para ajustes individuales de productos en inventario
+    FLUJO DIRECTO SIMPLIFICADO
     
     Responsabilidades:
     - Interfaz para ajustar un producto por movimiento
     - Validación de permisos de administrador
-    - Búsqueda y selección de productos (via ProductSearchWidget)
+    - Búsqueda y autoselección automática de productos
     - Validación cantidades positivas/negativas
     - Motivos predefinidos de ajuste
-    - Generación automática de tickets
-    - Integración con MovementService
+    - Flujo directo: código → cantidad → REGISTRAR (genera ticket automáticamente)
+    - Solo confirmación para imprimir ticket
     
     Patrón Arquitectónico: MVP
     - Model: Services (MovementService, ProductService, ExportService)
@@ -54,7 +58,7 @@ class MovementAdjustForm:
         self.window = None
         self.logger = get_logger(__name__)
         
-        # Estado del formulario
+        # Estado del formulario (simplificado)
         self.selected_product: Optional[Dict] = None
         
         # Variables de Tkinter
@@ -68,6 +72,11 @@ class MovementAdjustForm:
         self.reason_combobox: Optional[ttk.Combobox] = None
         self.observations_text: Optional[tk.Text] = None
         
+        # Botones simplificados
+        self.register_btn: Optional[ttk.Button] = None
+        self.cancel_btn: Optional[ttk.Button] = None
+        self.close_btn: Optional[ttk.Button] = None
+        
         # Lazy loading de servicios
         self._movement_service = None
         self._product_service = None
@@ -80,7 +89,11 @@ class MovementAdjustForm:
         # Crear interfaz
         self._create_interface()
         
-        self.logger.info("MovementAdjustForm inicializado correctamente")
+        # Configurar foco inicial en búsqueda de producto
+        if self.product_search_widget:
+            self.product_search_widget.set_focus()
+        
+        self.logger.info("MovementAdjustForm inicializado con flujo directo simplificado")
     
     def _validate_admin_permissions(self):
         """
@@ -112,7 +125,7 @@ class MovementAdjustForm:
         self._create_title_panel()
         self._create_product_search_panel()
         self._create_adjustment_details_panel()
-        self._create_buttons_panel()
+        self._create_buttons_panel_simplified()
         
         # Configurar validaciones
         self._setup_validations()
@@ -140,30 +153,30 @@ class MovementAdjustForm:
         
         subtitle_label = ttk.Label(
             title_frame,
-            text="Ajustar productos individualmente para conciliación con inventario físico",
+            text="Flujo directo: código producto → cantidad → motivo → observaciones → REGISTRAR",
             font=("Arial", 10)
         )
         subtitle_label.pack(pady=(5, 0))
     
     def _create_product_search_panel(self):
-        """Crear panel de búsqueda de productos"""
+        """Crear panel de búsqueda de productos con autoselección"""
         search_frame = ttk.LabelFrame(self.window, text="Búsqueda de Producto", padding=10)
         search_frame.pack(fill=tk.X, padx=20, pady=10)
         
-        # Widget de búsqueda reutilizable
+        # Widget de búsqueda reutilizable con autoselección
         self.product_search_widget = ProductSearchWidget(
             search_frame, 
             self.product_service
         )
         self.product_search_widget.pack(fill=tk.X)
         
-        # Configurar callback para selección
+        # Configurar callback para selección automática
         self.product_search_widget.on_product_selected = self._on_product_selected
         
         # Label para producto seleccionado
         self.selected_product_label = ttk.Label(
             search_frame,
-            text="Ningún producto seleccionado",
+            text="Ingrese código de producto por teclado o lector de código de barras",
             foreground="gray",
             font=("Arial", 10, "italic")
         )
@@ -178,14 +191,15 @@ class MovementAdjustForm:
         details_frame.grid_columnconfigure(1, weight=1)
         
         # Cantidad de ajuste
-        ttk.Label(details_frame, text="Cantidad:").grid(
+        ttk.Label(details_frame, text="Cantidad de ajuste:").grid(
             row=0, column=0, sticky="w", padx=5, pady=5
         )
         
         self.quantity_entry = ttk.Entry(
             details_frame,
             textvariable=self.adjustment_quantity,
-            width=15
+            width=15,
+            font=("Arial", 12)
         )
         self.quantity_entry.grid(row=0, column=1, sticky="w", padx=5, pady=5)
         
@@ -194,7 +208,7 @@ class MovementAdjustForm:
             row=0, column=2, sticky="w", padx=5
         )
         
-        # Motivo del ajuste
+        # Motivo del ajuste (con valor por defecto)
         ttk.Label(details_frame, text="Motivo:").grid(
             row=1, column=0, sticky="w", padx=5, pady=5
         )
@@ -203,7 +217,10 @@ class MovementAdjustForm:
             details_frame,
             values=[
                 "CORRECCIÓN INVENTARIO FÍSICO",
-                "PRODUCTO DAÑADO", 
+                "PRODUCTO DAÑADO",
+                "PRODUCTO VENCIDO",
+                "ERROR SISTEMA",
+                "ROBO/PÉRDIDA",
                 "OTRO"
             ],
             state="readonly",
@@ -212,7 +229,7 @@ class MovementAdjustForm:
         self.reason_combobox.grid(row=1, column=1, columnspan=2, sticky="ew", padx=5, pady=5)
         self.reason_combobox.set("CORRECCIÓN INVENTARIO FÍSICO")  # Valor por defecto
         
-        # Responsable
+        # Responsable (automático del usuario actual)
         ttk.Label(details_frame, text="Responsable:").grid(
             row=2, column=0, sticky="w", padx=5, pady=5
         )
@@ -223,19 +240,20 @@ class MovementAdjustForm:
         responsible_entry = ttk.Entry(
             details_frame,
             textvariable=self.responsible_var,
-            width=30
+            width=30,
+            state="readonly"  # Solo lectura, se establece automáticamente
         )
         responsible_entry.grid(row=2, column=1, columnspan=2, sticky="ew", padx=5, pady=5)
         
-        # Observaciones
-        ttk.Label(details_frame, text="Observaciones:").grid(
+        # Observaciones (opcional)
+        ttk.Label(details_frame, text="Observaciones (opcional):").grid(
             row=3, column=0, sticky="nw", padx=5, pady=5
         )
         
         self.observations_text = tk.Text(
             details_frame,
             width=50,
-            height=4
+            height=3
         )
         self.observations_text.grid(row=3, column=1, columnspan=2, sticky="ew", padx=5, pady=5)
         
@@ -244,68 +262,101 @@ class MovementAdjustForm:
         obs_scrollbar.grid(row=3, column=3, sticky="ns", pady=5)
         self.observations_text.configure(yscrollcommand=obs_scrollbar.set)
     
-    def _create_buttons_panel(self):
-        """Crear panel de botones"""
+    def _create_buttons_panel_simplified(self):
+        """Crear panel de botones simplificado (3 botones únicamente)"""
         buttons_frame = ttk.Frame(self.window)
         buttons_frame.pack(fill=tk.X, padx=20, pady=20)
         
-        # Botón Registrar Ajuste
-        register_btn = ttk.Button(
-            buttons_frame,
-            text="Registrar Ajuste",
-            command=self._register_adjustment,
-            style="Accent.TButton"
-        )
-        register_btn.pack(side=tk.LEFT, padx=5)
+        # Frame principal para los 3 botones
+        main_buttons_frame = ttk.Frame(buttons_frame)
+        main_buttons_frame.pack(fill=tk.X)
         
-        # Botón Limpiar
-        clear_btn = ttk.Button(
-            buttons_frame,
-            text="Limpiar",
-            command=self._clear_form
+        # Botón REGISTRAR AJUSTE (acción principal)
+        self.register_btn = ttk.Button(
+            main_buttons_frame,
+            text="REGISTRAR AJUSTE",
+            command=self._register_adjustment_direct,
+            style="Accent.TButton",
+            width=20
         )
-        clear_btn.pack(side=tk.LEFT, padx=5)
+        self.register_btn.pack(side=tk.LEFT, padx=5)
         
-        # Botón Cerrar
-        close_btn = ttk.Button(
-            buttons_frame,
-            text="Cerrar",
-            command=self.destroy
+        # Botón CANCELAR (limpiar formulario)
+        self.cancel_btn = ttk.Button(
+            main_buttons_frame,
+            text="CANCELAR",
+            command=self._clear_form,
+            width=15
         )
-        close_btn.pack(side=tk.RIGHT, padx=5)
+        self.cancel_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Botón CERRAR (cerrar formulario)
+        self.close_btn = ttk.Button(
+            main_buttons_frame,
+            text="CERRAR",
+            command=self.destroy,
+            width=15
+        )
+        self.close_btn.pack(side=tk.RIGHT, padx=5)
+        
+        # Instrucciones de uso
+        instructions_frame = ttk.Frame(buttons_frame)
+        instructions_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        instructions_label = ttk.Label(
+            instructions_frame,
+            text="1) Busque producto por código  2) Ingrese cantidad  3) REGISTRAR genera movimiento y ticket automáticamente",
+            font=("Arial", 9),
+            foreground="blue"
+        )
+        instructions_label.pack()
     
     def _setup_validations(self):
         """Configurar validaciones en tiempo real"""
         # Validación de cantidad en tiempo real
         self.adjustment_quantity.trace("w", self._on_quantity_change)
+        
+        # Configurar Enter en campo cantidad para registro rápido
+        if self.quantity_entry:
+            self.quantity_entry.bind("<Return>", lambda e: self._register_adjustment_direct())
     
     def _on_product_selected(self, product: Dict, **kwargs):
         """
-        Callback cuando se selecciona un producto
+        Callback cuando se selecciona un producto automáticamente
         
         Args:
             product: Diccionario con datos del producto seleccionado
         """
         self.selected_product = product
         
-        # Actualizar label
+        # Actualizar label con información completa
         stock_info = f" (Stock actual: {product.get('stock_actual', 'N/A')})" if 'stock_actual' in product else ""
+        category_info = f" | Categoría: {product.get('categoria', 'N/A')}"
+        
         self.selected_product_label.config(
-            text=f"Seleccionado: {product['nombre']}{stock_info}",
-            foreground="black"
+            text=f"✓ Producto: {product['nombre']}{stock_info}{category_info}",
+            foreground="green",
+            font=("Arial", 10, "bold")
         )
         
-        self.logger.debug(f"Producto seleccionado: {product['nombre']}")
+        # Enfocar automáticamente en cantidad después de selección
+        if self.quantity_entry:
+            self.quantity_entry.focus_set()
+            self.quantity_entry.select_range(0, tk.END)
+        
+        self.logger.debug(f"Producto auto-seleccionado: {product['nombre']}")
     
     def _on_quantity_change(self, *args):
         """Callback cuando cambia la cantidad"""
         quantity_str = self.adjustment_quantity.get()
         
-        # Validación visual
+        # Validación visual en tiempo real
         if self._validate_quantity(quantity_str):
-            self.quantity_entry.config(style="TEntry")  # Estilo normal
+            if self.quantity_entry:
+                self.quantity_entry.config(foreground="black")
         else:
-            self.quantity_entry.config(style="Error.TEntry")  # Estilo error
+            if self.quantity_entry:
+                self.quantity_entry.config(foreground="red")
     
     def _validate_quantity(self, quantity_str: str) -> bool:
         """
@@ -327,79 +378,159 @@ class MovementAdjustForm:
         except ValueError:
             return False
     
-    def _register_adjustment(self) -> bool:
+    def _register_adjustment_direct(self) -> bool:
         """
-        Registrar el ajuste de inventario
+        Registrar el ajuste de inventario en flujo directo
+        NUEVO: Un solo método que ejecuta todo el proceso
         
         Returns:
-            bool: True si se registró exitosamente, False en caso contrario
+            bool: True si se completó exitosamente, False en caso contrario
         """
         try:
-            # Validaciones previas
-            if not self._validate_form():
+            # Paso 1: Validaciones previas
+            if not self._validate_form_complete():
                 return False
             
-            # Preparar datos del ajuste
+            # Paso 2: Preparar datos del ajuste
             adjustment_data = self._prepare_adjustment_data()
             
-            # Crear movimiento en el servicio
-            result = self.movement_service.create_adjustment_movement(adjustment_data)
+            # Paso 3: Crear movimiento en el servicio
+            self.logger.info("Registrando ajuste de inventario...")
+            result = self.movement_service.create_ajuste_inventario(
+                id_producto=adjustment_data['product_id'],
+                cantidad_ajuste=adjustment_data['quantity'],
+                responsable=adjustment_data['responsible'],
+                motivo=adjustment_data['reason']
+            )
             
-            if result and result.get('success'):
-                # Generar ticket PDF
-                ticket_generated = self.export_service.generate_adjustment_ticket(
-                    result['id'], 
-                    adjustment_data
+            # Convertir resultado a formato esperado por el resto del código
+            if result and hasattr(result, 'id_movimiento'):
+                result = {
+                    'success': True,
+                    'id': result.id_movimiento
+                }
+            else:
+                result = {'success': False}
+            
+            if not result or not result.get('success'):
+                messagebox.showerror(
+                    "Error", 
+                    "Error al registrar el ajuste en la base de datos",
+                    parent=self.window
+                )
+                return False
+            
+            movement_id = result['id']
+            
+            # Paso 4: Generar ticket PDF automáticamente
+            self.logger.info(f"Generando ticket para movimiento {movement_id}...")
+            ticket = self.export_service.generate_adjustment_ticket(
+                movement_id, 
+                adjustment_data
+            )
+            
+            # Paso 5: Mostrar resultado y opción de impresión
+            if ticket:
+                # Mostrar mensaje de éxito
+                success_message = (
+                    f"✓ Ajuste registrado exitosamente\n\n"
+                    f"• ID de Movimiento: {movement_id}\n"
+                    f"• Producto: {adjustment_data['product_name']}\n"
+                    f"• Cantidad: {adjustment_data['quantity']:+d}\n"
+                    f"• Motivo: {adjustment_data['reason']}\n"
+                    f"• Ticket PDF generado automáticamente"
                 )
                 
-                if ticket_generated:
-                    messagebox.showinfo(
-                        "Éxito", 
-                        f"Ajuste registrado exitosamente.\nID: {result['id']}\nTicket generado."
-                    )
-                else:
-                    messagebox.showwarning(
-                        "Parcial", 
-                        "Ajuste registrado pero error al generar ticket."
-                    )
+                messagebox.showinfo(
+                    "Ajuste Completado",
+                    success_message,
+                    parent=self.window
+                )
                 
-                # Limpiar formulario
-                self._clear_form()
-                return True
+                # Preguntar si desea imprimir ticket (única confirmación)
+                print_ticket = messagebox.askyesno(
+                    "Imprimir Ticket",
+                    "¿Desea abrir el ticket para visualizarlo e imprimirlo?",
+                    parent=self.window
+                )
+                
+                if print_ticket:
+                    self._open_ticket_for_printing(ticket)
+                
             else:
-                messagebox.showerror("Error", "Error al registrar el ajuste")
-                return False
-                
+                # Ajuste registrado pero sin ticket
+                messagebox.showwarning(
+                    "Parcialmente Completado",
+                    f"✓ Ajuste registrado exitosamente (ID: {movement_id})\n"
+                    f"⚠ Error al generar ticket PDF",
+                    parent=self.window
+                )
+            
+            # Paso 6: Limpiar formulario para siguiente ajuste
+            self._clear_form()
+            
+            self.logger.info(f"Ajuste completado exitosamente: ID {movement_id}")
+            return True
+            
         except Exception as e:
-            self.logger.error(f"Error registrando ajuste: {e}")
-            messagebox.showerror("Error", f"Error registrando ajuste: {str(e)}")
+            self.logger.error(f"Error en flujo directo de ajuste: {e}")
+            messagebox.showerror(
+                "Error", 
+                f"Error procesando ajuste: {str(e)}",
+                parent=self.window
+            )
             return False
     
-    def _validate_form(self) -> bool:
+    def _validate_form_complete(self) -> bool:
         """
-        Validar el formulario completo
+        Validar el formulario completo para flujo directo
         
         Returns:
             bool: True si es válido, False en caso contrario
         """
         # Producto seleccionado
         if not self.selected_product:
-            messagebox.showerror("Error", "Debe seleccionar un producto")
+            messagebox.showerror(
+                "Error", 
+                "Debe seleccionar un producto.\n\nIngrese el código por teclado o lector de código de barras.",
+                parent=self.window
+            )
+            # Enfocar en búsqueda
+            if self.product_search_widget:
+                self.product_search_widget.set_focus()
             return False
         
-        # Cantidad válida
+        # Cantidad válida (no cero)
         if not self._validate_quantity(self.adjustment_quantity.get()):
-            messagebox.showerror("Error", "La cantidad debe ser un número entero diferente de cero")
+            messagebox.showerror(
+                "Error", 
+                "La cantidad debe ser un número entero diferente de cero.\n\n• Positivo: suma al stock\n• Negativo: resta del stock",
+                parent=self.window
+            )
+            # Enfocar en cantidad
+            if self.quantity_entry:
+                self.quantity_entry.focus_set()
+                self.quantity_entry.select_range(0, tk.END)
             return False
         
-        # Motivo seleccionado
+        # Motivo seleccionado (debería tener valor por defecto)
         if not self.reason_combobox.get():
-            messagebox.showerror("Error", "Debe seleccionar un motivo")
+            messagebox.showerror(
+                "Error", 
+                "Debe seleccionar un motivo del ajuste",
+                parent=self.window
+            )
+            if self.reason_combobox:
+                self.reason_combobox.focus_set()
             return False
         
-        # Responsable
+        # Responsable (se establece automáticamente)
         if not self.responsible_var.get().strip():
-            messagebox.showerror("Error", "Debe especificar el responsable")
+            messagebox.showerror(
+                "Error", 
+                "Error: No se pudo determinar el usuario responsable",
+                parent=self.window
+            )
             return False
         
         return True
@@ -420,13 +551,40 @@ class MovementAdjustForm:
             'reason': self.reason_combobox.get(),
             'observations': self.observations_text.get('1.0', tk.END).strip(),
             'responsible': self.responsible_var.get().strip(),
-            'user_id': current_user['id'] if current_user else None,
+            'user_id': current_user.id if current_user else None,
             'timestamp': datetime.now().isoformat(),
             'movement_type': 'AJUSTE'
         }
     
+    def _open_ticket_for_printing(self, ticket):
+        """
+        Abrir ticket PDF para visualización e impresión
+        Args:
+            ticket: instancia de Ticket con atributo .pdf_path
+        """
+        pdf_path = getattr(ticket, 'pdf_path', None)
+        if not pdf_path or not os.path.exists(pdf_path):
+            messagebox.showerror(
+                "Error",
+                f"No se encontró el archivo PDF:\n{pdf_path}",
+                parent=self.window
+            )
+            return
+
+        try:
+            if os.name == 'nt':  # Windows
+                os.startfile(pdf_path)
+            else:  # macOS / Linux
+                subprocess.run(['xdg-open', pdf_path], check=False)
+        except Exception as e:
+            messagebox.showerror(
+                "Error abriendo PDF",
+                f"No se pudo abrir el PDF:\n{e}",
+                parent=self.window
+            )
+    
     def _clear_form(self):
-        """Limpiar el formulario"""
+        """Limpiar el formulario completamente"""
         # Limpiar búsqueda de producto
         if self.product_search_widget:
             self.product_search_widget.clear_selection()
@@ -436,21 +594,50 @@ class MovementAdjustForm:
         self.adjustment_quantity.set("0")
         
         # Limpiar widgets
-        self.selected_product_label.config(
-            text="Ningún producto seleccionado",
-            foreground="gray"
-        )
+        if self.selected_product_label:
+            self.selected_product_label.config(
+                text="Ingrese código de producto por teclado o lector de código de barras",
+                foreground="gray",
+                font=("Arial", 10, "italic")
+            )
         
-        self.reason_combobox.set("CORRECCIÓN INVENTARIO FÍSICO")
-        self.observations_text.delete('1.0', tk.END)
+        # Restablecer motivo por defecto
+        if self.reason_combobox:
+            self.reason_combobox.set("CORRECCIÓN INVENTARIO FÍSICO")
+        
+        # Limpiar observaciones
+        if self.observations_text:
+            self.observations_text.delete('1.0', tk.END)
         
         # Mantener responsable actual
         current_user = self.session_manager.get_current_user()
         self.responsible_var.set(current_user.nombre_usuario if current_user else "")
         
-        self.logger.debug("Formulario limpiado")
+        # Enfocar en búsqueda para siguiente producto
+        if self.product_search_widget:
+            self.product_search_widget.set_focus()
+        
+        self.logger.debug("Formulario limpiado - listo para siguiente ajuste")
     
-    # Lazy loading de servicios (Properties)
+    # ============================================================================
+    # COMPATIBILIDAD - Métodos legacy mantenidos para evitar breaking changes
+    # ============================================================================
+    
+    def _register_adjustment(self) -> bool:
+        """
+        Método legacy mantenido para compatibilidad
+        Ahora redirige al nuevo flujo directo
+        
+        Returns:
+            bool: True si se completó exitosamente, False en caso contrario
+        """
+        self.logger.info("Usando método legacy _register_adjustment - redirigiendo a flujo directo")
+        return self._register_adjustment_direct()
+    
+    # ============================================================================
+    # LAZY LOADING DE SERVICIOS (Properties)
+    # ============================================================================
+    
     @property
     def movement_service(self):
         """Lazy loading del MovementService"""

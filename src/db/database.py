@@ -261,7 +261,7 @@ class DatabaseConnection:
         -- Tabla de numeración de tickets (FASE 3)
         CREATE TABLE IF NOT EXISTS ticket_numbering (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_type VARCHAR(20) NOT NULL UNIQUE CHECK (ticket_type IN ('VENTA', 'ENTRADA')),
+            ticket_type VARCHAR(20) NOT NULL UNIQUE CHECK (ticket_type IN ('VENTA', 'ENTRADA', 'AJUSTE')),
             last_number INTEGER DEFAULT 0,
             prefix VARCHAR(10) DEFAULT '',
             suffix VARCHAR(10) DEFAULT '',
@@ -272,7 +272,7 @@ class DatabaseConnection:
         CREATE TABLE IF NOT EXISTS tickets (
             id_ticket INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_number VARCHAR(50) NOT NULL UNIQUE,
-            ticket_type VARCHAR(20) NOT NULL CHECK (ticket_type IN ('VENTA', 'ENTRADA')),
+            ticket_type VARCHAR(20) NOT NULL CHECK (ticket_type IN ('VENTA', 'ENTRADA', 'AJUSTE')),
             id_venta INTEGER,
             id_movimiento INTEGER,
             generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

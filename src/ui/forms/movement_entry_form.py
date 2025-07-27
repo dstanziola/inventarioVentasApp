@@ -7,6 +7,7 @@ Patrón: Event Listener via Event Bus + Mediator coordination
 """
 
 import os
+import subprocess
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
@@ -254,6 +255,15 @@ class MovementEntryForm:
         )
         self.search_widget.grid(row=0, column=0, sticky="ew", pady=5)
         
+        # ✅ NUEVO: Label de selección propio en MovementEntryForm
+        self.selected_product_label = ttk.Label(
+            self.search_frame,
+            text="Ningún producto seleccionado",
+            foreground="gray",
+            font=("Arial", 10, "bold")
+        )
+        self.selected_product_label.grid(row=1, column=0, sticky="w", pady=(5, 0))
+        
         # ELIMINADO: Configuración de callbacks directos
         # Se mantienen solo para compatibilidad, pero la comunicación real es via Event Bus
         
@@ -410,6 +420,9 @@ class MovementEntryForm:
             # Actualizar estado interno
             self._current_selected_product = product_data
             
+            # ✅ NUEVO: Actualizar label de selección visual
+            self._update_selected_product_label(product_data)
+            
             # Validación automática del bloqueo de selección
             if hasattr(self, '_product_locked') and self._product_locked:
                 self.logger.warning("Producto ya bloqueado, ignorando nueva selección via Event Bus")
@@ -430,6 +443,59 @@ class MovementEntryForm:
             
         except Exception as e:
             self.logger.error(f"Error manejando selección via Event Bus: {e}")
+
+    def _update_selected_product_label(self, product_data: dict):
+        """
+        Actualizar label de producto seleccionado con información completa
+        
+        Args:
+            product_data: Datos del producto seleccionado
+        """
+        try:
+            if not product_data:
+                # Sin selección
+                self.selected_product_label.config(
+                    text="Ningún producto seleccionado",
+                    foreground="gray"
+                )
+                return
+            
+            # Extraer información del producto
+            product_name = product_data.get('nombre', 'Producto sin nombre')
+            product_id = product_data.get('id', 'N/A')
+            product_stock = product_data.get('stock', 'N/A')
+            product_category = product_data.get('categoria_tipo', 'N/A')
+            
+            # Texto informativo con detalles
+            if product_stock != 'N/A':
+                label_text = f"✓ Seleccionado: {product_name} (ID: {product_id}, Stock: {product_stock})"
+            else:
+                label_text = f"✓ Seleccionado: {product_name} (ID: {product_id})"
+            
+            # Color según tipo de producto
+            if product_category == 'SERVICIO':
+                label_color = "red"  # SERVICIOS no pueden agregarse
+                label_text += " - SERVICIO (No stock)"
+            elif product_category == 'MATERIAL':
+                label_color = "green"  # MATERIALES ok para inventario
+            else:
+                label_color = "blue"  # Categoría desconocida
+            
+            # Actualizar label
+            self.selected_product_label.config(
+                text=label_text,
+                foreground=label_color
+            )
+            
+            self.logger.debug(f"Label actualizado: {product_name}")
+            
+        except Exception as e:
+            self.logger.error(f"Error actualizando label de selección: {e}")
+            # Fallback seguro
+            self.selected_product_label.config(
+                text="Error en selección de producto",
+                foreground="red"
+            )
 
     def _handle_search_request_via_event_bus(self, event_data: EventData):
         """
@@ -514,6 +580,12 @@ class MovementEntryForm:
         
         # NUEVA FUNCIONALIDAD: Usar producto del Event Bus si está disponible
         selected_product = self._current_selected_product or self.search_widget.get_selected_product()
+        
+        # CORRECCION: Actualizar label si producto viene de seleccion manual del widget
+        if selected_product and not self._current_selected_product:
+            # Producto viene de seleccion manual directa (no Event Bus)
+            self._update_selected_product_label(selected_product)
+            self.logger.debug(f"Label actualizado para seleccion manual: {selected_product['nombre']}")
         
         if not selected_product:
             # Publicar evento de solicitud de validación
@@ -613,6 +685,9 @@ class MovementEntryForm:
             
             # Limpiar selección del widget de búsqueda
             self.search_widget._clear_code_and_selection()
+            
+            # ✅ NUEVO: Limpiar label de selección
+            self._update_selected_product_label(None)
             
             # Desbloquear selección y limpiar estado del Event Bus
             self._product_locked = False
@@ -886,6 +961,9 @@ class MovementEntryForm:
         self.search_widget.clear_selection()
         self._update_products_tree()
         
+        # ✅ NUEVO: Limpiar label de selección
+        self._update_selected_product_label(None)
+        
         # Limpiar estado del Event Bus
         self._current_selected_product = None
         self._product_locked = False
@@ -1107,6 +1185,35 @@ class MovementEntryForm:
         
         return f"Error al registrar entrada: {error}"
 
+    def _open_pdf_for_printing(self, pdf_path: str) -> None:
+        """
+        Abrir PDF con aplicación predeterminada del sistema para visualización e impresión.
+        
+        Args:
+            pdf_path: Ruta al archivo PDF a abrir
+            
+        Note:
+            - Windows: Usa os.startfile()
+            - Linux/Mac: Usa subprocess.run(['xdg-open', path])
+            - Maneja errores con notificación al usuario
+        """
+        try:
+            if os.name == 'nt':  # Windows
+                os.startfile(pdf_path)
+            else:  # Linux/Mac (fallback para compatibilidad)
+                subprocess.run(['xdg-open', pdf_path])
+            
+            self.logger.info(f"PDF abierto para impresión: {pdf_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Error abriendo PDF: {e}")
+            messagebox.showerror(
+                "Error", 
+                f"No se pudo abrir el PDF para impresión:\n\n{str(e)}\n\n"
+                f"Verifique que tiene una aplicación PDF instalada.",
+                parent=self.window
+            )
+
     def _generate_ticket(self, ticket_number: str, products: List[Dict]) -> str:
         """Generar ticket PDF con validación robusta y notificación al usuario"""
         try:
@@ -1183,15 +1290,19 @@ class MovementEntryForm:
             
             self.logger.info(f"Ticket generado exitosamente: {ticket_path}")
             
-            # Opcional: Notificar éxito al usuario
-            success_msg = (
-                f"Ticket Generado Exitosamente\n\n"
-                f"Número: {ticket_number}\n"
-                f"Archivo: {os.path.basename(ticket_path)}\n\n"
-                f"El ticket PDF ha sido guardado en el sistema."
-            )
-            
-            messagebox.showinfo("Ticket Generado", success_msg, parent=self.window)
+            # NUEVA FUNCIONALIDAD: Pregunta de confirmación para imprimir ticket
+            if ticket_path and os.path.exists(ticket_path):
+                result = messagebox.askquestion(
+                    "Imprimir Ticket",
+                    f"Ticket generado exitosamente.\n\n"
+                    f"¿Desea abrir el ticket para visualizarlo e imprimirlo?\n\n"
+                    f"Archivo: {os.path.basename(ticket_path)}",
+                    parent=self.window,
+                    icon='question'
+                )
+                
+                if result == 'yes':
+                    self._open_pdf_for_printing(ticket_path)
             
             return ticket_path
             

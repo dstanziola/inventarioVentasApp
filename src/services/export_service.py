@@ -219,7 +219,7 @@ class ExportService:
             filters: Filtros aplicados para incluir en el reporte
         
         Returns:
-            str: Ruta al archivo PDF generado
+            Ticket: Objeto Ticket generado con pdf_path configurado
         
         Raises:
             ValueError: Si los parámetros son inválidos
@@ -775,6 +775,194 @@ class ExportService:
         except Exception as e:
             # No fallar la generación del PDF si hay error en persistencia
             logger.warning(f"Error al persistir ticket (PDF generado exitosamente): {e}")
+    
+    def generate_adjustment_ticket(self, movement_id: int, adjustment_data: Dict[str, Any]):
+        """
+        Generar ticket de ajuste de inventario con PDF.
+        
+        Args:
+            movement_id: ID del movimiento de ajuste
+            adjustment_data: Diccionario con datos del ajuste
+                - product_id: ID del producto
+                - product_name: Nombre del producto
+                - quantity: Cantidad de ajuste (puede ser negativa)
+                - reason: Motivo del ajuste
+                - observations: Observaciones
+                - responsible: Usuario responsable
+                - timestamp: Timestamp del ajuste
+        
+        Returns:
+            Ticket: Objeto Ticket generado con pdf_path configurado
+        
+        Raises:
+            ValueError: Si los datos del ajuste son inválidos
+            Exception: Para errores de generación o exportación
+        """
+        try:
+            # Validar datos de entrada
+            self._validate_adjustment_data(adjustment_data)
+            
+            # Preparar datos para generación de PDF - Usar directorio específico para ajustes
+            ticket_directory = self._get_ticket_directory('AJUSTE')
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ticket_ajuste_{movement_id}_{timestamp}.pdf"
+            file_path = os.path.join(ticket_directory, filename)
+            
+            # Crear datos del template para PDF
+            template_data = self._create_adjustment_ticket_template_data(
+                movement_id,
+                adjustment_data
+            )
+            
+            # Generar PDF usando PDFExporter
+            self.pdf_exporter.create_adjustment_ticket_pdf(
+                template_data=template_data,
+                file_path=file_path
+            )
+            
+            # Persistir información del ticket y retornar objeto Ticket
+            ticket = self._persist_adjustment_ticket(
+                movement_id,
+                adjustment_data.get('responsible'),
+                file_path
+            )
+            
+            logger.info(f"Ticket de ajuste generado exitosamente: {file_path}")
+            print(f"[DEBUG] Ticket de ajuste generado en: {file_path}")
+            return ticket
+            
+        except ValueError as e:
+            logger.error(f"Error validando datos del ajuste: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error generando ticket de ajuste: {e}")
+            raise Exception(f"Error al generar ticket de ajuste: {e}")
+    
+    def _validate_adjustment_data(self, adjustment_data: Dict[str, Any]) -> None:
+        """
+        Validar datos del ajuste.
+        
+        Args:
+            adjustment_data: Datos del ajuste a validar
+        
+        Raises:
+            ValueError: Si los datos son inválidos
+        """
+        if not isinstance(adjustment_data, dict):
+            raise ValueError("adjustment_data debe ser un diccionario")
+        
+        required_fields = ['product_id', 'product_name', 'quantity', 'reason', 'responsible']
+        missing_fields = [field for field in required_fields if field not in adjustment_data]
+        
+        if missing_fields:
+            raise ValueError(f"Campos requeridos faltantes: {missing_fields}")
+        
+        # Validar que la cantidad sea un entero diferente de cero
+        quantity = adjustment_data.get('quantity')
+        if not isinstance(quantity, int) or quantity == 0:
+            raise ValueError("La cantidad debe ser un entero diferente de cero")
+        
+        logger.debug(f"Datos del ajuste validados: producto {adjustment_data.get('product_name')}")
+    
+    def _create_adjustment_ticket_template_data(self, movement_id: int, adjustment_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Crear datos del template para el ticket de ajuste PDF.
+        
+        Args:
+            movement_id: ID del movimiento de ajuste
+            adjustment_data: Datos del ajuste
+        
+        Returns:
+            Dict[str, Any]: Datos completos para el template
+        """
+        # Parsear timestamp si está presente
+        fecha_ajuste = adjustment_data.get('timestamp')
+        if isinstance(fecha_ajuste, str):
+            try:
+                fecha_ajuste = datetime.fromisoformat(fecha_ajuste.replace('Z', '+00:00'))
+            except:
+                fecha_ajuste = datetime.now()
+        elif not isinstance(fecha_ajuste, datetime):
+            fecha_ajuste = datetime.now()
+        
+        # Formatear cantidad con signo
+        quantity = adjustment_data.get('quantity', 0)
+        quantity_formatted = f"{quantity:+d}"  # +5 o -3
+        
+        # Determinar tipo de operación
+        operation_type = "SUMA AL STOCK" if quantity > 0 else "RESTA DEL STOCK"
+        
+        template_data = {
+            'title': 'Ticket de Ajuste de Inventario',
+            'ticket_info': {
+                'numero': f"ADJ-{movement_id:06d}",
+                'tipo': 'AJUSTE',
+                'fecha': fecha_ajuste.strftime('%d/%m/%Y %H:%M:%S'),
+                'responsable': adjustment_data.get('responsible', 'No especificado'),
+                'movimiento_id': movement_id
+            },
+            'producto_info': {
+                'id': adjustment_data.get('product_id', 'N/A'),
+                'nombre': adjustment_data.get('product_name', 'Producto sin nombre'),
+                'cantidad_ajuste': quantity_formatted,
+                'operacion': operation_type
+            },
+            'ajuste_details': {
+                'motivo': adjustment_data.get('reason', 'No especificado'),
+                'observaciones': adjustment_data.get('observations', 'Sin observaciones'),
+                'cantidad_numerica': quantity
+            },
+            'empresa': {
+                'nombre': 'Copy Point S.A.',
+                'direccion': 'Las Lajas, Las Cumbres, Panamá',
+                'telefono': '6342-9218',
+                'email': 'tus_amigos@copypoint.online'
+            }
+        }
+        
+        return template_data
+    
+    def _persist_adjustment_ticket(self, movement_id: int, responsible: str, pdf_path: str):
+        """
+        Persistir información del ticket de ajuste usando TicketService.
+        
+        Args:
+            movement_id: ID del movimiento asociado
+            responsible: Usuario responsable
+            pdf_path: Ruta del archivo PDF
+            
+        Returns:
+            Ticket: Objeto Ticket generado y persistido
+        """
+        try:
+            # Importar TicketService dinámicamente para evitar dependencias circulares
+            from services.ticket_service import TicketService
+            
+            ticket_service = TicketService()
+            
+            # Generar ticket usando el servicio especializado
+            ticket = ticket_service.generar_ticket_ajuste(
+                id_movimiento=movement_id,
+                generated_by=responsible,
+                pdf_path=pdf_path
+            )
+            
+            logger.info(f"Ticket de ajuste persistido: ID={ticket.id_ticket}, Movimiento={movement_id}")
+            return ticket
+            
+        except Exception as e:
+            # No fallar la generación del PDF si hay error en persistencia
+            logger.warning(f"Error al persistir ticket de ajuste (PDF generado exitosamente): {e}")
+            # Retornar un objeto ticket mínimo con la ruta del PDF
+            from models.ticket import Ticket
+            return Ticket(
+                ticket_type='AJUSTE',
+                ticket_number=f"ADJ-{movement_id:06d}",
+                generated_by=responsible,
+                pdf_path=pdf_path,
+                id_movimiento=movement_id
+            )
 
     def cleanup_old_exports(self, days_old: int = 7, include_tickets: bool = False) -> Dict[str, int]:
         """

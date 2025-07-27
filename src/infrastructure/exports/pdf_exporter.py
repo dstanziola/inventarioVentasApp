@@ -982,6 +982,313 @@ class PDFExporter:
         )
         
         canvas.restoreState()
+    
+    def create_adjustment_ticket_pdf(self, template_data: Dict[str, Any], file_path: str) -> None:
+        """
+        Crear documento PDF para ticket de ajuste de inventario.
+        
+        Args:
+            template_data: Datos formateados del ticket de ajuste
+                - title: Título del ticket
+                - ticket_info: Información básica del ticket
+                - producto_info: Información del producto ajustado
+                - ajuste_details: Detalles del ajuste
+                - empresa: Información corporativa
+            file_path: Ruta donde guardar el archivo PDF
+        
+        Raises:
+            ValueError: Si los datos no tienen formato correcto
+            IOError: Si no se puede escribir el archivo
+            Exception: Para otros errores de creación
+        """
+        try:
+            # Validar datos específicos para ticket de ajuste
+            self._validate_adjustment_ticket_pdf_data(template_data)
+            
+            # Crear documento PDF con tamaño compacto para tickets
+            doc = SimpleDocTemplate(
+                file_path,
+                pagesize=self.page_config['pagesize'],
+                topMargin=1.5*cm,
+                bottomMargin=1.5*cm,
+                leftMargin=1.5*cm,
+                rightMargin=1.5*cm
+            )
+            
+            # Construir contenido del ticket de ajuste
+            story = []
+            
+            # Header del ticket
+            self._add_adjustment_ticket_header(story, template_data)
+            
+            # Información del ticket
+            self._add_adjustment_ticket_info(story, template_data.get('ticket_info', {}))
+            
+            # Información del producto y ajuste
+            self._add_adjustment_product_info(story, template_data)
+            
+            # Detalles del ajuste
+            self._add_adjustment_details(story, template_data.get('ajuste_details', {}))
+            
+            # Footer del ticket
+            self._add_adjustment_ticket_footer(story, template_data)
+            
+            # Generar PDF
+            doc.build(story, onFirstPage=self._create_ticket_page_header, 
+                     onLaterPages=self._create_ticket_page_header)
+            
+            logger.info(f"Ticket de ajuste PDF creado exitosamente: {file_path}")
+            
+        except ValueError as e:
+            logger.error(f"Datos inválidos para ticket de ajuste PDF: {e}")
+            raise
+        except IOError as e:
+            logger.error(f"Error escribiendo ticket de ajuste PDF: {e}")
+            raise IOError(f"No se pudo guardar ticket de ajuste PDF: {e}")
+        except Exception as e:
+            logger.error(f"Error inesperado creando ticket de ajuste PDF: {e}")
+            raise Exception(f"Error creando ticket de ajuste PDF: {e}")
+    
+    def _validate_adjustment_ticket_pdf_data(self, template_data: Dict[str, Any]) -> None:
+        """
+        Validar que los datos del ticket de ajuste tienen la estructura correcta para PDF.
+        
+        Args:
+            template_data: Datos a validar
+        
+        Raises:
+            ValueError: Si la estructura no es válida
+        """
+        if not isinstance(template_data, dict):
+            raise ValueError("template_data debe ser un diccionario")
+        
+        required_keys = ['title', 'ticket_info', 'producto_info', 'ajuste_details']
+        for key in required_keys:
+            if key not in template_data:
+                raise ValueError(f"Clave requerida '{key}' faltante en template_data")
+        
+        # Validar información del ticket
+        ticket_info = template_data.get('ticket_info', {})
+        if not ticket_info.get('numero'):
+            raise ValueError("Número de ticket es requerido")
+        
+        # Validar información del producto
+        producto_info = template_data.get('producto_info', {})
+        if not producto_info.get('nombre'):
+            raise ValueError("Nombre del producto es requerido")
+        
+        # Validar detalles del ajuste
+        ajuste_details = template_data.get('ajuste_details', {})
+        if 'cantidad_numerica' not in ajuste_details:
+            raise ValueError("Cantidad numérica del ajuste es requerida")
+        
+        logger.debug(f"Datos de ticket de ajuste PDF validados: {ticket_info.get('numero', 'Sin número')}")
+    
+    def _add_adjustment_ticket_header(self, story: List, template_data: Dict[str, Any]) -> None:
+        """
+        Agregar header del ticket de ajuste al documento.
+        
+        Args:
+            story: Lista de elementos del documento
+            template_data: Datos del ticket
+        """
+        # Información de la empresa
+        empresa = template_data.get('empresa', self.company_info)
+        
+        # Nombre de la empresa
+        company_name = Paragraph(
+            f"<b>{empresa.get('nombre', 'Copy Point S.A.')}</b>",
+            self.styles['CorporateTitle']
+        )
+        story.append(company_name)
+        
+        # Dirección y contacto
+        company_details = Paragraph(
+            f"{empresa.get('direccion', 'Las Lajas, Las Cumbres, Panamá')}<br/>"
+            f"Tel: {empresa.get('telefono', '6342-9218')} | Email: {empresa.get('email', 'tus_amigos@copypoint.online')}",
+            self.styles['CompanyInfo']
+        )
+        story.append(company_details)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Título del ticket con color distintivo para ajustes
+        ticket_title = Paragraph(
+            f"<b><font color='#C55A11'>{template_data.get('title', 'Ticket de Ajuste')}</font></b>",
+            self.styles['CorporateSubtitle']
+        )
+        story.append(ticket_title)
+        story.append(Spacer(1, 0.2*inch))
+    
+    def _add_adjustment_ticket_info(self, story: List, ticket_info: Dict[str, Any]) -> None:
+        """
+        Agregar información básica del ticket de ajuste.
+        
+        Args:
+            story: Lista de elementos del documento
+            ticket_info: Información del ticket
+        """
+        # Crear tabla con información del ticket
+        info_data = [
+            ['Número de Ticket:', str(ticket_info.get('numero', 'N/A'))],
+            ['Tipo:', 'AJUSTE DE INVENTARIO'],
+            ['Fecha y Hora:', str(ticket_info.get('fecha', 'No especificada'))],
+            ['Responsable:', str(ticket_info.get('responsable', 'No especificado'))],
+            ['ID Movimiento:', str(ticket_info.get('movimiento_id', 'N/A'))]
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 3*inch])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [self.colors['white'], self.colors['light_gray']]),
+            ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 0.2*inch))
+    
+    def _add_adjustment_product_info(self, story: List, template_data: Dict[str, Any]) -> None:
+        """
+        Agregar información del producto ajustado.
+        
+        Args:
+            story: Lista de elementos del documento
+            template_data: Datos del template con información del producto
+        """
+        # Título de producto
+        product_title = Paragraph(
+            "<b>PRODUCTO AJUSTADO</b>",
+            self.styles['CorporateSubtitle']
+        )
+        story.append(product_title)
+        
+        producto_info = template_data.get('producto_info', {})
+        
+        # Información del producto
+        product_data = [
+            ['ID del Producto:', str(producto_info.get('id', 'N/A'))],
+            ['Nombre:', str(producto_info.get('nombre', 'Producto sin nombre'))],
+            ['Cantidad Ajustada:', str(producto_info.get('cantidad_ajuste', '0'))],
+            ['Tipo de Operación:', str(producto_info.get('operacion', 'No especificada'))]
+        ]
+        
+        product_table = Table(product_data, colWidths=[2*inch, 3*inch])
+        
+        # Aplicar estilo especial para resaltar el ajuste
+        product_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Resaltar la fila de cantidad ajustada
+            ('BACKGROUND', (0, 2), (-1, 2), self.colors['accent']),
+            ('TEXTCOLOR', (0, 2), (-1, 2), self.colors['white']),
+            ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
+            
+            # Resaltar la operación
+            ('BACKGROUND', (0, 3), (-1, 3), self.colors['secondary']),
+            ('TEXTCOLOR', (0, 3), (-1, 3), self.colors['white']),
+            
+            ('ROWBACKGROUNDS', (0, 0), (-1, 1), [self.colors['white'], self.colors['light_gray']]),
+            ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
+        ]))
+        
+        story.append(product_table)
+        story.append(Spacer(1, 0.2*inch))
+    
+    def _add_adjustment_details(self, story: List, ajuste_details: Dict[str, Any]) -> None:
+        """
+        Agregar detalles específicos del ajuste.
+        
+        Args:
+            story: Lista de elementos del documento
+            ajuste_details: Detalles del ajuste
+        """
+        # Título de detalles
+        details_title = Paragraph(
+            "<b>DETALLES DEL AJUSTE</b>",
+            self.styles['CorporateSubtitle']
+        )
+        story.append(details_title)
+        
+        # Información de detalles
+        details_data = [
+            ['Motivo del Ajuste:', str(ajuste_details.get('motivo', 'No especificado'))],
+            ['Observaciones:', str(ajuste_details.get('observaciones', 'Sin observaciones'))]
+        ]
+        
+        # Agregar información numérica del ajuste
+        cantidad_numerica = ajuste_details.get('cantidad_numerica', 0)
+        if cantidad_numerica > 0:
+            impact_text = f"Se AGREGARON {cantidad_numerica} unidades al inventario"
+            impact_color = self.colors['secondary']
+        else:
+            impact_text = f"Se ELIMINARON {abs(cantidad_numerica)} unidades del inventario"
+            impact_color = self.colors['accent']
+        
+        details_data.append(['Impacto en Stock:', impact_text])
+        
+        details_table = Table(details_data, colWidths=[2*inch, 3*inch])
+        details_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Resaltar el impacto en stock
+            ('BACKGROUND', (0, 2), (-1, 2), impact_color),
+            ('TEXTCOLOR', (0, 2), (-1, 2), self.colors['white']),
+            ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
+            
+            ('ROWBACKGROUNDS', (0, 0), (-1, 1), [self.colors['white'], self.colors['light_gray']]),
+            ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
+        ]))
+        
+        story.append(details_table)
+        story.append(Spacer(1, 0.3*inch))
+    
+    def _add_adjustment_ticket_footer(self, story: List, template_data: Dict[str, Any]) -> None:
+        """
+        Agregar footer del ticket de ajuste.
+        
+        Args:
+            story: Lista de elementos del documento
+            template_data: Datos del template
+        """
+        # Nota importante sobre ajustes
+        important_note = Paragraph(
+            "<b>IMPORTANTE:</b> Este ajuste afecta directamente el stock del producto en el sistema. "
+            "Verifique que la operación sea correcta antes de procesar.",
+            self.styles['CorporateNormal']
+        )
+        story.append(important_note)
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Línea de separación
+        story.append(Spacer(1, 0.1*inch))
+        
+        # Nota del sistema
+        footer_note = Paragraph(
+            "<i>Este ticket de ajuste fue generado automáticamente por el Sistema de Gestión de Inventario.</i>",
+            self.styles['CompanyInfo']
+        )
+        story.append(footer_note)
+        
+        # Fecha de generación
+        generation_info = Paragraph(
+            f"Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}",
+            self.styles['CompanyInfo']
+        )
+        story.append(generation_info)
 
     def get_page_size_options(self) -> Dict[str, Tuple[float, float]]:
         """

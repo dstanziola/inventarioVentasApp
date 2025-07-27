@@ -27,7 +27,8 @@ class Ticket:
     # Tipos válidos de ticket
     TIPO_VENTA = "VENTA"
     TIPO_ENTRADA = "ENTRADA"
-    TIPOS_VALIDOS = [TIPO_VENTA, TIPO_ENTRADA]
+    TIPO_AJUSTE = "AJUSTE"
+    TIPOS_VALIDOS = [TIPO_VENTA, TIPO_ENTRADA, TIPO_AJUSTE]
     
     def __init__(
         self,
@@ -112,6 +113,12 @@ class Ticket:
                 errores.append("Ticket de entrada debe tener id_movimiento asociado")
             if self.id_venta:
                 errores.append("Ticket de entrada no debe tener id_venta")
+                
+        elif self.ticket_type == self.TIPO_AJUSTE:
+            if not self.id_movimiento:
+                errores.append("Ticket de ajuste debe tener id_movimiento asociado")
+            if self.id_venta:
+                errores.append("Ticket de ajuste no debe tener id_venta")
         
         # Validar contador de reimpresiones
         if self.reprint_count < 0:
@@ -145,6 +152,15 @@ class Ticket:
             True si es ticket de entrada
         """
         return self.ticket_type == self.TIPO_ENTRADA
+    
+    def es_ticket_ajuste(self) -> bool:
+        """
+        Verificar si es un ticket de ajuste.
+        
+        Returns:
+            True si es ticket de ajuste
+        """
+        return self.ticket_type == self.TIPO_AJUSTE
     
     def incrementar_reimpresiones(self) -> None:
         """
@@ -184,6 +200,8 @@ class Ticket:
             return "Ticket de Venta"
         elif self.ticket_type == self.TIPO_ENTRADA:
             return "Ticket de Entrada de Inventario"
+        elif self.ticket_type == self.TIPO_AJUSTE:
+            return "Ticket de Ajuste de Inventario"
         else:
             return f"Ticket {self.ticket_type}"
     
@@ -313,6 +331,34 @@ class Ticket:
         """
         return cls(
             ticket_type=cls.TIPO_ENTRADA,
+            ticket_number=ticket_number,
+            generated_by=generated_by,
+            id_movimiento=id_movimiento,
+            pdf_path=pdf_path
+        )
+    
+    @classmethod
+    def crear_ticket_ajuste(
+        cls,
+        ticket_number: str,
+        id_movimiento: int,
+        generated_by: str,
+        pdf_path: Optional[str] = None
+    ) -> 'Ticket':
+        """
+        Crear un ticket de ajuste de inventario.
+        
+        Args:
+            ticket_number: Número único del ticket
+            id_movimiento: ID del movimiento asociado
+            generated_by: Usuario que genera el ticket
+            pdf_path: Ruta del PDF (opcional)
+            
+        Returns:
+            Nueva instancia de Ticket para ajuste
+        """
+        return cls(
+            ticket_type=cls.TIPO_AJUSTE,
             ticket_number=ticket_number,
             generated_by=generated_by,
             id_movimiento=id_movimiento,

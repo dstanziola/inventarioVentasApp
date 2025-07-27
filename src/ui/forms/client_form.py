@@ -138,7 +138,7 @@ class ClientWindow:
         self._create_form_panel(main_frame)
         
         # Panel inferior - Botones
-        self._create_button_panel(main_frame)
+        # self._create_button_panel(main_frame)
         
     def _create_list_panel(self, parent):
         """Crea el panel de lista de clientes."""
@@ -220,13 +220,11 @@ class ClientWindow:
         
         info_text = """Información del Cliente:
 
-• Nombre: Campo obligatorio, debe ser único
-• RUC: Campo opcional, formato válido requerido
+• Nombre: Es obligatorio poner nombre. No puede estar repetido.
+• RUC / Cédula: Es opcional.
 
-Notas importantes:
-- Los clientes no se eliminan físicamente
-- Se desactivan para mantener historial
-- Búsqueda en tiempo real por nombre"""
+Nota: Al eliminar un cliente sus datos no son 
+  eliminados para poder mantener el historial."""
         
         info_label = ttk.Label(
             info_frame,
@@ -237,29 +235,56 @@ Notas importantes:
         )
         info_label.grid(row=0, column=0, sticky=(tk.W, tk.E))
         
-    def _create_button_panel(self, parent):
-        """Crea el panel de botones."""
-        button_frame = ttk.Frame(parent)
-        button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
+        # Botones de acción
+
+        # Frame para los botones de acción dentro del mismo panel
+        button_frame = ttk.Frame(form_frame)
+        row += 1
+        button_frame.grid(row=row, column=0, columnspan=2, pady=(20, 0))
+
+        # Primera fila de botones
+        self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_client)
+        self.new_button.grid(row=0, column=0, padx=5, pady=5)
+
+        self.save_button = ttk.Button(button_frame, text="Guardar", command=self._save_client, state='disabled')
+        self.save_button.grid(row=0, column=1, padx=5, pady=5)
+
+        self.edit_button = ttk.Button(button_frame, text="Editar", command=self._edit_client, state='disabled')
+        self.edit_button.grid(row=0, column=2, padx=5, pady=5)
+
+        # Segunda fila de botones
+        self.delete_button = ttk.Button(button_frame, text="Desactivar", command=self._delete_client, state='disabled')
+        self.delete_button.grid(row=1, column=0, padx=5, pady=5)
+
+        self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
+        self.cancel_button.grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Button(button_frame, text="Cerrar", command=self._close_window).grid(row=1, column=2, padx=5, pady=5)
+
+
+    # def _create_button_panel(self, parent):
+    #     """Crea el panel de botones."""
+    #     button_frame = ttk.Frame(parent)
+    #     button_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(20, 0))
         
         # Botones de acción
-        self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_client)
-        self.new_button.pack(side=tk.LEFT, padx=(0, 5))
+    #     self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_client)
+    #     self.new_button.pack(side=tk.LEFT, padx=(0, 5))
         
-        self.save_button = ttk.Button(button_frame, text="Guardar", command=self._save_client, state='disabled')
-        self.save_button.pack(side=tk.LEFT, padx=(0, 5))
+    #     self.save_button = ttk.Button(button_frame, text="Guardar", command=self._save_client, state='disabled')
+    #     self.save_button.pack(side=tk.LEFT, padx=(0, 5))
         
-        self.edit_button = ttk.Button(button_frame, text="Editar", command=self._edit_client, state='disabled')
-        self.edit_button.pack(side=tk.LEFT, padx=(0, 5))
+    #     self.edit_button = ttk.Button(button_frame, text="Editar", command=self._edit_client, state='disabled')
+     #    self.edit_button.pack(side=tk.LEFT, padx=(0, 5))
         
-        self.delete_button = ttk.Button(button_frame, text="Desactivar", command=self._delete_client, state='disabled')
-        self.delete_button.pack(side=tk.LEFT, padx=(0, 5))
+    #     self.delete_button = ttk.Button(button_frame, text="Desactivar", command=self._delete_client, state='disabled')
+    #     self.delete_button.pack(side=tk.LEFT, padx=(0, 5))
         
-        self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
-        self.cancel_button.pack(side=tk.LEFT, padx=(0, 5))
+    #     self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
+    #     self.cancel_button.pack(side=tk.LEFT, padx=(0, 5))
         
         # Botón cerrar
-        ttk.Button(button_frame, text="Cerrar", command=self._close_window).pack(side=tk.RIGHT)
+    #     ttk.Button(button_frame, text="Cerrar", command=self._close_window).pack(side=tk.RIGHT)
         
     def _setup_events(self):
         """Configura eventos de la ventana."""
@@ -274,16 +299,6 @@ Notas importantes:
         
         # Protocolo de cierre
         self.root.protocol("WM_DELETE_WINDOW", self._close_window)
-        
-    # def _load_clients(self):
-    #     """Carga los clientes desde la base de datos."""
-    #     try:
-    #         self.clients = self.client_service.get_all_clients()
-    #         self._update_client_list()
-    #         self.logger.info(f"Cargados {len(self.clients)} clientes")
-    #     except Exception as e:
-    #         self.logger.error(f"Error al cargar clientes: {e}")
-    #         messagebox.showerror("Error", f"No se pudieron cargar los clientes: {e}")
 
     def _load_clients(self):
         """Carga los clientes desde la base de datos."""
@@ -305,19 +320,6 @@ Notas importantes:
         # Limpiar TreeView
         for item in self.client_tree.get_children():
             self.client_tree.delete(item)
-            
-        # Agregar clientes filtrados
-        # for client in self.clients:
-        #     if not filter_text or filter_text.lower() in client.nombre.lower():
-        #         status = "Activo" if client.activo else "Inactivo"
-        #         ruc_display = client.ruc if client.ruc else "N/A"
-                
-        #         self.client_tree.insert('', tk.END, values=(
-        #             client.id_cliente,
-        #             client.nombre,
-        #             ruc_display,
-        #             status
-        #          ))
 
         # Agregar clientes filtrados
         for client in self.clients:

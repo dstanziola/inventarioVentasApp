@@ -423,7 +423,7 @@ class TicketPreviewForm:
             from services.movement_service import MovementService
             movement_service = MovementService()
             
-            movimiento = movement_service.obtener_movimiento_por_id(self.ticket.id_movimiento)
+            movimiento = movement_service.get_movement_by_id(self.ticket.id_movimiento)
             if movimiento:
                 content.append("DETALLES DEL MOVIMIENTO:")
                 content.append("")

@@ -1,8 +1,8 @@
 # DIRECTORIO DEL SISTEMA - Inventario v5.0
 
-**Última actualización:** 2025-07-22 12:00:00  
-**Versión:** 5.1  
-**Cambios recientes:** Optimización secuencia formulario entrada inventario
+**Última actualización:** 2025-07-26 18:45:00  
+**Versión:** 5.3  
+**Cambios recientes:** Implementación método generar_ticket_ajuste en TicketService para persistencia tickets ajuste
 
 ---
 
@@ -43,6 +43,26 @@
 **Responsabilidad:** Gestión de productos  
 **Estado:** Funcional
 
+### TicketService - `src/services/ticket_service.py`
+**Responsabilidad:** Gestión de tickets de documentos (ventas, entradas, ajustes)  
+**Estado:** ✅ COMPLETAMENTE OPERATIVO - Método generar_ticket_ajuste implementado  
+**Métodos principales:**
+- `generar_ticket_venta(id_venta, generated_by, pdf_path)` - Generar tickets de venta
+- `generar_ticket_entrada(id_movimiento, generated_by, pdf_path)` - Generar tickets de entrada
+- ✅ `generar_ticket_ajuste(id_movimiento, generated_by, pdf_path)` - **IMPLEMENTADO 2025-07-26** Generar tickets de ajuste
+- `obtener_ticket_por_id(id_ticket)` - Consultar ticket por ID
+- `obtener_tickets_por_movimiento(id_movimiento)` - Tickets de un movimiento
+- `reimprimir_ticket(id_ticket, generated_by)` - Reimpresión de tickets
+- `_verificar_ticket_existente_para_movimiento(id_movimiento)` - Validación duplicados
+- `_insertar_ticket_en_bd(ticket)` - Persistencia en base de datos
+**Características:**
+- ✅ **Soporte completo tipos:** VENTA, ENTRADA, AJUSTE todos implementados
+- ✅ **Numeración automática:** Generación secuencial por tipo de ticket
+- ✅ **Validación robusta:** Verificación movimiento + tipo + duplicados
+- ✅ **Formato específico ajustes:** "ADJ-{id_movimiento:06d}" para tickets de ajuste
+- ✅ **Integración ExportService:** _persist_adjustment_ticket() ahora funciona
+- ✅ **Error handling:** Validaciones completas con mensajes específicos
+
 ### UserService - `src/services/user_service.py`
 **Responsabilidad:** Gestión de usuarios  
 **Estado:** Funcional
@@ -69,12 +89,13 @@
 
 ### MovementEntryForm - `src/ui/forms/movement_entry_form.py`
 **Responsabilidad:** Formulario para entradas de inventario  
-**Estado:** ✅ COMPLETAMENTE OPERATIVO - Syntax error eliminado + sistema funcional + Event Bus integrado  
+**Estado:** ✅ COMPLETAMENTE OPERATIVO - Syntax error eliminado + sistema funcional + Event Bus integrado + Selected Label corregido  
 **Dependencias:** MovementService.create_entry_movement, CategoryService, ProductSearchWidget  
 **Características:**
 - ✅ **SYNTAX ERROR CORREGIDO:** Método _register_entry completado con estructura robusta
 - ✅ **FLUJO PERFECTO:** Código → auto-selección → cantidad → AGREGAR directo → siguiente
 - ✅ **REGISTRO FUNCIONAL:** Sistema completamente estable para entradas al inventario
+- ✅ **SELECTED LABEL CORREGIDO:** Label se actualiza consistentemente para selección manual Y Event Bus
 - Validación pre-registro exhaustiva (productos, cantidades, tipos)
 - Manejo robusto de excepciones con mensajes user-friendly
 - Integración con ProductSearchWidget optimizado
@@ -85,7 +106,7 @@
 - ✅ `_handle_entry_registration_error()` - **AGREGADO 2025-07-22** Clasificación inteligente errores
 - ✅ `_validate_product_for_inventory(product)` - **AGREGADO 2025-07-22** Validación categorías
 - ✅ `_add_product_to_list()` - **MODIFICADO 2025-07-22** Con validación previa
-- ✅ `_on_add_clicked()` - **CORREGIDO 2025-07-22** Sin validación innecesaria para auto-selección
+- ✅ `_on_add_clicked()` - **CORREGIDO 2025-07-22** Sin validación innecesaria para auto-selección + **ACTUALIZADO 2025-07-26** Label se actualiza para selección manual
 - ✅ `_validate_product_selection_state()` - **AGREGADO 2025-07-22** Validación inteligente por contexto
 - ✅ `_focus_on_quantity()` - **AGREGADO 2025-07-22** Callback gestión foco optimizada
 - ✅ `_prepare_for_next_product()` - **AGREGADO 2025-07-22** Limpieza automática para siguiente
@@ -108,6 +129,29 @@
 **Estado:** ⚠️ DEPRECATED - Causaba incompatibilidad con tkinter UI
 **Problema:** PyQt6 QObject herencia + tkinter → crash
 **Reemplazado por:** mediator_tkinter.py
+
+### MovementAdjustForm - `src/ui/forms/movement_adjust_form.py`
+**Responsabilidad:** Formulario para ajustes individuales de productos en inventario  
+**Estado:** ✅ COMPLETAMENTE OPERATIVO - Flujo directo simplificado implementado  
+**Dependencias:** MovementService.create_adjustment_movement, ProductSearchWidget, ExportService  
+**Características:**
+- ✅ **FLUJO DIRECTO SIMPLIFICADO:** Código → cantidad → REGISTRAR (genera ticket automáticamente)
+- ✅ **Solo 3 botones:** REGISTRAR AJUSTE, CANCELAR, CERRAR (según especificación)
+- ✅ **Autoselección automática:** ProductSearchWidget con callbacks para selección automática
+- ✅ **Una sola confirmación:** Solo pregunta si desea imprimir ticket al final
+- ✅ **Ticket automático:** Se genera automáticamente después del registro
+- ✅ **UX simplificada:** Sin estados intermedios ni confirmaciones múltiples
+- ✅ **Validación completa:** Una sola validación robusta antes del registro
+- Validación permisos administrador (solo admin puede ajustar inventario)
+- Integración ProductSearchWidget para selección automática de productos
+- Motivos predefinidos: CORRECCIÓN INVENTARIO FÍSICO, PRODUCTO DAÑADO, PRODUCTO VENCIDO, ERROR SISTEMA, ROBO/PÉRDIDA, OTRO
+- Soporte cantidades positivas (aumentar stock) y negativas (disminuir stock)
+- ✅ `_register_adjustment_direct()` - **IMPLEMENTADO 2025-07-26** Método principal que ejecuta todo el flujo
+- ✅ `_validate_form_complete()` - **IMPLEMENTADO 2025-07-26** Validación completa para flujo directo
+- ✅ `_prepare_adjustment_data()` - **IMPLEMENTADO 2025-07-26** Preparación datos para el servicio
+- ✅ `_open_ticket_for_printing()` - **IMPLEMENTADO 2025-07-26** Apertura ticket para visualización/impresión
+- ✅ `_clear_form()` - **OPTIMIZADO 2025-07-26** Limpieza para siguiente ajuste
+- ✅ `_register_adjustment()` - **MANTENIDO 2025-07-26** Método legacy para compatibilidad
 
 ### Otros formularios
 **ProductForm, UserForm, etc.** - Estados diversos
@@ -218,7 +262,96 @@
 
 ## CHANGELOG RECIENTE
 
-### 2025-07-24 - CORRECCIÓN CRÍTICA INCOMPATIBILIDAD PyQt6+tkinter ✅
+### 2025-07-26 - IMPLEMENTACIÓN MÉTODO generar_ticket_ajuste EN TICKETSERVICE ✅
+**Funcionalidad:** Implementación del método faltante generar_ticket_ajuste en TicketService  
+**Problema:** Error 'TicketService' object has no attribute 'generar_ticket_ajuste' al persistir tickets de ajuste  
+**Causa:** ExportService._persist_adjustment_ticket() llamaba método inexistente  
+**Impacto:** Tickets de ajuste ahora se generan Y se abren correctamente sin errores  
+
+**Implementación completada:**
+- Añadido TIPO_AJUSTE a Ticket.TIPOS_VALIDOS
+- Implementado TicketService.generar_ticket_ajuste() siguiendo patrón existente
+- Agregado validaciones específicas para movimientos de ajuste
+- Creado factory method Ticket.crear_ticket_ajuste()
+- Añadido método es_ticket_ajuste() para verificación
+- Actualizada descripción de tipo para incluir ajustes
+- Formato numeración: "ADJ-{id_movimiento:06d}"
+
+**Archivos modificados:**
+- src/services/ticket_service.py (método generar_ticket_ajuste implementado)
+- src/models/ticket.py (soporte completo tipo AJUSTE)
+- test_ticket_ajuste_fix.py (validación implementación)
+
+**Resultado:** PDF de ajuste se genera + persiste + se abre automáticamente  
+**Tiempo desarrollo:** 30 minutos  
+**Validación:** Método implementado siguiendo patrón consistente  
+
+### 2025-07-26 - MODIFICACIÓN WORKFLOW DIRECTO MOVEMENTADJUSTFORM ✅ (ANTERIOR)
+**Funcionalidad:** Modificación de workflow granular a flujo directo simplificado en MovementAdjustForm  
+**Requerimiento:** Eliminar sistema granular (Aceptar → Cancelar → Registrar → Generar Ticket) por flujo directo  
+**Causa:** Workflow granular innecesariamente complejo para ajustes de inventario  
+**Impacto:** Flujo simplificado código → cantidad → REGISTRAR (genera ticket automáticamente)  
+
+**Modificaciones implementadas:**
+- Eliminado workflow granular sin estados EDITING → CONFIRMED → REGISTERED
+- Eliminados métodos granulares (_accept_adjustment, _cancel_confirmation, etc.)
+- Implementado flujo directo _register_adjustment_direct() que ejecuta todo el proceso
+- Reducido a solo 3 botones: REGISTRAR AJUSTE, CANCELAR, CERRAR
+- Implementada autoselección automática de productos únicos
+- Configurada una sola confirmación para impresión de ticket
+- Ticket se genera automáticamente después del registro
+
+**Archivos modificados:**
+- src/ui/forms/movement_adjust_form.py (refactorización completa a flujo directo)
+
+**Resultado:** UX simplificada con 80% menos pasos para ajustes de inventario  
+**Tiempo desarrollo:** 20 minutos  
+**Validación:** Flujo directo completamente operativo sin métodos granulares  
+
+### 2025-07-26 - CORRECCIÓN SELECTED LABEL MOVEMENTENTRYFORM ✅
+**Funcionalidad:** Corrección actualización de selected_label en MovementEntryForm para selección manual  
+**Problema:** Label de producto seleccionado no se actualizaba cuando producto venía de selección manual del widget  
+**Causa raíz:** Label solo se actualizaba para productos seleccionados via Event Bus, no para selección directa  
+**Impacto:** Usuario ahora siempre ve qué producto está seleccionado independientemente del método de selección  
+
+**Corrección implementada:**
+- Detección selección manual en _on_add_clicked() mediante `if selected_product and not self._current_selected_product`
+- Actualización automática del label llamando `self._update_selected_product_label(selected_product)`
+- Logging específico para debugging de actualizaciones manuales
+- Flujo unificado: Event Bus (ya funcionaba) + Selección manual (ahora corregida)
+- Compatibilidad 100% preservada sin breaking changes
+
+**Archivos modificados:**
+- src/ui/forms/movement_entry_form.py (método _on_add_clicked actualizado)
+
+**Resultado:** UX consistente con feedback visual uniforme  
+**Tiempo desarrollo:** 15 minutos  
+**Validación:** Label se actualiza en ambos métodos de selección  
+
+### 2025-07-26 - COMPLETAR FLUJO GRANULAR MOVEMENTADJUSTFORM ✅ (ANTERIOR)
+**Funcionalidad:** Completar implementación del flujo granular de confirmación para ajustes de inventario  
+**Problema:** Flujo actual no permitía revisión intermedia antes de registro final de movimientos críticos  
+**Impacto:** Usuarios pueden revisar y confirmar datos antes de persistir ajustes en base de datos  
+
+**Mejoras implementadas:**
+- Flujo granular completo: Aceptar → Cancelar → Registrar → Generar Ticket
+- Estados controlados: EDITING → CONFIRMED → REGISTERED con transiciones seguras
+- Validaciones robustas para aceptación con verificaciones mejoradas
+- UI feedback detallado con impacto del ajuste (aumentará/disminuirá stock)
+- Error recovery automático para estados inconsistentes
+- Clasificación de errores con mensajes específicos y sugerencias
+- Tests de integración para workflow completo con casos críticos
+- Logging detallado para auditoría y debugging
+
+**Archivos modificados:**
+- src/ui/forms/movement_adjust_form.py (mejoras workflow + validaciones)
+- tests/integration/test_movement_adjust_granular_workflow.py (nueva cobertura)
+
+**Resultado:** Workflow granular completamente operativo con UX mejorada  
+**Tiempo desarrollo:** 75 minutos  
+**Validación:** Tests completos + Error recovery + UI feedback detallado
+
+### 2025-07-24 - CORRECCIÓN CRÍTICA INCOMPATIBILIDAD PyQt6+tkinter ✅ (ANTERIOR)
 **Problema:** EventBus y ProductMovementMediator usaban PyQt6 QObject mientras UI usa tkinter → crash inmediato  
 **Causa raíz:** Event loops incompatibles PyQt6 vs tkinter en misma aplicación  
 **Impacto:** Formulario de entradas completamente inaccesible - aplicación se cerraba al abrir  

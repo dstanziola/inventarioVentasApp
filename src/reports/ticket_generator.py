@@ -219,7 +219,7 @@ class TicketGenerator:
         Returns:
             Diccionario con datos del movimiento
         """
-        movimiento = self.movement_service.obtener_movimiento_por_id(id_movimiento)
+        movimiento = self.movement_service.get_movement_by_id(id_movimiento)
         if not movimiento:
             raise ValueError(f"Movimiento {id_movimiento} no encontrado")
         

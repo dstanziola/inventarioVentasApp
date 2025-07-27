@@ -55,7 +55,7 @@ class TicketService:
             ValueError: Si el tipo de ticket es inválido
         """
         if ticket_type not in Ticket.TIPOS_VALIDOS:
-            raise ValueError(f"Tipo de ticket inválido: {ticket_type}")
+            raise ValueError(f"Tipo de ticket inválido: {ticket_type}. Tipos válidos: {Ticket.TIPOS_VALIDOS}")
         
         conn = self.db.get_connection()
         cursor = conn.cursor()
@@ -301,7 +301,7 @@ class TicketService:
             ValueError: Si el movimiento no existe, no es de entrada o ya tiene ticket
         """
         # Verificar que el movimiento existe
-        movimiento = self.movement_service.obtener_movimiento_por_id(id_movimiento)
+        movimiento = self.movement_service.get_movement_by_id(id_movimiento)
         if movimiento is None:
             raise ValueError(f"El movimiento con ID {id_movimiento} no existe")
         
@@ -318,6 +318,56 @@ class TicketService:
         
         # Crear instancia de ticket
         ticket = Ticket.crear_ticket_entrada(
+            ticket_number=ticket_number,
+            id_movimiento=id_movimiento,
+            generated_by=generated_by,
+            pdf_path=pdf_path
+        )
+        
+        # Insertar en base de datos
+        ticket_id = self._insertar_ticket_en_bd(ticket)
+        ticket.id_ticket = ticket_id
+        
+        return ticket
+    
+    def generar_ticket_ajuste(
+        self, 
+        id_movimiento: int, 
+        generated_by: str,
+        pdf_path: Optional[str] = None
+    ) -> Ticket:
+        """
+        Generar un ticket para un movimiento de ajuste.
+        
+        Args:
+            id_movimiento: ID del movimiento
+            generated_by: Usuario que genera el ticket
+            pdf_path: Ruta del PDF generado (opcional)
+            
+        Returns:
+            Ticket generado
+            
+        Raises:
+            ValueError: Si el movimiento no existe, no es de ajuste o ya tiene ticket
+        """
+        # Verificar que el movimiento existe
+        movimiento = self.movement_service.get_movement_by_id(id_movimiento)
+        if movimiento is None:
+            raise ValueError(f"El movimiento con ID {id_movimiento} no existe")
+        
+        # Verificar que es un movimiento de ajuste
+        if movimiento.get('tipo_movimiento') != 'AJUSTE':
+            raise ValueError(f"El movimiento {id_movimiento} no es un ajuste de inventario")
+        
+        # Verificar que no existe ya un ticket para este movimiento
+        if self._verificar_ticket_existente_para_movimiento(id_movimiento):
+            raise ValueError(f"El movimiento {id_movimiento} ya tiene un ticket generado")
+        
+        # Generar número de ticket
+        ticket_number = f"ADJ-{id_movimiento:06d}"
+        
+        # Crear instancia de ticket
+        ticket = Ticket.crear_ticket_ajuste(
             ticket_number=ticket_number,
             id_movimiento=id_movimiento,
             generated_by=generated_by,
