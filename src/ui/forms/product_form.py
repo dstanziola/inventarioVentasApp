@@ -4,14 +4,22 @@ Garantiza que todos los servicios reciban correctamente la conexión a la base d
 CORRECCIÓN CRÍTICA: Variable global BARCODE_SUPPORT manejada correctamente.
 """
 
+import shutil
+import datetime
+from decimal import Decimal
+import logging
+import os
+import tempfile
+from datetime import datetime
+
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import asksaveasfilename
+
 from typing import Optional, List
-import logging
-from decimal import Decimal
-from datetime import datetime
-import tempfile
-import os
+
+import openpyxl
 
 # Imports con Service Container Integration
 try:
@@ -239,7 +247,7 @@ class ProductWindow:
     def _create_button_panel(self, parent):
         """Crea el panel de botones en 2 columnas."""
         button_frame = ttk.Frame(parent)
-        button_frame.grid(row=1, column=1, sticky=(tk.N, tk.W), padx=(10, 10), pady=(60, 0))
+        button_frame.grid(row=1, column=1, sticky=(tk.N, tk.W), padx=(10, 10), pady=(50, 0))
 
         # Botones principales en 2 columnas (3 filas)
         self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_product)
@@ -260,10 +268,19 @@ class ProductWindow:
         close_button = ttk.Button(button_frame, text="Cerrar", command=self._close_window)
         close_button.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
 
+        # Botón de Importar Excel
+        self.import_button = ttk.Button(button_frame, text="Importar Excel", command=self._import_from_excel)
+        self.import_button.grid(row=4, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+
+        # Botón para descargar archivo de ejemplo
+        self.download_sample_button = ttk.Button(button_frame, text="Descargar Ejemplo", command=self._download_sample_excel)
+        # Ubícalo en la siguiente fila disponible (ajusta el row según tu layout)
+        self.download_sample_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+
         # Botón de escanear (solo si hay soporte)
         if self.barcode_support:
             scan_button = ttk.Button(button_frame, text="Escanear", command=self._scan_barcode)
-            scan_button.grid(row=3, column=0, columnspan=2, padx=5, pady=(15, 5), sticky="ew")
+            scan_button.grid(row=3, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="ew")
 
         # Expansión uniforme por columna
         button_frame.columnconfigure(0, weight=1)
@@ -784,6 +801,94 @@ class ProductWindow:
         
         self.name_entry.focus()
         
+    def _import_from_excel(self):
+        """Importa productos desde un archivo Excel (.xlsx)."""
+        # 1. Selección de archivo
+        filepath = askopenfilename(
+            title="Seleccionar archivo Excel",
+            filetypes=[("Archivos Excel", "*.xlsx *.xls")]
+        )
+        if not filepath:
+            return
+
+        try:
+            wb = openpyxl.load_workbook(filepath, data_only=True)
+            sheet = wb.active
+            rows = list(sheet.iter_rows(values_only=True))
+            headers = [h.strip().lower() for h in rows[0]]
+
+            # Validar que existan las columnas esperadas
+            expected = {'nombre','categoría','stock','costo','precio','impuesto'}
+            if not expected.issubset(set(headers)):
+                messagebox.showerror(
+                    "Formato inválido",
+                    f"Faltan columnas: {expected - set(headers)}"
+                )
+                return
+
+            count = 0
+            for row in rows[1:]:
+                data = dict(zip(headers, row))
+                # Buscar categoría por nombre
+                cat_name = data['categoría']
+                cat = next((c for c in self.categories if c.nombre.lower() in cat_name.lower()), None)
+                if not cat:
+                    continue  # o mostrar warning
+
+                # Leer valores
+                nombre = str(data['nombre']).strip()
+                stock = int(data.get('stock') or 0)
+                costo = float(data.get('costo') or 0)
+                precio = float(data.get('precio') or 0)
+                impuesto = float(data.get('impuesto') or 0)
+
+                # Crear producto
+                result = self.product_service.create_product(
+                    nombre=nombre,
+                    categoria_id=cat.id_categoria,
+                    stock_inicial=stock,
+                    precio_compra=costo,
+                    precio_venta=precio,
+                    tasa_impuesto=impuesto
+                )
+                if result:
+                    count += 1
+
+            messagebox.showinfo("Importación completada", f"Se importaron {count} productos.")
+            self._load_initial_data()
+
+        except Exception as e:
+            messagebox.showerror("Error al importar", f"No se pudo leer el archivo:\n{e}")
+
+    def _download_sample_excel(self):
+        """Permite guardar una copia local del archivo de ejemplo de importación."""
+        # Ruta del archivo de ejemplo embebido en la aplicación
+        sample_path = r"D:\inventario_app2\data\ejemplo_importacion_productos.xlsx"
+
+        # Diálogo para escoger dónde guardar
+        save_path = asksaveasfilename(
+            title="Guardar archivo de ejemplo",
+            initialfile="ejemplo_importacion_productos.xlsx",
+            defaultextension=".xlsx",
+            filetypes=[("Archivos Excel", "*.xlsx")]
+        )
+        # Si el usuario cancela
+        if not save_path:
+            return
+
+        try:
+            # Copiar el archivo al destino elegido
+            shutil.copy(sample_path, save_path)
+            messagebox.showinfo(
+                "Descarga completada",
+                f"Archivo de ejemplo guardado en:\n{save_path}"
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Error al guardar",
+                f"No se pudo guardar el archivo de ejemplo:\n{e}"
+            )
+
     def _edit_product(self):
         """Editar producto seleccionado."""
         selection = self.product_tree.selection()
