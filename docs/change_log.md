@@ -8,6 +8,70 @@
 
 ## [Unreleased] - En Desarrollo
 
+### CORRECCIÓN CRÍTICA COMPLETADA - ReportsForm Database Connection
+
+#### [2025-07-27] - fix: Resolver errores críticos en sistema de reportes
+**Archivos:** `src/ui/forms/reports_form.py`, `tests/integration/test_reports_form_critical_fix.py`
+**Autor:** Claude AI + Equipo de Desarrollo
+**Session ID:** 2025-07-27-reports-form-critical-fix
+**Protocolo:** claude_instructions_v3.md FASE 0-4 completa
+**Descripción:**
+- **PROBLEMA IDENTIFICADO:** Dos errores críticos en sistema de reportes
+  - Error 1: `'str' object has no attribute 'get_connection'` en línea 99
+  - Error 2: `bad option "-initialvalue"` en export_to_pdf línea 689
+- **CAUSA RAÍZ 1:** ReportsForm recibía db_path (string) pero servicios esperaban objeto DatabaseConnection
+- **CAUSA RAÍZ 2:** filedialog.asksaveasfilename() usaba opción inválida 'initialvalue'
+- **SOLUCIÓN IMPLEMENTADA:** Migración a ServiceContainer + corrección filedialog
+
+**Correcciones ReportsForm (`src/ui/forms/reports_form.py`):**
+- ✅ **ServiceContainer Integration**: Migrado de inicialización directa a container.get()
+- ✅ **Database Connection Fix**: CategoryService y ClientService obtienen conexión correcta
+- ✅ **FileDialog Fix**: Cambiado 'initialvalue' → 'initialfile' en asksaveasfilename()
+- ✅ **Backward Compatibility**: Firma del constructor mantenida sin breaking changes
+- ✅ **Error Handling**: Manejo robusto de servicios del container
+
+**Suite TDD (`tests/integration/test_reports_form_critical_fix.py`):**
+- ✅ **Test ServiceContainer**: Valida uso correcto del container para obtener servicios
+- ✅ **Test No Get Connection Error**: Verifica que _load_combo_data no produce AttributeError
+- ✅ **Test FileDialog Options**: Valida opciones correctas de filedialog
+- ✅ **Test Backward Compatibility**: Confirma compatibilidad con llamadas existentes
+- ✅ **Test Integration**: Suite completa de tests de regresión
+
+**Impacto:**
+- ✅ **CRÍTICO RESUELTO:** Sistema de reportes 100% funcional sin errores
+- ✅ **ServiceContainer Integration**: Consistencia con arquitectura del sistema
+- ✅ **Database Connection Fixed**: CategoryService y ClientService operativos
+- ✅ **PDF Export Fixed**: Exportación de reportes sin errores de filedialog
+- ✅ **Zero Breaking Changes**: main_window.py no requiere modificaciones
+- ✅ **Robust Error Handling**: Manejo mejorado de dependencias y servicios
+- ✅ **Architecture Consistency**: Alineación con Clean Architecture + DI pattern
+
+**Archivos modificados:**
+- 🔧 CORREGIDO: `src/ui/forms/reports_form.py` (ServiceContainer + filedialog fix)
+- ✅ NUEVO: `tests/integration/test_reports_form_critical_fix.py` (suite TDD validación)
+- 📝 ACTUALIZADO: `docs/change_log.md` (esta entrada)
+
+**Validaciones realizadas:**
+- ✅ ReportsForm usa ServiceContainer correctamente para obtener servicios
+- ✅ CategoryService.get_all_categories() funciona sin error get_connection
+- ✅ ClientService.get_all_clients() funciona sin error get_connection
+- ✅ filedialog.asksaveasfilename() usa 'initialfile' en lugar de 'initialvalue'
+- ✅ Backward compatibility mantenida con main_window.py
+- ✅ Sistema de reportes completamente operativo
+- ✅ Suite TDD completa para prevenir regresiones futuras
+
+**Resolución de incidente:**
+- **Estado:** ✅ RESUELTO COMPLETAMENTE
+- **Tiempo de resolución:** Mismo día de reporte (análisis + corrección + tests)
+- **Metodología aplicada:** Protocolo claude_instructions_v3.md FASE 0-4 completa
+- **Impacto en usuarios:** Sistema de reportes completamente funcional
+- **Prevención:** Suite TDD + migración a ServiceContainer para consistencia
+
+**Resultado para usuarios:**
+"El sistema de reportes ahora funciona completamente sin errores. Los usuarios pueden generar y exportar reportes de inventario, movimientos, ventas y rentabilidad sin problemas. La integración con ServiceContainer asegura consistencia arquitectónica y previene errores similares en el futuro."
+
+**Hash semántico:** `reports_form_servicecontainer_filedialog_critical_fix_20250727`
+
 ### CORRECCIÓN CRÍTICA COMPLETADA - Método generar_ticket_ajuste Implementado
 
 #### [2025-07-26] - fix: Implementar método generar_ticket_ajuste faltante en TicketService

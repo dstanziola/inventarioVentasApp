@@ -18,6 +18,7 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict
+from src.db.database import DatabaseConnection
 
 
 @dataclass
@@ -33,21 +34,19 @@ class ReportData:
 class ReportService:
     """Servicio para generación de reportes del sistema de inventario"""
     
-    def __init__(self, db_path: str):
+    def __init__(self, db_connection: DatabaseConnection):
         """
         Inicializa el servicio de reportes
         
         Args:
-            db_path: Ruta a la base de datos SQLite
+            db_connection: Instancia de DatabaseConnection
         """
-        self.db_path = db_path
+        self.db_connection = db_connection
         self.logger = logging.getLogger(__name__)
         
     def _get_connection(self) -> sqlite3.Connection:
         """Obtiene conexión a la base de datos"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Para acceso por nombre de columna
-        return conn
+        return self.db_connection.get_connection()
     
     def _validate_date_range(self, fecha_inicio: date, fecha_fin: date) -> None:
         """

@@ -153,7 +153,7 @@ class MovementAdjustForm:
         
         subtitle_label = ttk.Label(
             title_frame,
-            text="Flujo directo: código producto → cantidad → motivo → observaciones → REGISTRAR",
+            text="Código de producto y dele clic → Cantidad → Motivo → Observaciones → REGISTRAR",
             font=("Arial", 10)
         )
         subtitle_label.pack(pady=(5, 0))

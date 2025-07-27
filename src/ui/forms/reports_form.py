@@ -21,7 +21,7 @@ import threading
 import os
 import logging
 
-from services.report_service import ReportService
+# ReportService se obtiene desde ServiceContainer
 from services.category_service import CategoryService
 from services.client_service import ClientService
 from ui.utils.window_manager import WindowManager
@@ -36,17 +36,21 @@ class ReportsForm:
         
         Args:
             parent: Ventana padre
-            db_path: Ruta a la base de datos
+            db_path: Ruta a la base de datos (deprecado - se usa ServiceContainer)
         """
         self.parent = parent
-        self.db_path = db_path
+        self.db_path = db_path  # Mantenido para compatibilidad, no se usa
         self.window = None
         self.logger = logging.getLogger(__name__)
         
-        # Servicios
-        self.report_service = ReportService(db_path)
-        self.category_service = CategoryService(db_path)
-        self.client_service = ClientService(db_path)
+        # CORRECCIÓN: Usar ServiceContainer en lugar de inicializar servicios directamente
+        from services.service_container import get_container
+        self.container = get_container()
+        
+        # ✅ CORRECTO: Obtener servicios del container (ya configurados con DatabaseConnection)
+        self.report_service = self.container.get('report_service')
+        self.category_service = self.container.get('category_service')
+        self.client_service = self.container.get('client_service')
         
         # Variables de control
         self.report_type_var = tk.StringVar(value="inventory")
@@ -111,7 +115,7 @@ class ReportsForm:
         self.window.resizable(True, True)
         
         # Centrar ventana
-        WindowManager.center_window(self.window, 800, 600)
+        # WindowManager.center_window(self.window, 800, 600)
         
         self._create_widgets()
         self._setup_layout()
@@ -690,7 +694,7 @@ class ReportsForm:
             title="Guardar Reporte como PDF",
             defaultextension=".pdf",
             filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")],
-            initialvalue=default_filename
+            initialfile=default_filename  # ✅ CORRECTO: initialfile en lugar de initialvalue
         )
         
         if not file_path:

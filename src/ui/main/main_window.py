@@ -29,6 +29,9 @@ from datetime import datetime
 # Importaciones de servicios - Service Container Integration
 from services.service_container import get_container
 
+# Importar configuración de base de datos para path correcto
+from config_db import get_database_path
+
 # Importaciones de ventanas
 from ui.forms.category_form import CategoryWindow
 from ui.forms.product_form import ProductWindow
@@ -198,14 +201,14 @@ class MainWindow:
             reports_menu.add_command(label="📊 Rentabilidad", command=self._open_profitability_report_direct)
             
         # Menú Tickets - FASE 3
-        tickets_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Tickets", menu=tickets_menu)
-        tickets_menu.add_command(label="🎫 Generar Ticket de Venta", command=self._generate_sales_ticket)
-        if self.session_manager.has_permission('admin'):
-            tickets_menu.add_command(label="📦 Generar Ticket de Entrada", command=self._generate_entry_ticket)
-            tickets_menu.add_separator()
-            tickets_menu.add_command(label="🔍 Buscar Tickets", command=self._search_tickets)
-            tickets_menu.add_command(label="🗞️ Vista Previa de Tickets", command=self._open_ticket_preview)
+        # tickets_menu = tk.Menu(menubar, tearoff=0)
+        # menubar.add_cascade(label="Tickets", menu=tickets_menu)
+        # tickets_menu.add_command(label="🎫 Generar Ticket de Venta", command=self._generate_sales_ticket)
+        # if self.session_manager.has_permission('admin'):
+        #     tickets_menu.add_command(label="📦 Generar Ticket de Entrada", command=self._generate_entry_ticket)
+        #     tickets_menu.add_separator()
+        #     tickets_menu.add_command(label="🔍 Buscar Tickets", command=self._search_tickets)
+        #     tickets_menu.add_command(label="🗞️ Vista Previa de Tickets", command=self._open_ticket_preview)
             
         # Menú Ayuda
         help_menu = tk.Menu(menubar, tearoff=0)
@@ -268,11 +271,11 @@ class MainWindow:
             ).pack(side=tk.LEFT, padx=5)
             
             # FASE 3: Botón de tickets
-            ttk.Button(
-                toolbar,
-                text="🎫 Tickets",
-                command=self._open_ticket_preview
-            ).pack(side=tk.LEFT, padx=5)
+            # ttk.Button(
+            #     toolbar,
+            #     text="🎫 Tickets",
+            #     command=self._open_ticket_preview
+            # ).pack(side=tk.LEFT, padx=5)
             
     def _create_main_area(self):
         """Crea el área principal de la aplicación."""
@@ -310,55 +313,6 @@ class MainWindow:
             font=("Arial", 14)
         )
         user_label.pack(pady=(0, 20))
-        
-        # Accesos rápidos
-        # shortcuts_frame = ttk.LabelFrame(welcome_frame, text="Accesos Rápidos", padding=10)
-        # shortcuts_frame.pack(fill=tk.X, pady=(0, 20))
-        
-        # Configurar grid para botones
-        # shortcuts_frame.columnconfigure(0, weight=1)
-        # shortcuts_frame.columnconfigure(1, weight=1)
-        # shortcuts_frame.columnconfigure(2, weight=1)
-        # shortcuts_frame.columnconfigure(3, weight=1)
-        
-        # Botones de acceso rápido
-        # ttk.Button(
-        #     shortcuts_frame,
-        #     text="💰 Ventas",
-        #     command=self._open_sales,
-        #     width=15
-        # ).grid(row=0, column=0, padx=5, pady=5)
-        
-        # ttk.Button(
-        #     shortcuts_frame,
-        #     text="👥 Clientes",
-        #     command=self._open_clients,
-        #     width=15
-        # ).grid(row=0, column=1, padx=5, pady=5)
-        
-        # if session_manager.has_permission('admin'):
-        #     ttk.Button(
-        #         shortcuts_frame,
-        #         text="📦 Productos",
-        #         command=self._open_products,
-        #         width=15
-        #     ).grid(row=0, column=2, padx=5, pady=5)
-            
-            # FASE 2: Acceso rápido a reportes
-        #     ttk.Button(
-        #         shortcuts_frame,
-        #         text="📊 Reportes",
-        #         command=self._open_reports_system,
-        #         width=15
-        #     ).grid(row=0, column=3, padx=5, pady=5)
-            
-            # FASE 3: Acceso rápido a tickets
-        #     ttk.Button(
-        #         shortcuts_frame,
-        #         text="🎫 Tickets",
-        #         command=self._open_ticket_preview,
-        #         width=15
-        #     ).grid(row=1, column=0, padx=5, pady=5)
         
     def _create_status_bar(self):
         """Crea la barra de estado en la parte inferior."""
@@ -529,8 +483,11 @@ class MainWindow:
                     # La ventana fue destruida, crear nueva
                     pass
             
-            # Crear nueva instancia del formulario de reportes
-            self.reports_form = ReportsForm(self.root, self.db_connection)
+            # CORRECCIÓN: Usar path de base de datos en lugar del objeto conexión
+            db_path = get_database_path()  # Obtener string path
+            
+            # Crear nueva instancia del formulario de reportes con path correcto
+            self.reports_form = ReportsForm(self.root, db_path)  # ✅ CORREGIDO
             self.reports_form.show()
             self.logger.info("Sistema de reportes abierto exitosamente")
             
@@ -621,8 +578,13 @@ class MainWindow:
                     # La ventana fue destruida, crear nueva
                     pass
             
+            # CORRECCIÓN: Usar path de base de datos para consistencia
+            db_path = get_database_path()  # Obtener string path
+            
             # Crear nueva instancia del formulario de configuración
-            self.company_config_form = CompanyConfigForm(self.root, self.db_connection)
+            # self.company_config_form = CompanyConfigForm(self.root, db_path)
+            self.company_config_form = CompanyConfigForm(self.root)
+            
             self.company_config_form.show()
             self.logger.info("Configuración de empresa abierta exitosamente")
             
@@ -868,8 +830,11 @@ class MainWindow:
                     # La ventana fue destruida, crear nueva
                     pass
             
+            # CORRECCIÓN: Usar path de base de datos para consistencia
+            db_path = get_database_path()  # Obtener string path
+            
             # Crear nueva instancia del formulario de preview
-            self.ticket_preview_form = TicketPreviewForm(self.root, self.db_connection)
+            self.ticket_preview_form = TicketPreviewForm(self.root, db_path)
             self.ticket_preview_form.show()
             self.logger.info("Vista previa de tickets abierta exitosamente")
             

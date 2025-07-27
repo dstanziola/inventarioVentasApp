@@ -29,7 +29,7 @@ class CompanyConfigForm:
     Permite editar y validar datos corporativos.
     """
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, db_path=None):
         """
         Inicializar formulario de configuración.
         
@@ -37,6 +37,8 @@ class CompanyConfigForm:
             parent: Ventana padre
         """
         self.parent = parent
+        self.db_path = db_path
+        
         self.company_service = CompanyService()
         
         # Variables del formulario
