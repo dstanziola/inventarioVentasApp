@@ -6,6 +6,85 @@
 
 ---
 
+## SISTEMA DE RESPALDOS AUTOMÁTICOS
+
+### BackupService - `src/infrastructure/backup/backup_service.py`
+**Responsabilidad:** Servicio principal para respaldos automáticos del sistema  
+**Estado:** ✅ COMPLETAMENTE IMPLEMENTADO - Sistema de respaldos cada 15 días operativo  
+**Dependencias:** BackupConfig, filesystem, sqlite3  
+**Características:**
+- ✅ **Respaldos automáticos**: Cada 15 días sin intervención manual
+- ✅ **Respaldos manuales**: A petición con descripción personalizable
+- ✅ **Compresión inteligente**: ZIP con metadata completa del respaldo
+- ✅ **Validación integridad**: Verificación automática de respaldos válidos/corruptos
+- ✅ **Limpieza automática**: Eliminación respaldos >90 días (configurable)
+- ✅ **Estadísticas completas**: Monitoreo tamaño, fechas, cantidad respaldos
+- ✅ **Error handling robusto**: Manejo graceful errores con logging detallado
+- ✅ **Performance optimizada**: Respaldos <2s cada uno, verificación disco
+**Métodos principales:**
+- `create_manual_backup(description, created_by)` - Crear respaldo manual inmediato
+- `create_automatic_backup()` - Crear respaldo automático (scheduler)
+- `should_create_automatic_backup()` - Verificar si es necesario respaldo
+- `list_available_backups()` - Listar respaldos disponibles ordenados
+- `validate_backup_integrity(backup_path)` - Validar integridad ZIP + contenido
+- `cleanup_old_backups()` - Limpiar respaldos antiguos según retención
+- `get_backup_statistics()` - Estadísticas completas del sistema
+- `get_schedule_info()` - Información programación automática
+
+### BackupScheduler - `src/infrastructure/backup/backup_scheduler.py`
+**Responsabilidad:** Planificador automático respaldos background  
+**Estado:** ✅ COMPLETAMENTE IMPLEMENTADO - Scheduler thread-safe operativo  
+**Dependencias:** BackupService, threading  
+**Características:**
+- ✅ **Background processing**: Thread daemon sin bloquear aplicación principal
+- ✅ **Configuración flexible**: Intervalo respaldos + frecuencia verificación
+- ✅ **Thread safety**: RLock + stop events para operaciones seguras
+- ✅ **Graceful shutdown**: Start/stop controlado sin memory leaks
+- ✅ **Error recovery**: Continúa operando ante errores individuales
+- ✅ **Estadísticas runtime**: Tracking checks performed + backups created
+- ✅ **Context manager**: Uso con 'with' statement para cleanup automático
+**Configuración Copy Point S.A.:**
+- **Intervalo respaldos**: 15 días
+- **Verificación**: Cada 6 horas
+- **Auto-start**: Habilitado en inicialización sistema
+**Métodos principales:**
+- `start()` - Iniciar scheduler background
+- `stop()` - Detener scheduler graciosamente
+- `check_and_create_backup()` - Verificar + crear respaldo si necesario
+- `force_backup_now(description)` - Forzar respaldo inmediato
+- `get_scheduler_status()` - Estado actual scheduler + estadísticas
+
+### BackupIntegrationService - `src/services/backup_integration.py`
+**Responsabilidad:** Integración sistema respaldos con ServiceContainer  
+**Estado:** ✅ COMPLETAMENTE IMPLEMENTADO - Integración ServiceContainer operativa  
+**Dependencias:** ServiceContainer, BackupService, BackupScheduler  
+**Características:**
+- ✅ **ServiceContainer integration**: Registro automático servicios respaldos
+- ✅ **Configuración Copy Point S.A.**: Valores específicos empresa aplicados
+- ✅ **Factory methods**: Inicialización automática sistema completo
+- ✅ **User context**: Integración AuthService para created_by respaldos
+- ✅ **Lifecycle management**: Start/stop scheduler coordinado con aplicación
+- ✅ **Status monitoring**: API unificada estado sistema respaldos
+**Configuración automática:**
+- **Base datos**: `inventario.db` (auto-detectada)
+- **Directorio**: `backups/` (auto-creado)
+- **Retención**: 90 días (3 meses)
+- **Scheduler**: Auto-start habilitado
+**Métodos principales:**
+- `initialize_backup_system(db_path, backup_dir, auto_start)` - Setup completo
+- `create_manual_backup(description)` - Respaldo manual con user context
+- `get_backup_status()` - Estado completo sistema (config + stats + scheduler)
+- `cleanup_old_backups()` - Ejecutar limpieza manual
+- `force_backup_now(description)` - Respaldo forzado inmediato
+- `stop_backup_system()` - Shutdown graceful sistema
+
+**Servicios registrados en ServiceContainer:**
+- `backup_service` - Instancia BackupService configurada
+- `backup_scheduler` - Instancia BackupScheduler configurada
+- `backup_integration` - Instancia BackupIntegrationService
+
+---
+
 ## SERVICIOS PRINCIPALES
 
 ### MovementService - `src/services/movement_service.py`
