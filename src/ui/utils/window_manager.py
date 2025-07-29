@@ -127,6 +127,36 @@ class WindowManager:
         if name in self._windows:
             del self._windows[name]
             self.logger.debug(f"Ventana '{name}' removida del gestor")
+    
+    @staticmethod
+    def center_window(window, width: int, height: int) -> None:
+        """
+        Centra una ventana en la pantalla.
+        
+        Args:
+            window: Ventana de Tkinter a centrar
+            width: Ancho deseado de la ventana
+            height: Alto deseado de la ventana
+        """
+        try:
+            # Obtener dimensiones de la pantalla
+            screen_width = window.winfo_screenwidth()
+            screen_height = window.winfo_screenheight()
+            
+            # Calcular posición centrada
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+            
+            # Asegurar que la ventana no quede fuera de la pantalla
+            x = max(0, x)
+            y = max(0, y)
+            
+            # Aplicar geometría
+            window.geometry(f"{width}x{height}+{x}+{y}")
+            
+        except Exception as e:
+            # Si hay error, usar geometría simple sin centrar
+            window.geometry(f"{width}x{height}")
 
 # Instancia global del gestor
 window_manager = WindowManager()

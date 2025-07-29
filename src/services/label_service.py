@@ -25,6 +25,7 @@ from pathlib import Path
 # Importaciones de librerías externas
 try:
     import barcode
+    from barcode import Code128, Code39, EAN13, EAN8, UPCA
     from barcode.writer import ImageWriter
     from reportlab.lib.pagesizes import letter, A4
     from reportlab.platypus import SimpleDocTemplate, Paragraph
@@ -128,11 +129,15 @@ class LabelService:
         'Code128', 'Code39', 'EAN13', 'EAN8', 'UPC', 'UPCA'
     ]
     
-    def __init__(self):
-        """Inicializar el servicio de etiquetas."""
+    def __init__(self, category_service: CategoryService = None):
+        """Inicializar el servicio de etiquetas.
+        
+        Args:
+            category_service: Servicio de categorías (inyección de dependencia)
+        """
         self.templates = self.DEFAULT_TEMPLATES.copy()
         self.custom_templates_file = 'config/custom_templates.json'
-        self.category_service = CategoryService()
+        self.category_service = category_service
         self._lock = threading.Lock()
         
         # Cargar templates personalizados si existen
@@ -181,8 +186,19 @@ class LabelService:
             elif format == 'EAN8' and len(code_str) != 8:
                 raise ValueError("EAN8 requiere exactamente 8 dígitos")
             
-            # Generar código de barras
-            barcode_class = getattr(barcode, format.lower())
+            # Generar código de barras con mapeo de formatos
+            format_mapping = {
+                'code128': Code128,
+                'code39': Code39,
+                'ean13': EAN13,
+                'ean8': EAN8,
+                'upc': UPCA,
+                'upca': UPCA
+            }
+            
+            barcode_class = format_mapping.get(format.lower())
+            if not barcode_class:
+                raise ValueError(f"Formato {format} no soportado en la implementación actual")
             
             # Configurar writer con opciones
             writer = ImageWriter()
@@ -255,10 +271,13 @@ class LabelService:
             # Obtener categoría si se solicita
             category = None
             if include_category and product.id_categoria:
-                try:
-                    category = self.category_service.get_by_id(product.id_categoria)
-                except Exception as e:
-                    logger.warning(f"No se pudo obtener categoría {product.id_categoria}: {e}")
+                if self.category_service is None:
+                    logger.warning("CategoryService no está disponible, omitiendo información de categoría")
+                else:
+                    try:
+                        category = self.category_service.get_category_by_id(product.id_categoria)
+                    except Exception as e:
+                        logger.warning(f"No se pudo obtener categoría {product.id_categoria}: {e}")
             
             # Configurar dimensiones según formato
             if format == 'mini':
@@ -745,11 +764,13 @@ _label_service_instance = None
 def get_label_service() -> LabelService:
     """
     Obtener instancia singleton del servicio de etiquetas.
+    DEPRECATED: Usar ServiceContainer.get('label_service') en su lugar
     
     Returns:
         LabelService: Instancia del servicio
     """
-    global _label_service_instance
-    if _label_service_instance is None:
-        _label_service_instance = LabelService()
-    return _label_service_instance
+    # DEPRECATED: Esta función está obsoleta
+    # Usar ServiceContainer para obtener la instancia con dependencias correctas
+    from services.service_container import get_container
+    container = get_container()
+    return container.get('label_service')

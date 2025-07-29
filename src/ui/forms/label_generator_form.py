@@ -28,6 +28,7 @@ from models.categoria import Categoria
 from services.product_service import ProductService
 from services.category_service import CategoryService
 from services.label_service import LabelService
+from services.service_container import get_container
 from ui.utils.window_manager import WindowManager
 
 # Configurar logging
@@ -51,6 +52,11 @@ class LabelGeneratorForm(tk.Toplevel):
         """
         super().__init__(parent)
         
+        container = get_container()
+        self.product_service  = container.get('product_service')
+        self.category_service = container.get('category_service')
+        self.label_service    = container.get('label_service')
+
         # Configuración de ventana
         self.title("Generador de Etiquetas")
         self.geometry("1200x800")
@@ -77,16 +83,8 @@ class LabelGeneratorForm(tk.Toplevel):
         self.include_barcode_var = tk.BooleanVar(value=True)
         self.label_format_var = tk.StringVar(value="standard")
         
-        # Servicios
-        try:
-            self.product_service = ProductService()
-            self.category_service = CategoryService()
-            self.label_service = LabelService()
-        except Exception as e:
-            logger.error(f"Error inicializando servicios: {e}")
-            messagebox.showerror("Error", f"Error inicializando servicios: {e}")
-            self.destroy()
-            return
+        # Servicios ya obtenidos del ServiceContainer en líneas 47-49
+        # No necesitan re-inicialización - usando dependency injection correctamente
         
         # Datos
         self.products = []
@@ -410,11 +408,11 @@ class LabelGeneratorForm(tk.Toplevel):
             self.update_status("Cargando datos...")
             
             # Cargar productos
-            self.products = self.product_service.get_all()
+            self.products = self.product_service.get_all_products()
             self.load_products_to_tree(self.products)
             
             # Cargar categorías
-            self.categories = self.category_service.get_all()
+            self.categories = self.category_service.get_all_categories()
             self.load_categories_to_combo()
             
             # Cargar templates
@@ -440,7 +438,7 @@ class LabelGeneratorForm(tk.Toplevel):
                 category_name = ""
                 if product.id_categoria:
                     try:
-                        category = self.category_service.get_by_id(product.id_categoria)
+                        category = self.category_service.get_category_by_id(product.id_categoria)
                         category_name = category.nombre if category else "Sin categoría"
                     except:
                         category_name = "Sin categoría"
@@ -493,7 +491,7 @@ class LabelGeneratorForm(tk.Toplevel):
             
             if search_term:
                 # Buscar productos
-                results = self.product_service.search(search_term)
+                results = self.product_service.search_products(search_term)
                 self.load_products_to_tree(results)
                 self.update_status(f"Encontrados {len(results)} productos")
             else:

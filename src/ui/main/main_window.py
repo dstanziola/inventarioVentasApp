@@ -38,6 +38,7 @@ from ui.forms.product_form import ProductWindow
 from ui.forms.client_form import ClientWindow
 from ui.forms.sales_form import SalesWindow
 from ui.forms.movement_form import MovementForm
+from ui.forms.label_generator_form import LabelGeneratorForm  # SISTEMA DE ETIQUETAS
 
 
 from ui.forms.reports_form import ReportsForm  # FASE 2: Sistema de Reportes
@@ -199,6 +200,14 @@ class MainWindow:
             reports_menu.add_command(label="📋 Movimientos", command=self._open_movements_report_direct)
             reports_menu.add_command(label="💰 Ventas", command=self._open_sales_report_direct)
             reports_menu.add_command(label="📊 Rentabilidad", command=self._open_profitability_report_direct)
+        
+        # Menú Etiquetas (solo administradores)
+        if self.session_manager.has_permission('admin'):
+            labels_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="Etiquetas", menu=labels_menu)
+            labels_menu.add_command(label="🏷️ Generador de Etiquetas", command=self._open_label_generator)
+            labels_menu.add_separator()
+            labels_menu.add_command(label="📄 Templates de Etiquetas", command=self._open_label_templates)
             
         # Menú Tickets - FASE 3
         # tickets_menu = tk.Menu(menubar, tearoff=0)
@@ -268,6 +277,13 @@ class MainWindow:
                 toolbar,
                 text="📊 Reportes",
                 command=self._open_reports_system
+            ).pack(side=tk.LEFT, padx=5)
+            
+            # Botón de etiquetas
+            ttk.Button(
+                toolbar,
+                text="🏷️ Etiquetas",
+                command=self._open_label_generator
             ).pack(side=tk.LEFT, padx=5)
             
             # FASE 3: Botón de tickets
@@ -538,6 +554,33 @@ class MainWindow:
                 self.reports_form._on_report_type_changed()
         except Exception as e:
             self.logger.error(f"Error abriendo reporte de rentabilidad: {e}")
+    
+    def _open_label_generator(self):
+        """Abre el generador de etiquetas."""
+        if not self.session_manager.has_permission('admin'):
+            messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
+            return
+            
+        try:
+            # Crear nueva ventana
+            label_generator = LabelGeneratorForm(self.root)
+            self.logger.info("Generador de etiquetas abierto")
+        except Exception as e:
+            self.logger.error(f"Error al abrir generador de etiquetas: {e}")
+            messagebox.showerror("Error", f"No se pudo abrir el generador de etiquetas: {e}")
+    
+    def _open_label_templates(self):
+        """Abre la gestión de templates de etiquetas."""
+        if not self.session_manager.has_permission('admin'):
+            messagebox.showwarning("Acceso Denegado", "No tiene permisos para acceder a esta función")
+            return
+            
+        # TODO: Implementar gestión de templates personalizada
+        messagebox.showinfo(
+            "Información", 
+            "Gestión de templates de etiquetas en desarrollo.\n\n"
+            "Por ahora puede usar los templates disponibles en el generador de etiquetas."
+        )
     
     # Métodos legacy mantenidos para compatibilidad
     def _open_inventory_report(self):
@@ -874,6 +917,13 @@ FUNCIONALIDADES PRINCIPALES:
    - Base de datos de clientes
    - Información de contacto y RUC
 
+6. SISTEMA DE ETIQUETAS (NUEVO)
+   - Generación masiva de etiquetas
+   - Múltiples templates (Avery, A4, Térmico)
+   - Códigos de barras automáticos
+   - Impresión directa
+   - Configuración personalizable
+
 Para soporte técnico contactar:
 tus_amigos@copypoint.online"""
         
@@ -921,7 +971,8 @@ FUNCIONALIDADES IMPLEMENTADAS:
 • ✅ Sistema completo de reportes
 • ✅ Sistema de tickets y facturación
 • ✅ Configuración de empresa
-• ⏳ Códigos de barras (Próxima fase)
+• ✅ Sistema de etiquetas con códigos de barras
+• ⏳ Lectores de código de barras (Próxima fase)
 
 NUEVAS CARACTERÍSTICAS FASE 3:
 • 🎫 Generación de tickets de venta

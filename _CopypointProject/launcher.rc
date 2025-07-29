@@ -1,3 +1,0 @@
-// launcher.rc
-#include "resource.h"
-IDI_APPICON ICON "icono.ico"

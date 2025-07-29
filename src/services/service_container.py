@@ -653,8 +653,8 @@ def setup_default_container() -> ServiceContainer:
             from services.label_service import LabelService
             container.register(
                 'label_service',
-                lambda c: LabelService(),  # No necesita dependencias después de la corrección
-                dependencies=[]
+                lambda c: LabelService(category_service=c.get('category_service')),  # Con dependency injection
+                dependencies=['category_service']
             )
         except ImportError:
             pass
