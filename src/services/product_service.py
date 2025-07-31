@@ -310,18 +310,18 @@ class ProductService:
             productos = []
             for row in results:
                 producto = Producto(
-                    id=row['id_producto'],
+                    id_producto=row['id_producto'],
                     nombre=row['nombre'],
-                    descripcion=row['descripcion'],
+                    # descripcion=row['descripcion'],
                     precio=row['precio'],
                     costo=row['costo'],
                     stock=row['stock'],
-                    stock_minimo=row['stock_minimo'],
+                    # stock_minimo=row['stock_minimo'],
                     id_categoria=row['id_categoria'],
-                    categoria_nombre=row['categoria_nombre'],
-                    tasa_impuesto=row['tasa_impuesto'],
+                    # categoria_nombre=row['categoria_nombre'],
+                    # tasa_impuesto=row['tasa_impuesto'],
                     activo=bool(row['activo']),
-                    fecha_creacion=row['fecha_creacion']
+                    # fecha_creacion=row['fecha_creacion']
                 )
                 productos.append(producto)
 

@@ -59,7 +59,7 @@ class LabelGeneratorForm(tk.Toplevel):
 
         # Configuración de ventana
         self.title("Generador de Etiquetas")
-        self.geometry("1200x800")
+        self.geometry("1200x600")
         self.resizable(True, True)
         
         # Centrar ventana
@@ -168,7 +168,7 @@ class LabelGeneratorForm(tk.Toplevel):
     def setup_product_panel(self, parent):
         """Configurar panel de selección de productos."""
         product_frame = ttk.LabelFrame(parent, text="Productos Disponibles")
-        parent.add(product_frame, weight=2)
+        parent.add(product_frame, weight=1)
         
         # Frame para el treeview y scrollbars
         tree_frame = ttk.Frame(product_frame)
@@ -186,9 +186,9 @@ class LabelGeneratorForm(tk.Toplevel):
         self.product_tree.heading('stock', text='Stock')
         
         # Configurar ancho de columnas
-        self.product_tree.column('id', width=60, anchor='center')
+        self.product_tree.column('id', width=50, anchor='center')
         self.product_tree.column('nombre', width=200)
-        self.product_tree.column('categoria', width=120)
+        self.product_tree.column('categoria', width=100)
         self.product_tree.column('precio', width=80, anchor='e')
         self.product_tree.column('stock', width=80, anchor='center')
         
@@ -327,25 +327,32 @@ class LabelGeneratorForm(tk.Toplevel):
     
     def setup_preview_tab(self):
         """Configurar pestaña de preview."""
+        # Crear el frame de la pestaña y añadirla al notebook
         preview_frame = ttk.Frame(self.config_notebook)
         self.config_notebook.add(preview_frame, text="Preview")
         
-        # Botón de preview
-        ttk.Button(preview_frame, text="Generar Preview", 
-                  command=self.preview_labels).pack(pady=10)
+        # Botón para generar el preview
+        ttk.Button(preview_frame, text="Generar Preview", command=self.preview_labels).pack(pady=10)
         
-        # Frame para preview
+        # Frame contenedor del canvas de preview con altura fija
         self.preview_canvas_frame = ttk.Frame(preview_frame)
-        self.preview_canvas_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        self.preview_canvas_frame.pack(fill=tk.X, expand=False, padx=10, pady=(0, 10))
+        self.preview_canvas_frame.pack_propagate(False)
+        self.preview_canvas_frame.configure(height=250)
         
-        # Canvas con scrollbar para preview
-        self.preview_canvas = tk.Canvas(self.preview_canvas_frame, bg='white')
-        preview_scroll = ttk.Scrollbar(self.preview_canvas_frame, orient=tk.VERTICAL, 
-                                     command=self.preview_canvas.yview)
+        # Canvas para dibujar el preview (altura coincidente)
+        self.preview_canvas = tk.Canvas(self.preview_canvas_frame, bg='white', height=250)
+        preview_scroll = ttk.Scrollbar(
+            self.preview_canvas_frame,
+            orient=tk.VERTICAL,
+            command=self.preview_canvas.yview
+        )
         self.preview_canvas.configure(yscrollcommand=preview_scroll.set)
         
+        # Empaquetar canvas y scrollbar
         self.preview_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         preview_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
     
     def setup_action_panel(self, parent):
         """Configurar panel de botones de acción."""
