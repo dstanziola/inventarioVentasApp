@@ -272,52 +272,67 @@ class ProductService:
                 {'operation': 'get_product_by_id', 'product_id': id_producto}
             )
             return None
-    
+
     def get_all_products(self, only_active: bool = True) -> List[Producto]:
         """
-        Obtener todos los productos con consulta optimizada FASE 3.
-        
-        OPTIMIZACIÓN FASE 3:
-        - Usa DatabaseHelper para consulta optimizada
-        - Performance mejorada con índices
-        - Logging de operaciones masivas
-        
+        Obtener todos los productos con consulta optimizada.
+        Retorna una lista de objetos Producto.
+
         Args:
-            only_active: Si solo obtener productos activos
-            
+            only_active: Si True, retorna solo productos activos.
+
         Returns:
-            Lista de objetos Producto
+            Lista de objetos Producto.
         """
+        import time
         start_time = time.time()
-        
+
         try:
             query = """
                 SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.costo,
-                       p.stock, p.stock_minimo, p.id_categoria, c.nombre as categoria_nombre,
-                       p.tasa_impuesto, p.activo, p.fecha_creacion
+                    p.stock, p.stock_minimo, p.id_categoria, c.nombre as categoria_nombre,
+                    p.tasa_impuesto, p.activo, p.fecha_creacion
                 FROM productos p
                 LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
             """
-            
+
             params = None
             if only_active:
                 query += " WHERE p.activo = 1"
-            
+
             query += " ORDER BY p.nombre"
-            
+
             results = self.db_helper.safe_execute(query, params, 'all')
-            
+
             if not results:
                 return []
-    
-        except Exception as e:
-                # 3) Manejo de errores: loguear contexto y devolver lista vacía
-                LoggingHelper.log_error_with_context(
-                    self.logger,
-                    e,
-                    {'operation': 'get_all_products', 'only_active': only_active}
+
+            productos = []
+            for row in results:
+                producto = Producto(
+                    id=row['id_producto'],
+                    nombre=row['nombre'],
+                    descripcion=row['descripcion'],
+                    precio=row['precio'],
+                    costo=row['costo'],
+                    stock=row['stock'],
+                    stock_minimo=row['stock_minimo'],
+                    id_categoria=row['id_categoria'],
+                    categoria_nombre=row['categoria_nombre'],
+                    tasa_impuesto=row['tasa_impuesto'],
+                    activo=bool(row['activo']),
+                    fecha_creacion=row['fecha_creacion']
                 )
-                return []
+                productos.append(producto)
+
+            operation_time = time.time() - start_time
+            self.logger.info(f"[get_all_products] Cargados {len(productos)} productos en {operation_time:.2f} seg.")
+
+            return productos
+
+        except Exception as e:
+            self.logger.error(f"Error en get_all_products: {e}")
+            return []
 
     # ===============================
     # NUEVOS MÉTODOS SISTEMA FILTROS Y REACTIVACIÓN
