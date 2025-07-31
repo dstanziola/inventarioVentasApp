@@ -91,7 +91,7 @@ class CompanyService:
         try:
             insert_query = """
                 INSERT INTO company_config (
-                    config_id, nombre, ruc, direccion, telefono, email,
+                    id, nombre, ruc, direccion, telefono, email,
                     itbms_rate, moneda, logo_path, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
@@ -255,7 +255,7 @@ class CompanyService:
                 UPDATE company_config 
                 SET nombre = ?, ruc = ?, direccion = ?, telefono = ?, email = ?,
                     itbms_rate = ?, moneda = ?, logo_path = ?, updated_at = ?
-                WHERE config_id = 1
+                WHERE id = 1
             """
             
             values = (
@@ -403,7 +403,7 @@ class CompanyService:
             update_query = """
                 UPDATE company_config 
                 SET logo_path = ?, updated_at = ?
-                WHERE config_id = 1
+                WHERE id = 1
             """
             
             cursor.execute(update_query, (logo_path, datetime.now()))
@@ -434,7 +434,7 @@ class CompanyService:
             update_query = """
                 UPDATE company_config 
                 SET logo_path = NULL, updated_at = ?
-                WHERE config_id = 1
+                WHERE id = 1
             """
             
             cursor.execute(update_query, (datetime.now(),))
@@ -478,7 +478,7 @@ class CompanyService:
                 UPDATE company_config 
                 SET nombre = ?, ruc = ?, direccion = ?, telefono = ?, email = ?,
                     itbms_rate = ?, moneda = ?, logo_path = ?, updated_at = ?
-                WHERE config_id = 1
+                WHERE id = 1
             """
             
             values = (
@@ -533,7 +533,7 @@ class CompanyService:
         # Crear configuración desde diccionario
         try:
             config_importada = CompanyConfig.from_dict(config_data)
-            config_importada.config_id = 1  # Forzar ID = 1 (Singleton)
+            config_importada.id = 1  # Forzar ID = 1 (Singleton)
             config_importada.updated_at = datetime.now()
         except Exception as e:
             raise ValueError(f"Error al procesar configuración importada: {e}")
@@ -552,7 +552,7 @@ class CompanyService:
                 UPDATE company_config 
                 SET nombre = ?, ruc = ?, direccion = ?, telefono = ?, email = ?,
                     itbms_rate = ?, moneda = ?, logo_path = ?, updated_at = ?
-                WHERE config_id = 1
+                WHERE id = 1
             """
             
             values = (

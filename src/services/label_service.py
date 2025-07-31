@@ -22,6 +22,8 @@ import json
 import threading
 from pathlib import Path
 
+from networkx import draw
+
 # Importaciones de librerías externas
 try:
     import barcode
@@ -311,47 +313,77 @@ class LabelService:
             
             # Título del producto
             product_name = product.nombre[:30] + "..." if len(product.nombre) > 30 else product.nombre
-            draw.text((x_margin, y_pos), product_name, fill='black', font=font_title)
+            # draw.text((x_margin, y_pos), product_name, fill='black', font=font_title)
+            text_width = draw.textlength(product_name, font=font_title)
+            x_centered = (width - text_width) // 2
+            draw.text((x_centered, y_pos), product_name, fill='black', font=font_title)
             y_pos += font_sizes['title'] + 5
             
             # Información de categoría
             if include_category and category:
                 category_text = f"Categoría: {category.nombre}"
-                draw.text((x_margin, y_pos), category_text, fill='gray', font=font_detail)
+                # draw.text((x_margin, y_pos), category_text, fill='gray', font=font_detail)
+
+                text_width = draw.textlength(category_text, font=font_title)
+                x_centered = (width - text_width) // 2
+                draw.text((x_centered, y_pos), category_text, fill='black', font=font_title)
+
                 y_pos += font_sizes['detail'] + 3
             
             # ID del producto
-            id_text = f"ID: {product.id_producto}"
-            draw.text((x_margin, y_pos), id_text, fill='gray', font=font_detail)
-            y_pos += font_sizes['detail'] + 5
+            # id_text = f"ID: {product.id_producto}"
+            # text_width = draw.textlength(id_text, font=font_title)
+            # x_centered = (width - text_width) // 2
+            # draw.text((x_centered, y_pos), id_text, fill='black', font=font_title)
+
+            # y_pos += font_sizes['detail'] + 5
             
             # Precio
             if include_price and product.precio:
-                price_text = f"Precio: B/. {product.precio:.2f}"
-                draw.text((x_margin, y_pos), price_text, fill='darkgreen', font=font_price)
+                # price_text = f"Precio: B/. {product.precio:.2f}"
+                price_text = f"B/. {product.precio:.2f}"
+                text_width = draw.textlength(price_text, font=font_title)
+                x_centered = (width - text_width) // 2
+                draw.text((x_centered, y_pos), price_text, fill='black', font=font_title)
+
                 y_pos += font_sizes['price'] + 8
             
             # Código de barras
             if include_barcode:
                 try:
-                    barcode_width = width - (x_margin * 2)
-                    barcode_height = 40 if format != 'mini' else 25
+                    # barcode_width = width - (x_margin * 2)
+                    # barcode_height = 40 if format != 'mini' else 25
                     
+                    # barcode_image_data = self.generate_barcode_image(
+                    #     str(product.id_producto),
+                    #     width=barcode_width,
+                    #     height=barcode_height,
+                    #     font_size=8 if format == 'mini' else 10
+                    # )
+                    
+                    # Altura del código de barras basada en un porcentaje del alto total
+                    barcode_height = int(height * 0.50)  # 25% de la altura total
+                    barcode_width = int(width * 0.50)    # 85% del ancho total
+
                     barcode_image_data = self.generate_barcode_image(
                         str(product.id_producto),
                         width=barcode_width,
                         height=barcode_height,
-                        font_size=8 if format == 'mini' else 10
+                        font_size=font_sizes['detail'] + 2  # Asegura legibilidad
                     )
-                    
+
                     # Pegar código de barras
                     barcode_buffer = BytesIO(barcode_image_data)
                     barcode_img = Image.open(barcode_buffer)
                     
                     # Calcular posición centrada
-                    barcode_x = (width - barcode_img.width) // 2
-                    barcode_y = height - barcode_img.height - 10
+                    # barcode_x = (width - barcode_img.width) // 2
+                    # barcode_y = height - barcode_img.height - 10
                     
+                    barcode_x = (width - barcode_img.width) // 2
+                    barcode_y = y_pos + 4  # menor espacio entre texto y código de barras
+
+
                     image.paste(barcode_img, (barcode_x, barcode_y))
                     
                 except Exception as e:
@@ -469,7 +501,7 @@ class LabelService:
                         (template_data['page_height'] - pos['y'] - pos['height']) * mm,
                         width=pos['width'] * mm,
                         height=pos['height'] * mm,
-                        preserveAspectRatio=True
+                        preserveAspectRatio=False
                     )
                     
                     # Limpiar archivo temporal

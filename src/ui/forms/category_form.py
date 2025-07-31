@@ -126,7 +126,7 @@ class CategoryWindow:
     def _create_form_panel(self, parent):
         """Crea el panel de formulario."""
         # Frame de formulario
-        form_frame = ttk.LabelFrame(parent, text="Datos de Categoría", padding=10)
+        form_frame = ttk.LabelFrame(parent, text="Datos de Categoría: Seleccione Nuevo para crear o haga click en una categoría", padding=10)
         form_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=(5, 0))
         
         # Configurar grid

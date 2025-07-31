@@ -309,6 +309,269 @@ class ProductService:
             
             if not results:
                 return []
+    
+        except Exception as e:
+                # 3) Manejo de errores: loguear contexto y devolver lista vacía
+                LoggingHelper.log_error_with_context(
+                    self.logger,
+                    e,
+                    {'operation': 'get_all_products', 'only_active': only_active}
+                )
+                return []
+
+    # ===============================
+    # NUEVOS MÉTODOS SISTEMA FILTROS Y REACTIVACIÓN
+    # IMPLEMENTACIÓN FASE 2: DESARROLLO ATÓMICO
+    # ===============================
+    
+    def get_products_by_status(self, status: str) -> List[Producto]:
+        """
+        Obtener productos filtrados por estado (activo/inactivo/todos).
+        
+        NUEVO MÉTODO FASE 2: Sistema de filtros productos
+        - Soporte para 3 opciones: 'active', 'inactive', 'all'
+        - Query optimizada con DatabaseHelper
+        - Logging de operaciones de filtrado
+        
+        Args:
+            status: Estado a filtrar ('active', 'inactive', 'all')
+            
+        Returns:
+            Lista de productos según el filtro especificado
+            
+        Raises:
+            ValueError: Si el estado no es válido
+        """
+        try:
+            # Validar estado
+            valid_statuses = ['active', 'inactive', 'all']
+            if status not in valid_statuses:
+                raise ValueError(f"Estado inválido '{status}'. Debe ser uno de: {valid_statuses}")
+            
+            query = """
+                SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.costo,
+                       p.stock, p.stock_minimo, p.id_categoria, c.nombre as categoria_nombre,
+                       c.tipo AS categoria_tipo,
+                       p.tasa_impuesto, p.activo, p.fecha_creacion
+                FROM productos p
+                LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+            """
+            
+            params = None
+            
+            # Agregar filtro según estado
+            if status == 'active':
+                query += " WHERE p.activo = 1"
+            elif status == 'inactive':
+                query += " WHERE p.activo = 0"
+            # Para 'all' no agregar WHERE (todos los productos)
+            
+            query += " ORDER BY p.activo DESC, p.nombre"  # Activos primero, luego por nombre
+            
+            results = self.db_helper.safe_execute(query, params, 'all')
+            
+            if not results:
+                return []
+            
+            productos = []
+            for row in results:
+                producto = Producto(
+                    id_producto=row['id_producto'],
+                    nombre=row['nombre'],
+                    id_categoria=row['id_categoria'],
+                    categoria_tipo=row['categoria_tipo'],
+                    stock=row['stock'] if row['stock'] is not None else 0,
+                    costo=Decimal(str(row['costo'])) if row['costo'] is not None else Decimal('0'),
+                    precio=Decimal(str(row['precio'])) if row['precio'] is not None else Decimal('0'),
+                    tasa_impuesto=Decimal(str(row['tasa_impuesto'])) if row['tasa_impuesto'] is not None else Decimal('0'),
+                    activo=bool(row['activo']) if row['activo'] is not None else True
+                )
+                productos.append(producto)
+            
+            self.logger.debug(f"Filtro '{status}': {len(productos)} productos encontrados")
+            return productos
+            
+        except Exception as e:
+            LoggingHelper.log_error_with_context(
+                self.logger, 
+                e, 
+                {'operation': 'get_products_by_status', 'status': status}
+            )
+            raise
+    
+    def reactivate_product(self, id_producto: int) -> bool:
+        """
+        Reactivar un producto inactivo (cambiar activo de 0 a 1).
+        
+        NUEVO MÉTODO FASE 2: Botón de reactivación
+        - Solo permite reactivar productos con activo = 0
+        - Valida reglas de negocio (servicios mantienen stock = 0)
+        - Logging de operaciones de reactivación
+        
+        Args:
+            id_producto: ID del producto a reactivar
+            
+        Returns:
+            bool: True si fue exitoso, False en caso contrario
+            
+        Raises:
+            ValueError: Si producto no existe, ya está activo, o viola reglas de negocio
+        """
+        try:
+            # Obtener producto SIN filtro de activo para acceder a inactivos
+            query = """
+                SELECT p.id_producto, p.nombre, p.stock, p.activo, p.id_categoria,
+                       c.tipo AS categoria_tipo
+                FROM productos p
+                LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+                WHERE p.id_producto = ?
+            """
+            
+            result = self.db_helper.safe_execute(query, (id_producto,), 'one')
+            
+            if not result:
+                self.logger.warning(f"Intento de reactivar producto inexistente: {id_producto}")
+                raise ValueError(f"No existe el producto con ID {id_producto}")
+            
+            # Verificar que esté inactivo
+            if result['activo'] == 1:
+                self.logger.warning(f"Intento de reactivar producto ya activo: {id_producto}")
+                raise ValueError(f"El producto '{result['nombre']}' ya está activo")
+            
+            # VALIDACIÓN REGLAS DE NEGOCIO: Servicios deben mantener stock = 0
+            if result['categoria_tipo'] == 'SERVICIO' and result['stock'] != 0:
+                LoggingHelper.log_business_rule_violation(
+                    'REACTIVATE_SERVICE_WITH_STOCK',
+                    {
+                        'product_id': id_producto,
+                        'product_name': result['nombre'],
+                        'stock_actual': result['stock']
+                    }
+                )
+                raise ValueError(
+                    f"No se puede reactivar el servicio '{result['nombre']}' porque tiene stock {result['stock']}. "
+                    "Los servicios deben tener stock = 0. Ajuste el stock primero."
+                )
+            
+            # Reactivar producto (soft undelete)
+            update_query = """
+                UPDATE productos 
+                SET activo = 1, fecha_modificacion = datetime('now') 
+                WHERE id_producto = ?
+            """
+            
+            rows_affected = self.db_helper.safe_execute_with_commit(update_query, (id_producto,))
+            
+            success = bool(rows_affected)
+            
+            if success:
+                self.logger.info(f"Producto reactivado: {result['nombre']} (ID: {id_producto})")
+                LoggingHelper.log_database_operation(
+                    'productos',
+                    'REACTIVATE',
+                    id_producto,
+                    {'product_name': result['nombre'], 'action': 'reactivate'}
+                )
+            
+            return success
+            
+        except Exception as e:
+            LoggingHelper.log_error_with_context(
+                self.logger, 
+                e, 
+                {'operation': 'reactivate_product', 'product_id': id_producto}
+            )
+            raise
+    
+    def validate_stock_adjustment(self, id_producto: int, adjustment_quantity: int) -> bool:
+        """
+        Validar que un ajuste de stock no resulte en stock negativo.
+        
+        NUEVO MÉTODO FASE 2: Validación crítica stock < 0
+        - Verifica que stock_actual + adjustment_quantity >= 0
+        - Previene stock negativo en movimientos
+        - Logging de violaciones de stock negativo
+        
+        Args:
+            id_producto: ID del producto
+            adjustment_quantity: Cantidad de ajuste (puede ser negativa)
+            
+        Returns:
+            bool: True si el ajuste es válido, False si resultaría en stock < 0
+        """
+        try:
+            # Obtener stock actual del producto
+            product = self.get_product_by_id(id_producto)
+            
+            if not product:
+                self.logger.warning(f"Validación ajuste en producto inexistente: {id_producto}")
+                return False
+            
+            # Calcular stock resultante
+            resulting_stock = product.stock + adjustment_quantity
+            
+            # Validar que no sea negativo
+            if resulting_stock < 0:
+                LoggingHelper.log_business_rule_violation(
+                    'STOCK_ADJUSTMENT_NEGATIVE_RESULT',
+                    {
+                        'product_id': id_producto,
+                        'product_name': product.nombre,
+                        'current_stock': product.stock,
+                        'adjustment_quantity': adjustment_quantity,
+                        'resulting_stock': resulting_stock
+                    }
+                )
+                
+                self.logger.warning(
+                    f"Ajuste inválido para producto '{product.nombre}' (ID: {id_producto}): "
+                    f"stock actual {product.stock} + ajuste {adjustment_quantity} = {resulting_stock} < 0"
+                )
+                
+                return False
+            
+            self.logger.debug(
+                f"Ajuste válido para producto '{product.nombre}': "
+                f"{product.stock} + {adjustment_quantity} = {resulting_stock}"
+            )
+            
+            return True
+            
+        except Exception as e:
+            LoggingHelper.log_error_with_context(
+                self.logger, 
+                e, 
+                {
+                    'operation': 'validate_stock_adjustment',
+                    'product_id': id_producto,
+                    'adjustment_quantity': adjustment_quantity
+                }
+            )
+            return False
+    
+    def get_inactive_products_count(self) -> int:
+        """
+        Obtener conteo de productos inactivos.
+        
+        NUEVO MÉTODO FASE 2: Estadísticas sistema filtros
+        - Útil para dashboards y reportes
+        - Query optimizada con DatabaseHelper
+        
+        Returns:
+            int: Número de productos inactivos
+        """
+        try:
+            count = self.db_helper.count_records('productos', 'activo = 0')
+            self.logger.debug(f"Productos inactivos: {count}")
+            return count
+            
+        except Exception as e:
+            LoggingHelper.log_error_with_context(
+                self.logger, 
+                e, 
+                {'operation': 'get_inactive_products_count'}
+            )
+            return 0
             
             productos = []
             for row in results:
@@ -509,7 +772,12 @@ class ProductService:
     
     def delete_product(self, id_producto: int) -> bool:
         """
-        Eliminar (desactivar) un producto con logging optimizado FASE 3.
+        Eliminar (desactivar) un producto con validación de stock y logging optimizado FASE 3.
+        
+        VALIDACIÓN CRÍTICA DE NEGOCIO:
+        - NUEVO: Validar stock = 0 antes de permitir eliminación
+        - Productos con stock > 0 NO pueden eliminarse
+        - Protege integridad del inventario
         
         OPTIMIZACIÓN FASE 3:
         - Usa DatabaseHelper para operación segura
@@ -521,6 +789,9 @@ class ProductService:
             
         Returns:
             bool: True si fue exitoso, False en caso contrario
+            
+        Raises:
+            ValueError: Si producto no existe o tiene stock > 0
         """
         try:
             # Verificar que el producto existe
@@ -528,6 +799,25 @@ class ProductService:
             if not product:
                 self.logger.warning(f"Intento de eliminar producto inexistente: {id_producto}")
                 raise ValueError(f"No existe el producto con ID {id_producto}")
+            
+            # VALIDACIÓN CRÍTICA: Verificar que no tenga stock
+            if product.stock > 0:
+                self.logger.warning(
+                    f"Intento de eliminar producto '{product.nombre}' con stock > 0: "
+                    f"stock actual = {product.stock}"
+                )
+                LoggingHelper.log_business_rule_violation(
+                    'DELETE_PRODUCT_WITH_STOCK',
+                    {
+                        'product_id': id_producto,
+                        'product_name': product.nombre,
+                        'stock_actual': product.stock
+                    }
+                )
+                raise ValueError(
+                    f"El producto '{product.nombre}' no puede eliminarse mientras tenga stock. "
+                    f"Stock actual: {product.stock}. Debe ajustar el stock a 0 antes de eliminarlo."
+                )
             
             # Soft delete usando DatabaseHelper
             query = """
@@ -793,7 +1083,9 @@ class ProductService:
             )
             return []
     
-    def search_products(self, search_term: str) -> List[Dict[str, Any]]:
+    # def search_products(self, search_term: str) -> List[Dict[str, Any]]:
+    def search_products(self, search_term: str) -> List[Producto]:
+
         """
         Buscar productos por nombre o ID.
         
@@ -852,15 +1144,16 @@ class ProductService:
             # Convertir a formato compatible con ProductSearchWidget
             productos = []
             for row in results:
-                producto = {
-                    'id': row['id'],
-                    'nombre': row['nombre'],
-                    'stock': row['stock'] if row['stock'] is not None else 0,
-                    'stock_actual': row['stock'] if row['stock'] is not None else 0,
-                    'precio': float(row['precio']) if row['precio'] is not None else 0.0,
-                    'id_categoria': row['id_categoria'],
-                    'categoria_nombre': row['categoria_nombre'] or 'Sin categoría'
-                }
+                producto = Producto(
+                    id_producto=row['id'],
+                    nombre=row['nombre'],
+                    id_categoria=row['id_categoria'],
+                    stock=row['stock'] if row['stock'] is not None else 0,
+                    precio=Decimal(str(row['precio'])) if row['precio'] is not None else Decimal('0'),
+                    costo=Decimal('0'),  # Si no se usa en esta vista, puede ir como cero
+                    tasa_impuesto=Decimal('0'),  # Igual
+                    activo=True
+                )
                 productos.append(producto)
             
             self.logger.debug(f"Búsqueda '{search_term}': {len(productos)} productos encontrados")

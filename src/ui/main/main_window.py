@@ -313,14 +313,34 @@ class MainWindow:
         welcome_title.pack(pady=(0, 10))
         
         # Información de la empresa
-        info_label = ttk.Label(
+        # info_label = ttk.Label(
+        #     welcome_frame,
+        #     text="Copy Point S.A.\nSistema de Gestión de Inventario v1.1\nLas Lajas, Las Cumbres, Panamá\nTeléfono: 6342-9218\ne-mail: tus_amigos@copypoint.online",
+        #     font=("Arial", 12),
+        #     justify=tk.CENTER
+        # )
+        # info_label.pack(pady=(0, 20))
+        
+        # Información de la empresa (dinámica)
+        config = self.container.get('company_service').obtener_configuracion()
+        company_text = (
+            f"{config.nombre}\n"
+            f"Sistema de Gestión de Inventario v1.2\n"
+            f"{config.direccion}\n"
+            f"Teléfono: {config.telefono}\n"
+            f"E-mail: {config.email}"
+        )
+        self.company_info_label = ttk.Label(
             welcome_frame,
-            text="Copy Point S.A.\nSistema de Gestión de Inventario v1.1\nLas Lajas, Las Cumbres, Panamá\nTeléfono: 6342-9218\ne-mail: tus_amigos@copypoint.online",
+            text=company_text,
             font=("Arial", 12),
             justify=tk.CENTER
         )
-        info_label.pack(pady=(0, 20))
-        
+        self.company_info_label.pack(pady=(0, 20))
+
+
+
+
         # Información de usuario
         user_info = self.session_manager.get_user_info()
         user_label = ttk.Label(
@@ -621,16 +641,19 @@ class MainWindow:
                     # La ventana fue destruida, crear nueva
                     pass
             
-            # CORRECCIÓN: Usar path de base de datos para consistencia
             db_path = get_database_path()  # Obtener string path
             
-            # Crear nueva instancia del formulario de configuración
-            # self.company_config_form = CompanyConfigForm(self.root, db_path)
+            # self.company_config_form = CompanyConfigForm(self.root)
+            # self.company_config_form.show()
+            # self.logger.info("Configuración de empresa abierta exitosamente")
+            
             self.company_config_form = CompanyConfigForm(self.root)
-            
+            # Mostrar el formulario (bloquea hasta cerrarse)
             self.company_config_form.show()
-            self.logger.info("Configuración de empresa abierta exitosamente")
-            
+            # Al volver, recargar la info en la ventana principal
+            self._refresh_company_info()
+            self.logger.info("Configuración de empresa actualizada y ventana principal refrescada")
+
         except Exception as e:
             self.logger.error(f"Error al abrir configuración de empresa: {e}")
             messagebox.showerror("Error", f"No se pudo abrir la configuración de empresa: {e}")
@@ -1067,6 +1090,22 @@ Desarrollado siguiendo metodología TDD"""
         if self.root:
             self.root.destroy()
 
+    def _refresh_company_info(self):
+        """
+        Recarga la configuración de empresa y actualiza la etiqueta en la ventana principal.
+        """
+        try:
+            config = self.container.get('company_service').obtener_configuracion()
+            company_text = (
+                f"{config.nombre}\n"
+                f"Sistema de Gestión de Inventario v1.2\n"
+                f"{config.direccion}\n"
+                f"Teléfono: {config.telefono}\n"
+                f"E-mail: {config.email}"
+            )
+            self.company_info_label.config(text=company_text)
+        except Exception as e:
+            self.logger.error(f"Error al refrescar información de empresa: {e}")
 
 # Función auxiliar para iniciar la aplicación principal
 def start_main_window():

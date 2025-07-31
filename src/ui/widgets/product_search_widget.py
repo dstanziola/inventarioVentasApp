@@ -190,25 +190,106 @@ class ProductSearchWidget(ttk.Frame):
             self.logger.error(f"Error procesando código {code}: {e}")
             self._update_results_optimized([])
 
-    def _update_results_optimized(self, results: List[Dict]):
+    def _normalize_product(self, product) -> Dict:
+        """
+        Normalizar producto a formato diccionario compatible
+        
+        CORRECCIÓN CRÍTICA: 'Producto' object is not subscriptable
+        Convierte objetos Producto a diccionarios para compatibilidad
+        
+        Args:
+            product: Objeto Producto o diccionario
+            
+        Returns:
+            Dict: Producto normalizado como diccionario
+        """
+        try:
+            # Si ya es diccionario, usar directamente
+            if isinstance(product, dict):
+                # Normalizar claves para compatibilidad
+                normalized = {
+                    'id': product.get('id') or product.get('id_producto'),
+                    'nombre': product.get('nombre'),
+                    'stock': product.get('stock', 0),
+                    'categoria_tipo': product.get('categoria_tipo'),
+                    'precio': product.get('precio', 0),
+                    'activo': product.get('activo', True)
+                }
+                # Preservar campos originales también
+                normalized.update(product)
+                return normalized
+            
+            # Si es objeto Producto, convertir a diccionario
+            elif hasattr(product, 'id_producto'):
+                return {
+                    'id': product.id_producto,
+                    'id_producto': product.id_producto,
+                    'nombre': product.nombre,
+                    'stock': getattr(product, 'stock', 0),
+                    'categoria_tipo': getattr(product, 'categoria_tipo', None),
+                    'precio': float(getattr(product, 'precio', 0)),
+                    'activo': getattr(product, 'activo', True),
+                    'costo': float(getattr(product, 'costo', 0)),
+                    'tasa_impuesto': float(getattr(product, 'tasa_impuesto', 0)),
+                    'id_categoria': getattr(product, 'id_categoria', None)
+                }
+            
+            else:
+                # Fallback: intentar conversión genérica
+                self.logger.warning(f"Producto tipo desconocido: {type(product)}")
+                return {
+                    'id': getattr(product, 'id', None) or getattr(product, 'id_producto', None),
+                    'nombre': getattr(product, 'nombre', str(product)),
+                    'stock': getattr(product, 'stock', 0),
+                    'categoria_tipo': getattr(product, 'categoria_tipo', None),
+                    'precio': getattr(product, 'precio', 0),
+                    'activo': getattr(product, 'activo', True)
+                }
+                
+        except Exception as e:
+            self.logger.error(f"Error normalizando producto {product}: {e}")
+            # Fallback seguro
+            return {
+                'id': None,
+                'nombre': f"Error: {str(product)}",
+                'stock': 0,
+                'categoria_tipo': None,
+                'precio': 0,
+                'activo': False
+            }
+
+    def _update_results_optimized(self, results: List):
         """
         Actualizar lista de resultados con selección automática optimizada
         
         OPTIMIZACIÓN: Si hay un solo resultado, lo selecciona automáticamente
         y publica evento via Event Bus.
         
+        CORRECCIÓN CRÍTICA: Normaliza productos para compatibilidad Dict/Object
+        
         Args:
-            results: Lista de productos encontrados
+            results: Lista de productos encontrados (Dict o objetos Producto)
         """
         self.logger.info(f"DEBUGGING _update_results_optimized:")
         self.logger.info(f"  - results count: {len(results)}")
         
-        self.current_results = results
+        # CORRECCIÓN CRÍTICA: Normalizar productos para compatibilidad
+        normalized_results = []
+        for product in results:
+            try:
+                normalized = self._normalize_product(product)
+                normalized_results.append(normalized)
+                self.logger.debug(f"Producto normalizado: {normalized['nombre']} (ID: {normalized['id']})")
+            except Exception as e:
+                self.logger.error(f"Error normalizando producto: {e}")
+                continue
+        
+        self.current_results = normalized_results
         
         # Limpiar listbox
         self.results_listbox.delete(0, tk.END)
         
-        if not results:
+        if not normalized_results:
             # Sin resultados
             self.selected_product = None
             self.selected_label.config(
@@ -219,19 +300,19 @@ class ProductSearchWidget(ttk.Frame):
             return
         
         # Agregar resultados al listbox
-        for product in results:
+        for product in normalized_results:
             display_text = f"{product['id']} - {product['nombre']}"
             if 'stock' in product:
                 display_text += f" (Stock: {product['stock']})"
             self.results_listbox.insert(tk.END, display_text)
         
         # OPTIMIZACIÓN: Selección automática para resultado único
-        if len(results) == 1:
+        if len(normalized_results) == 1:
             self.logger.info(f"  - Un solo resultado: iniciando auto-selección")
             
             # Un solo resultado: selección automática INMEDIATA
             self.results_listbox.selection_set(0)
-            self.selected_product = results[0]
+            self.selected_product = normalized_results[0]
             
             self.logger.info(f"  - selected_product asignado: {self.selected_product}")
             
@@ -250,7 +331,7 @@ class ProductSearchWidget(ttk.Frame):
             # Múltiples resultados: mostrar para selección manual
             self.selected_product = None
             self.selected_label.config(
-                text=f"Encontrados {len(results)} productos - seleccione uno",
+                text=f"Encontrados {len(normalized_results)} productos - seleccione uno",
                 foreground="orange"
             )
             self.logger.info(f"  - Múltiples resultados, selected_product = None")

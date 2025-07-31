@@ -72,7 +72,7 @@ class CompanyConfigForm:
         self.window.resizable(True, False)
         
         # Frame principal con scroll
-        main_frame = ttk.Frame(self.window, padding="15")
+        main_frame = ttk.Frame(self.window, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configurar grid
@@ -85,7 +85,7 @@ class CompanyConfigForm:
         # Título
         title_label = ttk.Label(main_frame, text="Configuración de Empresa", 
                                font=('TkDefaultFont', 14, 'bold'))
-        title_label.grid(row=row, column=0, columnspan=2, pady=(0, 20))
+        title_label.grid(row=row, column=0, columnspan=2, pady=(0, 10))
         row += 1
         
         # Sección de datos básicos
@@ -94,7 +94,7 @@ class CompanyConfigForm:
         
         # Separador
         ttk.Separator(main_frame, orient='horizontal').grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=15
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
         )
         row += 1
         
@@ -104,7 +104,7 @@ class CompanyConfigForm:
         
         # Separador
         ttk.Separator(main_frame, orient='horizontal').grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=15
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
         )
         row += 1
         
@@ -114,7 +114,7 @@ class CompanyConfigForm:
         
         # Separador
         ttk.Separator(main_frame, orient='horizontal').grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=15
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
         )
         row += 1
         
@@ -124,7 +124,7 @@ class CompanyConfigForm:
         
         # Separador
         ttk.Separator(main_frame, orient='horizontal').grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=15
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
         )
         row += 1
         
@@ -134,7 +134,7 @@ class CompanyConfigForm:
         
         # Separador
         ttk.Separator(main_frame, orient='horizontal').grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=15
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
         )
         row += 1
         
@@ -345,7 +345,7 @@ class CompanyConfigForm:
         """
         # Frame para botones
         button_frame = ttk.Frame(parent)
-        button_frame.grid(row=row, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=row, column=0, columnspan=2, pady=5)
         
         # Botones principales
         ttk.Button(button_frame, text="Guardar Cambios", 

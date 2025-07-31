@@ -201,14 +201,16 @@ class ProductWindow:
         self.price_var = tk.StringVar()
         self.tax_var = tk.StringVar()
         
-        # Variables para códigos de barras (si están disponibles)
-        if self.barcode_support:
-            self.barcode_var = tk.StringVar()
-            self.barcode_format_var = tk.StringVar()
-            self.auto_generate_barcode_var = tk.BooleanVar(value=True)
-            self.include_price_var = tk.BooleanVar(value=True)
-            self.include_category_var = tk.BooleanVar(value=False)
-            self.include_barcode_var = tk.BooleanVar(value=True)
+        # === NUEVAS VARIABLES SISTEMA FILTROS ===
+        self.filter_var = tk.StringVar()
+        self.filter_var.set("Activos")  # Filtro por defecto
+        
+        # Estado interno para filtros
+        self.current_filter_status = "active"  # active, inactive, all
+        self.displayed_products = []  # Productos actualmente mostrados
+        
+        # SIMPLIFICADO: Variables de barcode UI eliminadas (innecesarias)
+        # Solo mantener funcionalidad de escaneo si está disponible
         
     def _create_user_interface(self):
         """Crea la interfaz de usuario adaptativa."""
@@ -222,14 +224,10 @@ class ProductWindow:
         main_frame.rowconfigure(1, weight=1)  # Formulario
         main_frame.rowconfigure(2, weight=2)  # Lista de productos
         
-        # Título
-        title_text = "Gestión de Productos"
-        if self.barcode_support:
-            title_text += " - Con Códigos de Barras"
-            
+        # Título SIMPLIFICADO (sin referencia a códigos de barras)
         title_label = ttk.Label(
             main_frame,
-            text=title_text,
+            text="Gestión de Productos",  # Título simple
             font=("Arial", 16, "bold"),
             foreground="darkblue"
         )
@@ -262,25 +260,33 @@ class ProductWindow:
         self.delete_button = ttk.Button(button_frame, text="Eliminar", command=self._delete_product, state='disabled')
         self.delete_button.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
+        # === NUEVO: BOTÓN REACTIVAR ===
+        self.reactivate_button = ttk.Button(
+            button_frame, 
+            text="Reactivar", 
+            command=self._reactivate_product, 
+            state='disabled'
+        )
+        self.reactivate_button.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+
         self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
-        self.cancel_button.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        self.cancel_button.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
 
         close_button = ttk.Button(button_frame, text="Cerrar", command=self._close_window)
-        close_button.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+        close_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Botón de Importar Excel
         self.import_button = ttk.Button(button_frame, text="Importar Excel", command=self._import_from_excel)
-        self.import_button.grid(row=4, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.import_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Botón para descargar archivo de ejemplo
         self.download_sample_button = ttk.Button(button_frame, text="Descargar Ejemplo", command=self._download_sample_excel)
-        # Ubícalo en la siguiente fila disponible (ajusta el row según tu layout)
-        self.download_sample_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.download_sample_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
 
         # Botón de escanear (solo si hay soporte)
         if self.barcode_support:
-            scan_button = ttk.Button(button_frame, text="Escanear", command=self._scan_barcode)
-            scan_button.grid(row=3, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="ew")
+            scan_button = ttk.Button(button_frame, text="Buscar por Código", command=self._scan_barcode)
+            scan_button.grid(row=4, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="ew")
 
         # Expansión uniforme por columna
         button_frame.columnconfigure(0, weight=1)
@@ -288,80 +294,81 @@ class ProductWindow:
 
 
     def _create_product_list_panel(self, parent):
-        """Crea el panel de lista de productos."""
+        """Crea el panel de lista de productos con sistema de filtros."""
         list_frame = ttk.LabelFrame(parent, text="Lista de Productos", padding=10)
         list_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5), pady=(15, 0))
         
         list_frame.columnconfigure(0, weight=1)
-        list_frame.rowconfigure(1, weight=1)
+        list_frame.rowconfigure(2, weight=1)  # Cambiar a fila 2 para TreeView
         
-        # Campo de búsqueda
-        search_frame = ttk.Frame(list_frame)
-        search_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
-        search_frame.columnconfigure(1, weight=1)
+        # === NUEVO: FRAME DE FILTROS Y BÚSQUEDA ===
+        controls_frame = ttk.Frame(list_frame)
+        controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        controls_frame.columnconfigure(3, weight=1)  # Búsqueda se expande
         
-        ttk.Label(search_frame, text="Buscar:").grid(row=0, column=0, padx=(0, 5))
-        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
-        search_entry.grid(row=0, column=1, sticky=(tk.W, tk.E))
+        # Widget de filtro
+        ttk.Label(controls_frame, text="Filtro:").grid(row=0, column=0, padx=(0, 5))
         
-        # TreeView para productos
-        if self.barcode_support:
-            columns = ('ID', 'Código', 'Nombre', 'Categoría', 'Stock', 'Precio', 'Impuesto')
-        else:
-            columns = ('ID', 'Nombre', 'Categoría', 'Stock', 'Precio', 'Impuesto')
-            
+        self.filter_combobox = ttk.Combobox(
+            controls_frame, 
+            textvariable=self.filter_var,
+            values=["Activos", "Inactivos", "Todos"],
+            state='readonly',
+            width=12
+        )
+        self.filter_combobox.grid(row=0, column=1, padx=(0, 10))
+        
+        # Campo de búsqueda (movido a la misma fila)
+        ttk.Label(controls_frame, text="Buscar por nombre:").grid(row=0, column=2, padx=(10, 5))
+        search_entry = ttk.Entry(controls_frame, textvariable=self.search_var)
+        search_entry.grid(row=0, column=3, sticky=(tk.W, tk.E), padx=(0, 5))
+        
+        # === NUEVO: FRAME DE ESTADÍSTICAS ===
+        stats_frame = ttk.Frame(list_frame)
+        stats_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        
+        self.stats_label = ttk.Label(
+            stats_frame, 
+            text="Cargando productos...",
+            font=("Arial", 9),
+            foreground="gray"
+        )
+        self.stats_label.grid(row=0, column=0, sticky=tk.W)
+        
+        # SIMPLIFICADO: TreeView sin columna "Código" redundante
+        columns = ('ID', 'Nombre', 'Categoría', 'Stock', 'Precio', 'Estado')
         self.product_tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=10)
         
         # Configurar columnas
         for col in columns:
             self.product_tree.heading(col, text=col)
-            
-        if self.barcode_support:
-            self.product_tree.column('ID', width=50)
-            self.product_tree.column('Código', width=100)
-            self.product_tree.column('Nombre', width=150)
-            self.product_tree.column('Categoría', width=100)
-            self.product_tree.column('Stock', width=60, anchor='e')
-            self.product_tree.column('Precio', width=80, anchor='e')
-            self.product_tree.column('Impuesto', width=70, anchor='e')
-        else:
-            self.product_tree.column('ID', width=50)
-            self.product_tree.column('Nombre', width=200)
-            self.product_tree.column('Categoría', width=120)
-            self.product_tree.column('Stock', width=80, anchor='e')
-            self.product_tree.column('Precio', width=100, anchor='e')
-            self.product_tree.column('Impuesto', width=80, anchor='e')
+        
+        # Ancho de columnas optimizado
+        self.product_tree.column('ID', width=50)   # ID visible (que es el código)
+        self.product_tree.column('Nombre', width=180)
+        self.product_tree.column('Categoría', width=100)
+        self.product_tree.column('Stock', width=70, anchor='e')
+        self.product_tree.column('Precio', width=80, anchor='e')
+        self.product_tree.column('Estado', width=70, anchor='center')
         
         # Scrollbar
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.product_tree.yview)
         self.product_tree.configure(yscrollcommand=scrollbar.set)
         
-        self.product_tree.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
+        self.product_tree.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        scrollbar.grid(row=2, column=1, sticky=(tk.N, tk.S))
         
     def _create_form_panel(self, parent):
-        """Crea el panel del formulario."""
-        form_frame = ttk.LabelFrame(parent, text="Datos del Producto", padding=10)
+        """Crea el panel del formulario SIMPLIFICADO sin pestaña de códigos."""
+        form_frame = ttk.LabelFrame(parent, text="Datos del Producto: Seleccione Nuevo para crear o haga click en un producto", padding=10)
         form_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=(15, 0))
         
         form_frame.columnconfigure(1, weight=1)
         
-        if self.barcode_support:
-            # Usar notebook para organizar pestañas
-            self.form_notebook = ttk.Notebook(form_frame)
-            self.form_notebook.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # SIMPLIFICADO: Siempre usar formulario básico (sin notebook/pestañas)
+        self._create_basic_form_fields(form_frame)
             
-            self._create_basic_info_tab()
-            self._create_barcode_tab()
-        else:
-            # Formulario simple sin pestañas
-            self._create_basic_form_fields(form_frame)
-            
-    def _create_basic_info_tab(self):
-        """Crea la pestaña de información básica."""
-        basic_frame = ttk.Frame(self.form_notebook)
-        self.form_notebook.add(basic_frame, text="Información Básica")
-        self._create_basic_form_fields(basic_frame)
+    # ELIMINADO: _create_basic_info_tab() - Ya no es necesario (sin notebook)
         
     def _create_basic_form_fields(self, parent):
         """Crea los campos básicos del formulario."""
@@ -404,61 +411,27 @@ class ProductWindow:
         self.tax_entry = ttk.Entry(parent, textvariable=self.tax_var, width=30, justify='right')
         self.tax_entry.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=5)
         
-    def _create_barcode_tab(self):
-        """Crea la pestaña de códigos de barras (solo si está disponible)."""
-        if not self.barcode_support:
-            return
-            
-        barcode_frame = ttk.Frame(self.form_notebook)
-        self.form_notebook.add(barcode_frame, text="Código de Barras")
-        
-        barcode_frame.columnconfigure(1, weight=1)
-        
-        # Campo código con BarcodeEntry Widget
-        ttk.Label(barcode_frame, text="Código:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        
-        # Usar BarcodeEntry en lugar de Entry normal
-        self.barcode_entry = BarcodeEntry(
-            barcode_frame,
-            textvariable=self.barcode_var,
-            on_scan_complete=self._on_barcode_scanned,
-            validation_enabled=True,
-            clear_after_scan=False,  # Mantener código para edición
-            width=30,
-            font=('Consolas', 11)
-        )
-        self.barcode_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
-        
-        # Botones
-        button_frame = ttk.Frame(barcode_frame)
-        button_frame.grid(row=1, column=0, columnspan=2, pady=10)
-        
-        ttk.Button(button_frame, text="Generar", command=self._generate_barcode).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Validar", command=self._validate_barcode).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Limpiar", command=self._clear_barcode).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Buscar Producto", command=self._search_by_barcode).pack(side=tk.LEFT, padx=5)
-        
-        # Estado
-        self.validation_label = ttk.Label(barcode_frame, text="Sin código", foreground='gray')
-        self.validation_label.grid(row=2, column=0, columnspan=2, pady=5)
+    # ELIMINADO: _create_barcode_tab() - Ya no es necesario
         
         
     def _setup_event_handlers(self):
-        """Configura los manejadores de eventos."""
+        """Configura los manejadores de eventos con filtros."""
         self.product_tree.bind('<<TreeviewSelect>>', self._on_product_select)
         self.search_var.trace('w', self._on_search)
         self.product_name_var.trace('w', self._validate_form)
         self.category_var.trace('w', self._validate_form)
         
-        if self.barcode_support:
-            self.barcode_var.trace('w', self._on_barcode_changed)
+        # === NUEVO: HANDLER DE FILTRO ===
+        self.filter_var.trace('w', self._on_filter_change)
+        
+        # SIMPLIFICADO: Ya no hay handlers de código de barras
             
         self.root.protocol("WM_DELETE_WINDOW", self._close_window)
         
     def _load_initial_data(self):
-        """Carga los datos iniciales."""
+        """Carga los datos iniciales con filtro por defecto."""
         try:
-            self.logger.info("Cargando datos iniciales...")
+            self.logger.info("Cargando datos iniciales con sistema de filtros...")
             
             # Cargar categorías
             self.categories = self.category_service.get_all_categories()
@@ -466,100 +439,66 @@ class ProductWindow:
             self.category_combo['values'] = category_names
             self.logger.info(f"Cargadas {len(self.categories)} categorías")
             
-            # Cargar productos - CORREGIDO: ahora get_all_products() devuelve objetos Producto
-            self.products = self.product_service.get_all_products()
+            # === NUEVO: CARGAR PRODUCTOS CON FILTRO POR DEFECTO ===
+            self._load_products_by_filter()
             
-            # Los productos ya son objetos Producto, no necesitan conversión
-                
-            self.logger.info(f"Cargados {len(self.products)} productos")
+            self.logger.info(f"Cargados {len(self.displayed_products)} productos con filtro '{self.filter_var.get()}'")
             self._update_product_list()
+            self._update_stats_label()
             
         except Exception as e:
             self.logger.error(f"Error cargando datos: {e}")
             messagebox.showerror("Error", f"Error cargando datos: {e}")
             
-    def _update_product_list(self, filter_text: str = ""):
-        """Actualiza la lista de productos."""
-        # Limpiar
+    def _update_product_list(self, search_filter: str = ""):
+        """Actualiza la lista de productos con filtros y búsqueda."""
+        # Limpiar TreeView
         for item in self.product_tree.get_children():
             self.product_tree.delete(item)
+        
+        # Aplicar filtro de búsqueda adicional si existe
+        products_to_show = self.displayed_products
+        if search_filter:
+            products_to_show = [
+                p for p in self.displayed_products 
+                if search_filter.lower() in p.nombre.lower()
+            ]
+        
+        # Agregar productos al TreeView
+        for product in products_to_show:
+            # Buscar nombre de categoría
+            category_name = "N/A"
+            for cat in self.categories:
+                if cat.id_categoria == product.id_categoria:
+                    category_name = cat.nombre
+                    break
             
-        # Agregar productos filtrados
-        for product in self.products:
-            if not filter_text or filter_text.lower() in product.nombre.lower():
-                # Buscar nombre de categoría
-                category_name = "N/A"
-                for cat in self.categories:
-                    if cat.id_categoria == product.id_categoria:
-                        category_name = cat.nombre
-                        break
-                
-                if self.barcode_support:
-                    values = (
-                        product.id_producto,
-                        str(product.id_producto),  # Código temporal
-                        product.nombre,
-                        category_name,
-                        product.stock,
-                        f"B/. {float(product.precio):.2f}",
-                        f"{float(product.tasa_impuesto):.1f}%"
-                    )
-                else:
-                    values = (
-                        product.id_producto,
-                        product.nombre,
-                        category_name,
-                        product.stock,
-                        f"B/. {float(product.precio):.2f}",
-                        f"{float(product.tasa_impuesto):.1f}%"
-                    )
-                
-                self.product_tree.insert('', tk.END, values=values)
+            # Estado del producto
+            estado = "Activo" if product.activo else "Inactivo"
+            
+            # SIMPLIFICADO: Sin columna "Código" redundante
+            # El ID ya representa el código automáticamente
+            values = (
+                product.id_producto,      # ID (que sirve como código)
+                product.nombre,
+                category_name,
+                product.stock,
+                f"B/. {float(product.precio):.2f}",
+                estado
+            )
+            
+            # Insertar en TreeView
+            item_id = self.product_tree.insert('', tk.END, values=values)
                 
     # === MÉTODOS DE CÓDIGOS DE BARRAS (SOLO SI ESTÁN DISPONIBLES) ===
     
-    def _generate_barcode(self):
-        """Genera código de barras."""
-        if not self.barcode_support:
-            return
-            
-        try:
-            import random
-            temp_id = random.randint(100000, 999999)
-            generated_code = generate_product_code(temp_id, 'CODE128')
-            self.barcode_var.set(generated_code)
-            messagebox.showinfo("Código Generado", f"Código: {generated_code}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Error generando código: {e}")
-            
-    def _validate_barcode(self):
-        """Valida el código de barras."""
-        if not self.barcode_support:
-            return
-            
-        try:
-            code = self.barcode_var.get().strip()
-            if not code:
-                self.validation_label.config(text="Sin código", foreground='gray')
-                return
-                
-            is_valid = validate_barcode(code)
-            if is_valid:
-                self.validation_label.config(text="✓ Válido", foreground='green')
-            else:
-                self.validation_label.config(text="✗ Inválido", foreground='red')
-        except Exception as e:
-            self.validation_label.config(text="Error", foreground='orange')
-            
-    def _clear_barcode(self):
-        """Limpia el código de barras."""
-        if not self.barcode_support:
-            return
-        self.barcode_var.set("")
-        self.validation_label.config(text="Sin código", foreground='gray')
+    # ELIMINADOS: Métodos innecesarios de barcode UI
+    # - _generate_barcode()
+    # - _validate_barcode() 
+    # - _clear_barcode()
         
     def _scan_barcode(self):
-        """Abre ventana de escaneo de códigos de barras."""
+        """Abre ventana de escaneo SIMPLIFICADA."""
         if not self.barcode_support:
             return
         
@@ -577,21 +516,13 @@ class ProductWindow:
         # Instrucciones
         ttk.Label(
             main_frame, 
-            text="Escanee el código de barras con su lector:\n(El código aparecerá automáticamente)",
+            text="Introduzca el código del producto:\nPor teclado o use scanner",
             justify=tk.CENTER
         ).pack(pady=(0, 15))
         
-        # Campo de escaneo
+        # Campo de escaneo simplificado
         scan_var = tk.StringVar()
-        scan_entry = BarcodeEntry(
-            main_frame,
-            textvariable=scan_var,
-            on_scan_complete=lambda code, valid: self._handle_scanned_code(code, valid, scan_window),
-            validation_enabled=True,
-            clear_after_scan=False,
-            width=40,
-            font=('Consolas', 12)
-        )
+        scan_entry = ttk.Entry(main_frame, textvariable=scan_var, width=20, font=('Consolas', 12))
         scan_entry.pack(pady=(0, 15))
         scan_entry.focus()
         
@@ -601,15 +532,60 @@ class ProductWindow:
         
         ttk.Button(
             button_frame, 
-            text="Cerrar", 
-            command=scan_window.destroy
+            text="Buscar", 
+            command=lambda: self._search_product_by_id(scan_var.get(), scan_window)
         ).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(
             button_frame, 
-            text="Buscar Manualmente", 
-            command=lambda: self._handle_scanned_code(scan_var.get(), True, scan_window)
+            text="Cerrar", 
+            command=scan_window.destroy
         ).pack(side=tk.LEFT, padx=5)
+
+    def _search_product_by_id(self, product_id_str: str, scan_window: tk.Toplevel):
+        """Busca producto por ID (código) SIMPLIFICADO."""
+        if not product_id_str.strip():
+            return
+        
+        try:
+            product_id = int(product_id_str.strip())
+            
+            # Buscar en la lista de productos actuales
+            found_product = None
+            for product in self.displayed_products:
+                if product.id_producto == product_id:
+                    found_product = product
+                    break
+            
+            if found_product:
+                # Mostrar producto encontrado
+                self._show_product_in_form(found_product)
+                
+                # Seleccionar en TreeView
+                for item in self.product_tree.get_children():
+                    values = self.product_tree.item(item)['values']
+                    if values[0] == product_id:
+                        self.product_tree.selection_set(item)
+                        self.product_tree.see(item)
+                        break
+                
+                # Habilitar botones de edición
+                self.edit_button.config(state='normal')
+                self.delete_button.config(state='normal')
+                
+                messagebox.showinfo(
+                    "Producto Encontrado", 
+                    f"Producto: {found_product.nombre}\nCódigo: {product_id}"
+                )
+                scan_window.destroy()
+            else:
+                messagebox.showinfo(
+                    "Producto No Encontrado", 
+                    f"No se encontró un producto con el código '{product_id}'"
+                )
+                
+        except ValueError:
+            messagebox.showerror("Error", "El código debe ser un número válido")
     
     def _handle_scanned_code(self, code: str, is_valid: bool, scan_window: tk.Toplevel):
         """Maneja código escaneado desde la ventana de escaneo."""
@@ -662,47 +638,10 @@ class ProductWindow:
             f"Producto: {product.nombre}\nID: {product.id_producto}"
         )
     
-    def _on_barcode_scanned(self, code: str, is_valid: bool):
-        """Callback para cuando se escanea un código en el campo de código de barras."""
-        if not is_valid:
-            self.validation_label.config(text="✗ Código Inválido", foreground='red')
-            return
-        
-        self.validation_label.config(text="✓ Código Válido", foreground='green')
-        
-        # Buscar producto automáticamente si está en modo de visualización
-        if not self.is_creating_new and self.editing_product is None:
-            self._search_by_barcode()
-    
-    def _search_by_barcode(self):
-        """Busca un producto por el código de barras actual."""
-        if not self.barcode_support:
-            return
-        
-        code = self.barcode_var.get().strip()
-        if not code:
-            messagebox.showwarning("Advertencia", "Ingrese un código de barras para buscar")
-            return
-        
-        try:
-            product = self.barcode_service.search_product_by_code(code)
-            
-            if product:
-                self._show_product_in_form(product)
-                self._on_product_found_by_barcode(product)
-            else:
-                messagebox.showinfo(
-                    "Producto No Encontrado", 
-                    f"No se encontró un producto con el código '{code}'"
-                )
-                
-        except Exception as e:
-            messagebox.showerror("Error", f"Error buscando producto: {e}")
-        
-    def _on_barcode_changed(self, *args):
-        """Maneja cambios en código de barras."""
-        if self.barcode_support:
-            self._validate_barcode()
+    # ELIMINADOS: Métodos adicionales innecesarios de barcode
+    # - _on_barcode_scanned() 
+    # - _search_by_barcode()
+    # - _on_barcode_changed()
             
     # === MÉTODOS PRINCIPALES DEL FORMULARIO ===
     
@@ -760,7 +699,9 @@ class ProductWindow:
                 
                 if result:
                     messagebox.showinfo("Éxito", "Producto creado exitosamente")
-                    self._load_initial_data()
+                    self._load_products_by_filter()
+                    self._update_product_list()
+                    self._update_stats_label()
                     self._cancel_edit()
                 else:
                     messagebox.showerror("Error", "No se pudo crear el producto")
@@ -778,7 +719,9 @@ class ProductWindow:
                 
                 if updated_product:
                     messagebox.showinfo("Éxito", "Producto actualizado exitosamente")
-                    self._load_initial_data()
+                    self._load_products_by_filter()
+                    self._update_product_list()
+                    self._update_stats_label()
                     self._cancel_edit()
                 else:
                     messagebox.showerror("Error", "No se pudo actualizar el producto")
@@ -901,7 +844,7 @@ class ProductWindow:
         
         # Buscar producto
         selected_product = None
-        for product in self.products:
+        for product in self.displayed_products:
             if product.id_producto == product_id:
                 selected_product = product
                 break
@@ -927,7 +870,7 @@ class ProductWindow:
             
         item = self.product_tree.item(selection[0])
         product_id = int(item['values'][0])
-        product_name = item['values'][2] if self.barcode_support else item['values'][1]
+        product_name = item['values'][1]  # Índice simplificado sin columna Código
         
         result = messagebox.askyesno(
             "Confirmar Eliminación",
@@ -971,8 +914,7 @@ class ProductWindow:
         self.price_var.set("")
         self.tax_var.set("")
         
-        if self.barcode_support:
-            self._clear_barcode()
+        # SIMPLIFICADO: Ya no hay campos de código de barras que limpiar
             
         for item in self.product_tree.selection():
             self.product_tree.selection_remove(item)
@@ -986,8 +928,7 @@ class ProductWindow:
         self.price_entry.config(state='normal')
         self.tax_entry.config(state='normal')
         
-        if self.barcode_support and hasattr(self, 'barcode_entry'):
-            self.barcode_entry.config(state='normal')
+        # SIMPLIFICADO: Ya no hay campos de código de barras que habilitar
             
     def _disable_form(self):
         """Deshabilitar formulario."""
@@ -998,27 +939,37 @@ class ProductWindow:
         self.price_entry.config(state='readonly')
         self.tax_entry.config(state='readonly')
         
-        if self.barcode_support and hasattr(self, 'barcode_entry'):
-            self.barcode_entry.config(state='readonly')
+        # SIMPLIFICADO: Ya no hay campos de código de barras que deshabilitar
             
     def _on_product_select(self, event):
-        """Manejar selección de producto."""
+        """Manejar selección de producto con lógica de reactivación."""
         selection = self.product_tree.selection()
         if selection:
             item = self.product_tree.item(selection[0])
             product_id = int(item['values'][0])
             
-            # Buscar producto
+            # Buscar producto en la lista actual
             selected_product = None
-            for product in self.products:
+            for product in self.displayed_products:
                 if product.id_producto == product_id:
                     selected_product = product
                     break
                     
             if selected_product:
                 self._show_product_in_form(selected_product)
-                self.edit_button.config(state='normal')
-                self.delete_button.config(state='normal')
+                
+                # Habilitar botones según estado del producto
+                if selected_product.activo:
+                    # Producto activo: habilitar editar y eliminar
+                    self.edit_button.config(state='normal')
+                    self.delete_button.config(state='normal')
+                    self.reactivate_button.config(state='disabled')
+                else:
+                    # Producto inactivo: solo habilitar reactivar
+                    self.edit_button.config(state='disabled')
+                    self.delete_button.config(state='disabled')
+                    self.reactivate_button.config(state='normal')
+                
                 self._disable_form()
                 
     def _show_product_in_form(self, product: Producto):
@@ -1035,15 +986,26 @@ class ProductWindow:
                 self.category_combo.current(i)
                 break
                 
-        # Mostrar código de barras si está disponible
-        if self.barcode_support:
-            self.barcode_var.set(str(product.id_producto))
-            self._validate_barcode()
+        # NOTA: El código es simplemente el ID del producto
+        # No se necesita campo separado para mostrarlo
             
     def _on_search(self, *args):
-        """Manejar búsqueda."""
+        """Manejar búsqueda combinada con filtros."""
         search_text = self.search_var.get()
         self._update_product_list(search_text)
+        
+        # Actualizar estadísticas con filtro de búsqueda
+        if search_text:
+            filtered_count = len([
+                p for p in self.displayed_products 
+                if search_text.lower() in p.nombre.lower()
+            ])
+            current_filter = self.filter_var.get()
+            self.stats_label.config(
+                text=f"Búsqueda '{search_text}': {filtered_count} productos {current_filter.lower()}"
+            )
+        else:
+            self._update_stats_label()
         
     def _close_window(self):
         """Cerrar ventana."""
@@ -1056,6 +1018,135 @@ class ProductWindow:
                 return
                 
         self.root.destroy()
+    
+    # === NUEVOS MÉTODOS SISTEMA FILTROS Y REACTIVACIÓN ===
+    
+    def _load_products_by_filter(self):
+        """Carga productos según el filtro actual."""
+        try:
+            filter_map = {
+                "Activos": "active",
+                "Inactivos": "inactive", 
+                "Todos": "all"
+            }
+            
+            current_filter = self.filter_var.get()
+            status = filter_map.get(current_filter, "active")
+            self.current_filter_status = status
+            
+            # Usar método del ProductService para filtrar
+            self.displayed_products = self.product_service.get_products_by_status(status)
+            
+            self.logger.debug(f"Filtro '{current_filter}': {len(self.displayed_products)} productos cargados")
+            
+        except Exception as e:
+            self.logger.error(f"Error filtrando productos: {e}")
+            self.displayed_products = []
+    
+    def _on_filter_change(self, *args):
+        """Maneja cambio de filtro."""
+        try:
+            self.logger.debug(f"Cambio de filtro a: {self.filter_var.get()}")
+            
+            # Cargar productos con nuevo filtro
+            self._load_products_by_filter()
+            
+            # Actualizar interfaz
+            self._update_product_list()
+            self._update_stats_label()
+            
+            # Limpiar selección y deshabilitar botones
+            self._clear_selection()
+            
+        except Exception as e:
+            self.logger.error(f"Error en cambio de filtro: {e}")
+            messagebox.showerror("Error", f"Error cambiando filtro: {e}")
+    
+    def _update_stats_label(self):
+        """Actualiza la etiqueta de estadísticas."""
+        try:
+            current_filter = self.filter_var.get()
+            count = len(self.displayed_products)
+            
+            # Obtener conteos adicionales para estadísticas completas
+            if current_filter == "Todos":
+                # Mostrar desglose cuando se muestran todos
+                activos_count = len([p for p in self.displayed_products if p.activo])
+                inactivos_count = len([p for p in self.displayed_products if not p.activo])
+                stats_text = f"Total: {count} productos | Activos: {activos_count} | Inactivos: {inactivos_count}"
+            else:
+                stats_text = f"Mostrando: {count} productos {current_filter.lower()}"
+            
+            self.stats_label.config(text=stats_text)
+            
+        except Exception as e:
+            self.logger.error(f"Error actualizando estadísticas: {e}")
+            self.stats_label.config(text="Error en estadísticas")
+    
+    def _clear_selection(self):
+        """Limpia la selección actual y deshabilita botones."""
+        # Limpiar selección en TreeView
+        for item in self.product_tree.selection():
+            self.product_tree.selection_remove(item)
+        
+        # Deshabilitar botones de acción
+        self.edit_button.config(state='disabled')
+        self.delete_button.config(state='disabled')
+        self.reactivate_button.config(state='disabled')
+        
+        # Limpiar formulario si no está en modo edición
+        if not self.is_creating_new and self.editing_product is None:
+            self._clear_form()
+    
+    def _reactivate_product(self):
+        """Reactivar producto inactivo seleccionado."""
+        selection = self.product_tree.selection()
+        if not selection:
+            messagebox.showwarning("Advertencia", "Seleccione un producto inactivo para reactivar")
+            return
+        
+        try:
+            # Obtener ID del producto seleccionado
+            item = self.product_tree.item(selection[0])
+            product_id = int(item['values'][0])
+            product_name = item['values'][1]  # Índice simplificado sin columna Código
+            
+            # Verificar que el producto esté inactivo
+            selected_product = None
+            for product in self.displayed_products:
+                if product.id_producto == product_id:
+                    selected_product = product
+                    break
+            
+            if selected_product and selected_product.activo:
+                messagebox.showwarning("Advertencia", "El producto seleccionado ya está activo")
+                return
+            
+            # Confirmar reactivación
+            result = messagebox.askyesno(
+                "Confirmar Reactivación",
+                f"¿Está seguro que desea reactivar '{product_name}'?"
+            )
+            
+            if result:
+                # Llamar al ProductService para reactivar
+                success = self.product_service.reactivate_product(product_id)
+                
+                if success:
+                    messagebox.showinfo("Éxito", f"Producto '{product_name}' reactivado exitosamente")
+                    
+                    # Recargar datos y mantener filtro actual
+                    self._load_products_by_filter()
+                    self._update_product_list()
+                    self._update_stats_label()
+                    self._clear_selection()
+                    
+                else:
+                    messagebox.showerror("Error", "No se pudo reactivar el producto")
+                    
+        except Exception as e:
+            self.logger.error(f"Error reactivando producto: {e}")
+            messagebox.showerror("Error", f"Error reactivando producto: {e}")
 
 
 def main():

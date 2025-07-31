@@ -243,24 +243,22 @@ class LabelGeneratorForm(tk.Toplevel):
         # Selección de template
         ttk.Label(template_frame, text="Template de Etiqueta:").pack(anchor=tk.W, padx=10, pady=(10, 5))
         
-        self.template_combo = ttk.Combobox(template_frame, textvariable=self.template_var, 
-                                          state="readonly", width=40)
+        self.template_combo = ttk.Combobox(template_frame, textvariable=self.template_var, state="readonly", width=40)
         self.template_combo.pack(fill=tk.X, padx=10, pady=(0, 10))
         
         # Información del template
         self.template_info_frame = ttk.LabelFrame(template_frame, text="Información del Template")
         self.template_info_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
         
-        self.template_info_label = ttk.Label(self.template_info_frame, text="Seleccione un template", 
-                                           justify=tk.LEFT, wraplength=300)
+        self.template_info_label = ttk.Label(self.template_info_frame, text="Seleccione un template", justify=tk.LEFT, wraplength=300)
         self.template_info_label.pack(padx=10, pady=10)
         
         # Botones de template
         template_buttons = ttk.Frame(template_frame)
         template_buttons.pack(fill=tk.X, padx=10)
         
-        ttk.Button(template_buttons, text="Crear Template Personalizado", 
-                  command=self.create_custom_template).pack(side=tk.LEFT)
+        # ttk.Button(template_buttons, text="Crear Template Personalizado", 
+        #          command=self.create_custom_template).pack(side=tk.LEFT)
     
     def setup_quantity_tab(self):
         """Configurar pestaña de cantidades."""
@@ -322,8 +320,8 @@ class LabelGeneratorForm(tk.Toplevel):
         
         ttk.Checkbutton(content_frame, text="Incluir Precio", 
                        variable=self.include_price_var).pack(anchor=tk.W, padx=10, pady=2)
-        ttk.Checkbutton(content_frame, text="Incluir Categoría", 
-                       variable=self.include_category_var).pack(anchor=tk.W, padx=10, pady=2)
+        # ttk.Checkbutton(content_frame, text="Incluir Categoría", 
+        #                variable=self.include_category_var).pack(anchor=tk.W, padx=10, pady=2)
         ttk.Checkbutton(content_frame, text="Incluir Código de Barras", 
                        variable=self.include_barcode_var).pack(anchor=tk.W, padx=10, pady=2)
     
@@ -527,7 +525,7 @@ class LabelGeneratorForm(tk.Toplevel):
                                if cat.nombre == selected_category), None)
                 
                 if category:
-                    products = self.product_service.get_by_category(category.id_categoria)
+                    products = self.product_service.get_products_by_category(category.id_categoria)
                     self.load_products_to_tree(products)
                     self.update_status(f"Mostrando {len(products)} productos de {selected_category}")
                 
@@ -870,10 +868,10 @@ Tamaño de página: {template['page_size']}
             logger.error(f"Error imprimiendo: {e}")
             messagebox.showerror("Error", f"Error imprimiendo etiquetas: {e}")
     
-    def create_custom_template(self):
-        """Crear template personalizado."""
-        # TODO: Implementar diálogo para crear template personalizado
-        messagebox.showinfo("Información", "Funcionalidad de template personalizado en desarrollo")
+    # def create_custom_template(self):
+    #     """Crear template personalizado."""
+    #    # TODO: Implementar diálogo para crear template personalizado
+    #    messagebox.showinfo("Información", "Funcionalidad de template personalizado en desarrollo")
     
     def validate_selection(self) -> bool:
         """Validar selección antes de generar."""
