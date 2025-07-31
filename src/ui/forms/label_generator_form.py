@@ -59,11 +59,11 @@ class LabelGeneratorForm(tk.Toplevel):
 
         # Configuración de ventana
         self.title("Generador de Etiquetas")
-        self.geometry("1200x600")
-        self.resizable(True, True)
+        self.geometry("1000x600")
+        self.resizable(True, False)
         
         # Centrar ventana
-        WindowManager.center_window(self, 1200, 800)
+        WindowManager.center_window(self, 1000, 600)
         
         # Variables
         self.parent = parent
@@ -166,19 +166,28 @@ class LabelGeneratorForm(tk.Toplevel):
         self.show_all_button.pack(side=tk.LEFT)
     
     def setup_product_panel(self, parent):
-        """Configurar panel de selección de productos."""
-        product_frame = ttk.LabelFrame(parent, text="Productos Disponibles")
+        """Configurar panel de selección de productos con altura limitada a 15 líneas."""
+        product_frame = ttk.LabelFrame(parent, text="Productos Disponibles: Haz click a todos los productos que quieras imprimir etiquetas")
         parent.add(product_frame, weight=1)
         
-        # Frame para el treeview y scrollbars
+        # Frame contenedor del Treeview con altura fija
         tree_frame = ttk.Frame(product_frame)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # No expandir verticalmente: sólo llenará hasta la altura que configuremos
+        tree_frame.pack(fill=tk.X, expand=False, padx=10, pady=10)
+        tree_frame.pack_propagate(False)
+        # Ajusta este valor si tu tema tiene otra altura de fila; aprox. 15 filas × 20px + encabezado ≃ 350px
+        tree_frame.configure(height=350)
         
-        # Treeview para productos
+        # Treeview para productos con 15 filas visibles
         columns = ('id', 'nombre', 'categoria', 'precio', 'stock')
-        self.product_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=15)
+        self.product_tree = ttk.Treeview(
+            tree_frame,
+            columns=columns,
+            show='headings',
+            height=15
+        )  # height=15 garantiza 15 filas antes del scrollbar :contentReference[oaicite:1]{index=1}.
         
-        # Configurar columnas
+        # Configurar encabezados
         self.product_tree.heading('id', text='ID')
         self.product_tree.heading('nombre', text='Producto')
         self.product_tree.heading('categoria', text='Categoría')
@@ -197,22 +206,22 @@ class LabelGeneratorForm(tk.Toplevel):
         h_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.product_tree.xview)
         self.product_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-        # Empaquetar
+        # Empaquetar Treeview y scrollbars dentro de tree_frame
         self.product_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         
-        # Frame para información de selección
+        # Información y botones de selección debajo del Treeview
         selection_frame = ttk.Frame(product_frame)
         selection_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
         
         self.selection_label = ttk.Label(selection_frame, text="Productos seleccionados: 0")
         self.selection_label.pack(side=tk.LEFT)
         
-        ttk.Button(selection_frame, text="Seleccionar Todo", 
-                  command=self.select_all_products).pack(side=tk.RIGHT, padx=(5, 0))
-        ttk.Button(selection_frame, text="Limpiar Selección", 
-                  command=self.clear_selection).pack(side=tk.RIGHT)
+        ttk.Button(selection_frame, text="Seleccionar Todo", command=self.select_all_products)\
+            .pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(selection_frame, text="Limpiar Selección", command=self.clear_selection)\
+            .pack(side=tk.RIGHT)
     
     def setup_config_panel(self, parent):
         """Configurar panel de configuración y preview."""
@@ -238,19 +247,19 @@ class LabelGeneratorForm(tk.Toplevel):
     def setup_template_tab(self):
         """Configurar pestaña de template."""
         template_frame = ttk.Frame(self.config_notebook)
-        self.config_notebook.add(template_frame, text="Template")
+        self.config_notebook.add(template_frame, text="Modelos")
         
         # Selección de template
-        ttk.Label(template_frame, text="Template de Etiqueta:").pack(anchor=tk.W, padx=10, pady=(10, 5))
+        ttk.Label(template_frame, text="Modelos de Etiqueta (Template):").pack(anchor=tk.W, padx=10, pady=(10, 5))
         
         self.template_combo = ttk.Combobox(template_frame, textvariable=self.template_var, state="readonly", width=40)
         self.template_combo.pack(fill=tk.X, padx=10, pady=(0, 10))
         
         # Información del template
-        self.template_info_frame = ttk.LabelFrame(template_frame, text="Información del Template")
+        self.template_info_frame = ttk.LabelFrame(template_frame, text="Información del Modelo")
         self.template_info_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
         
-        self.template_info_label = ttk.Label(self.template_info_frame, text="Seleccione un template", justify=tk.LEFT, wraplength=300)
+        self.template_info_label = ttk.Label(self.template_info_frame, text="Seleccione un Modelo", justify=tk.LEFT, wraplength=300)
         self.template_info_label.pack(padx=10, pady=10)
         
         # Botones de template

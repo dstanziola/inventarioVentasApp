@@ -70,6 +70,8 @@ class SalesWindow:
         self.sale_items: List[Dict] = []
         self.selected_client = None
         
+        self.ignore_next_return = False
+
         # Variables de formulario
         self.barcode_var = tk.StringVar()
         self.quantity_var = tk.StringVar(value="1")
@@ -201,15 +203,16 @@ class SalesWindow:
         instructions.grid(row=0, column=0, columnspan=5, sticky=tk.W, pady=(0, 10))
         
         # Primera fila - Campo código de barras / ID producto
-        ttk.Label(entry_frame, text="Código/ID:").grid(row=1, column=0, padx=(0, 5), sticky=tk.W)
+        ttk.Label(entry_frame, text="Código del Producto:").grid(row=1, column=0, padx=(0, 5), sticky=tk.W)
         
         # Widget BarcodeEntry especializado
         self.barcode_entry = BarcodeEntry(
             entry_frame, 
             textvariable=self.barcode_var,
-            on_scan_complete=self._on_barcode_scanned,
+            # on_scan_complete=self._preview_product_info,
+            on_scan_complete=self._on_scan_complete_focus_quantity,
+            clear_after_scan=False,
             validation_enabled=True,
-            clear_after_scan=True,
             font=('Consolas', 12),
             width=12
         )
@@ -423,7 +426,7 @@ class SalesWindow:
         self.barcode_entry.focus()
 
         # Preview de información del producto al escribir en el campo de código
-        self.barcode_var.trace_add("write", self._preview_product_info)
+        ## self.barcode_var.trace_add("write", self._preview_product_info)
 
         # Filtrado de clientes en tiempo real
         self.client_search_var.trace_add("write", lambda *_: self._update_client_listbox())
@@ -560,11 +563,61 @@ class SalesWindow:
                 text=f"✓ {producto.nombre} - Stock: {producto.stock}",
                 foreground="green"
             )
+            # ——— Preparar para que el usuario ingrese la cantidad ———
+            self.quantity_var.set("1")         # valor por defecto
+            self.quantity_entry.focus()        # mover foco al campo cantidad
+
         else:
             self.product_status_label.config(
                 text="✗ Producto no encontrado",
                 foreground="red"
             )
+
+    def _on_scan_complete_focus_quantity(self, code: str, is_valid: bool = True):
+        """
+        Callback tras terminar el escaneo:
+        - Si el código es válido, busca el producto y muestra su estado.
+        - Setea cantidad por defecto en 1.
+        - Activa el flag para ignorar el Enter extra.
+        - Mueve el foco al campo cantidad.
+        """
+        try:
+            # 1) Validar formato
+            if not is_valid:
+                self.product_status_label.config(
+                    text=f"✗ Código inválido: {code}",
+                    foreground="red"
+                )
+                return
+
+            # 2) Indicar que estamos buscando
+            self.product_status_label.config(
+                text=f"Buscando producto: {code}…",
+                foreground="blue"
+            )
+
+            # 3) Buscar objeto Producto
+            producto = self._search_product_by_code(code)
+            if not producto:
+                self.product_status_label.config(
+                    text=f"✗ Producto no encontrado: {code}",
+                    foreground="red"
+                )
+                messagebox.showinfo("No Encontrado", f"No hay producto con código {code}")
+                return
+
+            # 4) Mostrar éxito y preparar cantidad
+            self.product_status_label.config(
+                text=f"✓ {producto.nombre} – Stock: {producto.stock}",
+                foreground="green"
+            )
+            self.quantity_var.set("1")
+            self.ignore_next_return = True
+            self.quantity_entry.focus()
+
+        except Exception as e:
+            self.logger.error(f"Error en on_scan_complete_focus_quantity: {e}")
+            messagebox.showerror("Error de Escaneo", f"Ocurrió un error procesando el escaneo:\n{e}")
 
     def _search_product_by_code(self, code: str):
         """
@@ -642,6 +695,11 @@ class SalesWindow:
             # Agregar producto a la venta
             self._add_product_item(producto, quantity, code)
             
+            # Limpiar cantidad (el código ya se limpia automáticamente)
+            self.quantity_var.set("")
+            # Para el siguiente escaneo, que el usuario ingrese primero la cantidad
+            self.quantity_entry.focus()
+
             # Actualizar estado
             self.product_status_label.config(
                 text=f"✓ Agregado: {producto.nombre} (x{quantity})",
@@ -858,14 +916,8 @@ class SalesWindow:
             
             # Limpiar campos
             self._clear_barcode()
-            self.quantity_var.set("1")
+            self.quantity_var.set("")
             
-            # Mostrar confirmación
-            # messagebox.showinfo(
-            #     "Producto Agregado",
-            #     f"Producto agregado: {product.nombre}\n"
-            #     f"Cantidad: {quantity}"
-            # )
             
         except Exception as e:
             self.logger.error(f"Error agregando producto: {e}")
