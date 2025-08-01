@@ -291,6 +291,7 @@ class ProductService:
             query = """
                 SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.costo,
                     p.stock, p.stock_minimo, p.id_categoria, c.nombre as categoria_nombre,
+                    c.tipo AS categoria_tipo,
                     p.tasa_impuesto, p.activo, p.fecha_creacion
                 FROM productos p
                 LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
@@ -318,6 +319,7 @@ class ProductService:
                     stock=row['stock'],
                     # stock_minimo=row['stock_minimo'],
                     id_categoria=row['id_categoria'],
+                    categoria_tipo=row.get('categoria_tipo'),
                     # categoria_nombre=row['categoria_nombre'],
                     # tasa_impuesto=row['tasa_impuesto'],
                     activo=bool(row['activo']),
@@ -1125,7 +1127,7 @@ class ProductService:
             if search_term.isdigit():
                 query = """
                     SELECT p.id_producto as id, p.nombre, p.stock, p.precio, 
-                           p.id_categoria, c.nombre as categoria_nombre
+                           p.id_categoria, c.nombre as categoria_nombre, c.tipo as categoria_tipo
                     FROM productos p
                     LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
                     WHERE (p.id_producto = ? OR LOWER(p.nombre) LIKE LOWER(?)) 
@@ -1141,7 +1143,7 @@ class ProductService:
                 # Búsqueda solo por nombre
                 query = """
                     SELECT p.id_producto as id, p.nombre, p.stock, p.precio,
-                           p.id_categoria, c.nombre as categoria_nombre
+                           p.id_categoria, c.nombre as categoria_nombre, c.tipo as categoria_tipo
                     FROM productos p
                     LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
                     WHERE LOWER(p.nombre) LIKE LOWER(?) AND p.activo = 1
@@ -1163,6 +1165,7 @@ class ProductService:
                     id_producto=row['id'],
                     nombre=row['nombre'],
                     id_categoria=row['id_categoria'],
+                    categoria_tipo=row.get('categoria_tipo'),
                     stock=row['stock'] if row['stock'] is not None else 0,
                     precio=Decimal(str(row['precio'])) if row['precio'] is not None else Decimal('0'),
                     costo=Decimal('0'),  # Si no se usa en esta vista, puede ir como cero

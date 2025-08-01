@@ -59,7 +59,7 @@ class LabelGeneratorForm(tk.Toplevel):
 
         # Configuración de ventana
         self.title("Generador de Etiquetas")
-        self.geometry("1000x600")
+        self.geometry("1000x500")
         self.resizable(True, False)
         
         # Centrar ventana
@@ -391,7 +391,7 @@ class LabelGeneratorForm(tk.Toplevel):
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(action_frame, variable=self.progress_var, 
                                            mode='determinate')
-        self.progress_bar.pack(fill=tk.X, pady=(10, 0))
+        self.progress_bar.pack(fill=tk.X, pady=(8, 0), padx=(10, 30))
         
         # Label de estado
         self.status_label = ttk.Label(action_frame, text="Listo")

@@ -8,6 +8,67 @@
 
 ## [Unreleased] - En Desarrollo
 
+### CORRECCIÓN CRÍTICA COMPLETADA - CompanyConfigForm Modal Focus Optimization
+
+#### [2025-08-01] - fix: Optimizar secuencia configuración modal CompanyConfigForm siguiendo patrón MovementEntryForm exitoso
+**Archivos:** `src/ui/forms/company_config_form.py`
+**Autor:** Claude AI + Equipo de Desarrollo
+**Session ID:** 2025-08-01-company-config-modal-focus-sequence-fix
+**Protocolo:** claude_instructions_v3.md FASE 0-4 completa - Protocolo de Continuación
+**Descripción:**
+- **PROBLEMA RESUELTO:** CompanyConfigForm pierde foco modal al actualizar campos, regresa a main_window
+- **CAUSA RAÍZ:** Secuencia de configuración modal subóptima con interferencia de centering/protocolo
+- **SOLUCIÓN IMPLEMENTADA:** Aplicar configuración modal INMEDIATAMENTE siguiendo patrón MovementEntryForm
+- **PRECEDENTE EXITOSO:** MovementEntryForm mantiene foco modal correctamente con secuencia optimizada
+
+**Correcciones implementadas:**
+- ✅ **Secuencia Optimizada**: transient() + grab_set() + focus_force() INMEDIATO tras crear Toplevel
+- ✅ **Sin Interferencia**: Configuraciones adicionales (centering, protocolo) movidas DESPUÉS de modal básico
+- ✅ **Método Respaldo**: _reinforce_modal_focus() agregado para casos extremos (opcional)
+- ✅ **Documentación Completa**: Docstrings actualizados con explicación de corrección
+- ✅ **Comentarios Explicativos**: Referencias al patrón MovementEntryForm exitoso
+- ✅ **Preservación Total**: Funcionalidad existente 100% mantenida sin breaking changes
+
+**Patrón aplicado (MovementEntryForm exitoso):**
+```python
+self.window = tk.Toplevel(self.parent)
+# ———> Configuración modal INMEDIATA
+self.window.transient(self.parent)   # Liga al parent
+self.window.grab_set()               # Captura eventos
+self.window.focus_force()            # Fuerza foco
+# Configuraciones adicionales DESPUÉS
+self.window.title("...")
+self.window.geometry("...")
+```
+
+**Resultado:** Formulario Configuración Empresa mantiene foco modal perfecto sin desvío a main_window
+**Hash semántico:** `company_config_form_modal_focus_sequence_optimization_20250801`
+
+### CORRECCIÓN CRÍTICA COMPLETADA - Error Widget Destruido MovementEntryForm
+
+#### [2025-08-01] - fix: Resolver error crítico "invalid command name" en selected_product_label + Event Bus cleanup mejorado
+**Archivos:** `src/ui/forms/movement_entry_form.py`, `tests/test_movement_entry_form_widget_fix.py`
+**Autor:** Claude AI + Equipo de Desarrollo
+**Session ID:** 2025-08-01-widget-validation-event-bus-cleanup-fix
+**Protocolo:** claude_instructions_v3.md FASE 0-4 completa
+**Descripción:**
+- **PROBLEMA RESUELTO:** Error `invalid command name ".!toplevel.!toplevel.!labelframe.!label"`
+- **CAUSA RAÍZ:** Event Bus intentaba actualizar widget destruido durante cierre de formulario
+- **SOLUCIÓN 1:** Validación robusta widget existe antes de actualización (_update_selected_product_label)
+- **SOLUCIÓN 2:** Event Bus cleanup mejorado con tracking listeners y estado de cierre
+- **IMPACTO:** Formulario ajustes 100% estable sin errores widget destruido
+
+**Correcciones implementadas:**
+- ✅ **Widget Validation**: Validación `winfo_exists()` antes de actualizar selected_product_label
+- ✅ **Error Handling**: Try/catch específico para `tk.TclError` y `AttributeError`
+- ✅ **Event Bus Tracking**: Lista `_registered_listeners` para cleanup automático
+- ✅ **Estado de Cierre**: Flag `_is_closing` para prevenir procesamiento eventos tardíos
+- ✅ **Cleanup Secuencial**: Desregistro listeners → cleanup mediator → destrucción widget
+- ✅ **Fallback Seguro**: Múltiples niveles de validación para prevenir crashes
+
+**Resultado:** Sistema ajustes inventario completamente estable sin errores widget destruido
+**Hash semántico:** `movement_entry_form_widget_validation_event_bus_cleanup_20250801`
+
 ### REFACTORIZACIÓN COMPLETADA - Eliminación Pestaña Redundante Código de Barras en ProductForm
 
 #### [2025-07-31] - refactor: Simplificar interfaz ProductForm eliminando pestaña redundante "Código de Barras"

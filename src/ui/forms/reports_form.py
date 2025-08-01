@@ -111,7 +111,7 @@ class ReportsForm:
             
         self.window = tk.Toplevel(self.parent)
         self.window.title("Reportes del Sistema")
-        self.window.geometry("800x600")
+        self.window.geometry("750x650")
         self.window.resizable(True, True)
         
         # Centrar ventana
@@ -136,7 +136,7 @@ class ReportsForm:
         
         # Título
         title_frame = ttk.Frame(main_frame)
-        title_frame.pack(fill="x", pady=(0, 20))
+        title_frame.pack(fill="x", pady=(0, 10))
         
         title_label = ttk.Label(
             title_frame, 

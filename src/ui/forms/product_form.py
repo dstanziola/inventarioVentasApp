@@ -83,7 +83,7 @@ class ProductWindow:
         self.root = tk.Toplevel(parent)
         self.root.title("Gestión de Productos")
         window_width = 900 if self.barcode_support else 750
-        self.root.geometry(f"{window_width}x600")
+        self.root.geometry(f"{window_width}x500")
         self.root.transient(parent)
         self.root.grab_set()
         
@@ -245,20 +245,20 @@ class ProductWindow:
     def _create_button_panel(self, parent):
         """Crea el panel de botones en 2 columnas."""
         button_frame = ttk.Frame(parent)
-        button_frame.grid(row=1, column=1, sticky=(tk.N, tk.W), padx=(10, 10), pady=(50, 0))
+        button_frame.grid(row=1, column=1, sticky=(tk.N, tk.W), padx=(10, 10), pady=(4, 0))
 
         # Botones principales en 2 columnas (3 filas)
         self.new_button = ttk.Button(button_frame, text="Nuevo", command=self._new_product)
-        self.new_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        self.new_button.grid(row=0, column=0, padx=5, pady=3, sticky="ew")
 
         self.save_button = ttk.Button(button_frame, text="Guardar", command=self._save_product, state='disabled')
-        self.save_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        self.save_button.grid(row=0, column=1, padx=5, pady=3, sticky="ew")
 
         self.edit_button = ttk.Button(button_frame, text="Editar", command=self._edit_product, state='disabled')
-        self.edit_button.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        self.edit_button.grid(row=1, column=0, padx=5, pady=3, sticky="ew")
 
         self.delete_button = ttk.Button(button_frame, text="Eliminar", command=self._delete_product, state='disabled')
-        self.delete_button.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.delete_button.grid(row=1, column=1, padx=5, pady=3, sticky="ew")
 
         # === NUEVO: BOTÓN REACTIVAR ===
         self.reactivate_button = ttk.Button(
@@ -267,26 +267,26 @@ class ProductWindow:
             command=self._reactivate_product, 
             state='disabled'
         )
-        self.reactivate_button.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        self.reactivate_button.grid(row=2, column=0, padx=5, pady=3, sticky="ew")
 
         self.cancel_button = ttk.Button(button_frame, text="Cancelar", command=self._cancel_edit, state='disabled')
-        self.cancel_button.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+        self.cancel_button.grid(row=2, column=1, padx=5, pady=3, sticky="ew")
 
         close_button = ttk.Button(button_frame, text="Cerrar", command=self._close_window)
-        close_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        close_button.grid(row=3, column=0, columnspan=2, padx=5, pady=3, sticky="ew")
 
         # Botón de Importar Excel
-        self.import_button = ttk.Button(button_frame, text="Importar Excel", command=self._import_from_excel)
-        self.import_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.import_button = ttk.Button(button_frame, text="Importar Productos x Excel", command=self._import_from_excel)
+        self.import_button.grid(row=5, column=0, columnspan=2, padx=5, pady=3, sticky="ew")
 
         # Botón para descargar archivo de ejemplo
-        self.download_sample_button = ttk.Button(button_frame, text="Descargar Ejemplo", command=self._download_sample_excel)
-        self.download_sample_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
+        self.download_sample_button = ttk.Button(button_frame, text="Descargar Ejemplo Excel", command=self._download_sample_excel)
+        self.download_sample_button.grid(row=6, column=0, columnspan=2, padx=5, pady=3, sticky="ew")
 
         # Botón de escanear (solo si hay soporte)
         if self.barcode_support:
             scan_button = ttk.Button(button_frame, text="Buscar por Código", command=self._scan_barcode)
-            scan_button.grid(row=4, column=0, columnspan=2, padx=5, pady=(5, 5), sticky="ew")
+            scan_button.grid(row=4, column=0, columnspan=2, padx=5, pady=(4, 5), sticky="ew")
 
         # Expansión uniforme por columna
         button_frame.columnconfigure(0, weight=1)
@@ -360,7 +360,7 @@ class ProductWindow:
         
     def _create_form_panel(self, parent):
         """Crea el panel del formulario SIMPLIFICADO sin pestaña de códigos."""
-        form_frame = ttk.LabelFrame(parent, text="Datos del Producto: Seleccione Nuevo para crear o haga click en un producto", padding=10)
+        form_frame = ttk.LabelFrame(parent, text="Datos del Producto: Seleccione Nuevo para crear o haga click en un producto para editar", padding=10)
         form_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0), pady=(15, 0))
         
         form_frame.columnconfigure(1, weight=1)

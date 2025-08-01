@@ -56,7 +56,7 @@ class Producto:
         self.precio = Decimal(str(precio))
         self.tasa_impuesto = Decimal(str(tasa_impuesto))
         self.activo = activo
-        self.categoria_tipo = categoria_tipo  # ← AÑADIR ESTA LÍNEA
+        self.categoria_tipo = categoria_tipo
     
     def calcular_impuesto(self, cantidad: int) -> Decimal:
         """

@@ -106,7 +106,7 @@ class ProductSearchWidget(ttk.Frame):
         # Lista de resultados
         self.results_listbox = tk.Listbox(
             self,
-            height=1
+            height=3
         )
         self.results_listbox.grid(
             row=1, column=0, columnspan=4, 

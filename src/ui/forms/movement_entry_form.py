@@ -63,6 +63,10 @@ class MovementEntryForm:
         self._event_bus = event_bus or get_event_bus_tkinter()
         self._mediator: Optional[ProductMovementMediatorTkinter] = None
         
+        # ✅ CORRECCIÓN 2: Control de estado para Event Bus cleanup
+        self._is_closing = False
+        self._registered_listeners = []
+        
         # Servicios lazy loading
         self._movement_service = None
         self._product_service = None
@@ -108,30 +112,58 @@ class MovementEntryForm:
             self.logger.error(f"Error configurando Event Bus: {e}")
 
     def _register_event_listeners(self):
-        """Registrar listeners para eventos del Event Bus"""
+        """Registrar listeners para eventos del Event Bus con tracking"""
         try:
-            # Escuchar eventos de selección de productos
-            self._event_bus.register(
-                EventTypes.MOVEMENT_ENTRY_ACTION,
-                self._handle_movement_entry_action_event
-            )
+            # ✅ MEJORA: Almacenar referencias a los listeners para cleanup
+            self._registered_listeners = []
             
-            # Escuchar eventos de validación
-            self._event_bus.register(
-                EventTypes.VALIDATION_ERROR,
-                self._handle_validation_error_event
-            )
+            # Listener para eventos de selección de productos
+            movement_action_listener = self._handle_movement_entry_action_event
+            self._event_bus.register(EventTypes.MOVEMENT_ENTRY_ACTION, movement_action_listener)
+            self._registered_listeners.append((EventTypes.MOVEMENT_ENTRY_ACTION, movement_action_listener))
             
-            # Escuchar advertencias de reglas de negocio
-            self._event_bus.register(
-                EventTypes.BUSINESS_RULE_VIOLATION,
-                self._handle_business_rule_violation_event
-            )
+            # Listener para eventos de validación
+            validation_error_listener = self._handle_validation_error_event
+            self._event_bus.register(EventTypes.VALIDATION_ERROR, validation_error_listener)
+            self._registered_listeners.append((EventTypes.VALIDATION_ERROR, validation_error_listener))
             
-            self.logger.debug("Event listeners registrados para MovementEntryForm")
+            # Listener para advertencias de reglas de negocio
+            business_rule_listener = self._handle_business_rule_violation_event
+            self._event_bus.register(EventTypes.BUSINESS_RULE_VIOLATION, business_rule_listener)
+            self._registered_listeners.append((EventTypes.BUSINESS_RULE_VIOLATION, business_rule_listener))
+            
+            self.logger.debug(f"Event listeners registrados: {len(self._registered_listeners)}")
             
         except Exception as e:
             self.logger.error(f"Error registrando event listeners: {e}")
+
+    def _unregister_event_listeners(self):
+        """Desregistrar listeners del Event Bus de forma robusta"""
+        try:
+            if not hasattr(self, '_registered_listeners'):
+                self.logger.debug("No hay listeners registrados para limpiar")
+                return
+                
+            unregistered_count = 0
+            
+            for event_type, listener_func in self._registered_listeners:
+                try:
+                    success = self._event_bus.unregister(event_type, listener_func)
+                    if success:
+                        unregistered_count += 1
+                        self.logger.debug(f"Listener desregistrado: {event_type}")
+                    else:
+                        self.logger.warning(f"No se pudo desregistrar listener: {event_type}")
+                except Exception as e:
+                    self.logger.error(f"Error desregistrando listener {event_type}: {e}")
+            
+            # Limpiar lista de listeners
+            self._registered_listeners.clear()
+            
+            self.logger.info(f"Event Bus cleanup completado: {unregistered_count} listeners desregistrados")
+            
+        except Exception as e:
+            self.logger.error(f"Error en cleanup Event Bus: {e}")
 
     @property
     def movement_service(self):
@@ -202,7 +234,7 @@ class MovementEntryForm:
         self.window.grab_set()               # captura todos los eventos
         self.window.focus_force()            # fuerza el foco aquí
         self.window.title(self.title)
-        self.window.geometry("1000x700")
+        self.window.geometry("800x700")
         self.window.resizable(True, True)
         
         # Configurar grid
@@ -255,7 +287,7 @@ class MovementEntryForm:
         )
         self.search_widget.grid(row=0, column=0, sticky="ew", pady=5)
         
-        # ✅ NUEVO: Label de selección propio en MovementEntryForm
+        # NUEVO: Label de selección propio en MovementEntryForm
         self.selected_product_label = ttk.Label(
             self.search_frame,
             text="Ningún producto seleccionado",
@@ -404,12 +436,22 @@ class MovementEntryForm:
 
     def _handle_product_selected_via_event_bus(self, event_data: EventData):
         """
-        Manejar selección de producto via Event Bus
+        Manejar selección de producto via Event Bus con validación de estado
         
         Args:
             event_data: Datos del evento de selección
         """
         try:
+            # ✅ VALIDACIÓN CRÍTICA: Verificar que formulario no se está cerrando
+            if hasattr(self, '_is_closing') and self._is_closing:
+                self.logger.debug("Formulario cerrando - ignorando evento de selección")
+                return
+                
+            # ✅ VALIDACIÓN DE VENTANA: Verificar que ventana aún existe
+            if not hasattr(self, 'window') or not self.window.winfo_exists():
+                self.logger.debug("Ventana no existe - ignorando evento de selección")
+                return
+            
             product_data = event_data.data.get("product_data")
             if not product_data:
                 self.logger.warning("Evento product_selected sin datos de producto")
@@ -420,7 +462,7 @@ class MovementEntryForm:
             # Actualizar estado interno
             self._current_selected_product = product_data
             
-            # ✅ NUEVO: Actualizar label de selección visual
+            # ✅ ACTUALIZACIÓN SEGURA: Con validación de widget
             self._update_selected_product_label(product_data)
             
             # Validación automática del bloqueo de selección
@@ -431,13 +473,21 @@ class MovementEntryForm:
             # Establecer bloqueo
             self._product_locked = True
             
-            # Enfocar cantidad automáticamente
-            self.quantity_entry.focus()
+            # ✅ FOCUS SEGURO: Solo si ventana existe
+            try:
+                if self.window.winfo_exists():
+                    self.quantity_entry.focus()
+            except:
+                self.logger.debug("No se pudo establecer foco en quantity_entry")
             
             # Pre-llenar cantidad con 1 si está vacío
             if not self.quantity_var.get().strip():
                 self.quantity_var.set("1")
-                self.quantity_entry.select_range(0, tk.END)
+                try:
+                    if self.window.winfo_exists():
+                        self.quantity_entry.select_range(0, tk.END)
+                except:
+                    pass
             
             self.logger.info(f"Selección via Event Bus procesada: {product_data['nombre']}")
             
@@ -448,10 +498,26 @@ class MovementEntryForm:
         """
         Actualizar label de producto seleccionado con información completa
         
+        CORRECCIÓN CRÍTICA: Validar widget existe antes de actualizar
+        
         Args:
             product_data: Datos del producto seleccionado
         """
         try:
+            # ✅ CORRECCIÓN CRÍTICA: Validar que el widget existe y es válido
+            if not hasattr(self, 'selected_product_label'):
+                self.logger.debug("selected_product_label no existe - formulario cerrado")
+                return
+                
+            if not self.selected_product_label.winfo_exists():
+                self.logger.debug("selected_product_label ya fue destruido - ignorando actualización")
+                return
+                
+            # ✅ VALIDACIÓN ADICIONAL: Verificar que la ventana padre existe
+            if not hasattr(self, 'window') or not self.window.winfo_exists():
+                self.logger.debug("Ventana principal destruida - ignorando actualización label")
+                return
+            
             if not product_data:
                 # Sin selección
                 self.selected_product_label.config(
@@ -460,7 +526,7 @@ class MovementEntryForm:
                 )
                 return
             
-            # Extraer información del producto
+            # Extraer información del producto (código original preservado)
             product_name = product_data.get('nombre', 'Producto sin nombre')
             product_id = product_data.get('id', 'N/A')
             product_stock = product_data.get('stock', 'N/A')
@@ -481,21 +547,35 @@ class MovementEntryForm:
             else:
                 label_color = "blue"  # Categoría desconocida
             
-            # Actualizar label
+            # ✅ ACTUALIZACIÓN SEGURA: Solo si widget aún existe
             self.selected_product_label.config(
                 text=label_text,
                 foreground=label_color
             )
             
-            self.logger.debug(f"Label actualizado: {product_name}")
+            self.logger.debug(f"Label actualizado exitosamente: {product_name}")
             
+        except tk.TclError as e:
+            # Error específico de Tkinter (widget destruido)
+            self.logger.debug(f"Widget destruido durante actualización - ignorando: {e}")
+            return
+        except AttributeError as e:
+            # Widget o atributo no existe
+            self.logger.debug(f"Widget no existe durante actualización - ignorando: {e}")
+            return
         except Exception as e:
-            self.logger.error(f"Error actualizando label de selección: {e}")
-            # Fallback seguro
-            self.selected_product_label.config(
-                text="Error en selección de producto",
-                foreground="red"
-            )
+            # Otros errores - log completo pero no fallar
+            self.logger.error(f"Error inesperado actualizando label: {e}")
+            # ✅ FALLBACK SEGURO: Intentar mostrar error solo si widget existe
+            try:
+                if hasattr(self, 'selected_product_label') and self.selected_product_label.winfo_exists():
+                    self.selected_product_label.config(
+                        text="Error en selección de producto",
+                        foreground="red"
+                    )
+            except:
+                # Si incluso el fallback falla, simplemente continuar
+                pass
 
     def _handle_search_request_via_event_bus(self, event_data: EventData):
         """
@@ -720,28 +800,50 @@ class MovementEntryForm:
             self.logger.error(f"Error publicando form cleared event: {e}")
 
     def _close_form(self):
-        """Cerrar formulario con cleanup del Event Bus"""
+        """Cerrar formulario con cleanup completo del Event Bus y widgets"""
         try:
-            # Cleanup del mediator
-            if self._mediator:
-                self._mediator.cleanup()
+            self.logger.info("Iniciando proceso de cierre de formulario")
             
-            # Desregistrar listeners
+            # ✅ STEP 1: Marcar como cerrando INMEDIATAMENTE
+            self._is_closing = True
+            
+            # ✅ STEP 2: Desregistrar listeners ANTES de destruir widgets
             self._unregister_event_listeners()
             
-            # Liberar el grab para devolver el foco a la app principal
-            try:
-                self.window.grab_release()
-            except Exception:
-                pass
-            # Cerrar ventana
-            self.window.destroy()
+            # ✅ STEP 3: Cleanup del mediator
+            if hasattr(self, '_mediator') and self._mediator:
+                try:
+                    self._mediator.cleanup()
+                    self.logger.debug("Mediator cleanup completado")
+                except Exception as e:
+                    self.logger.error(f"Error en mediator cleanup: {e}")
             
-            self.logger.info("MovementEntryForm cerrado con cleanup de Event Bus")
+            # ✅ STEP 4: Liberar grab modal ANTES de destruir
+            try:
+                if hasattr(self, 'window') and self.window.winfo_exists():
+                    self.window.grab_release()
+                    self.logger.debug("Modal grab liberado")
+            except Exception as e:
+                self.logger.debug(f"Error liberando grab (normal si ventana ya cerrada): {e}")
+            
+            # ✅ STEP 5: Destruir ventana
+            try:
+                if hasattr(self, 'window'):
+                    self.window.destroy()
+                    self.logger.debug("Ventana destruida exitosamente")
+            except Exception as e:
+                self.logger.error(f"Error destruyendo ventana: {e}")
+            
+            self.logger.info("MovementEntryForm cerrado exitosamente con cleanup completo")
             
         except Exception as e:
-            self.logger.error(f"Error cerrando formulario: {e}")
-            self.window.destroy()
+            self.logger.error(f"Error crítico cerrando formulario: {e}")
+            # Fallback: Intentar destruir ventana directamente
+            try:
+                if hasattr(self, 'window'):
+                    self.window.destroy()
+            except:
+                pass
 
     def _unregister_event_listeners(self):
         """Desregistrar listeners del Event Bus"""

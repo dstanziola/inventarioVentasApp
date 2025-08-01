@@ -64,12 +64,31 @@ class CompanyConfigForm:
     def setup_ui(self):
         """
         Configurar la interfaz de usuario.
+        CORRECCIÓN CRÍTICA APLICADA: Patrón modal optimizado siguiendo MovementEntryForm exitoso
         """
         # Crear ventana
         self.window = tk.Toplevel(self.parent) if self.parent else tk.Tk()
+        
+        # CORRECCIÓN CRÍTICA OPTIMIZADA: Aplicar configuración modal INMEDIATAMENTE
+        # Siguiendo patrón exitoso de MovementEntryForm (sin interferencia)
+        if self.parent:
+            # ———> Aplicar comportamiento modal ANTES de cualquier otra configuración
+            self.window.transient(self.parent)   # Liga la ventana al parent
+            self.window.grab_set()               # Captura todos los eventos  
+            self.window.focus_force()            # Fuerza el foco inmediatamente
+        
+        # Configuración básica DESPUÉS de modal (como MovementEntryForm)
         self.window.title("Configuración de Empresa")
-        self.window.geometry("600x700")
+        self.window.geometry("600x650")
         self.window.resizable(True, False)
+        
+        # Configuraciones adicionales DESPUÉS de modal básico
+        if self.parent:
+            # Centrar ventana (movido DESPUÉS de configuración modal base)
+            self._center_window_on_parent()
+            
+            # Configurar protocolo de cierre
+            self.window.protocol("WM_DELETE_WINDOW", self._close_window)
         
         # Frame principal con scroll
         main_frame = ttk.Frame(self.window, padding="10")
@@ -133,10 +152,10 @@ class CompanyConfigForm:
         row += 2
         
         # Separador
-        ttk.Separator(main_frame, orient='horizontal').grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
-        )
-        row += 1
+        # ttk.Separator(main_frame, orient='horizontal').grid(
+        #     row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=10
+        # )
+        # row += 1
         
         # Botones de acción
         self._create_action_buttons(main_frame, row)
@@ -326,7 +345,7 @@ class CompanyConfigForm:
         self.validation_frame.columnconfigure(0, weight=1)
         
         # Text widget para mensajes de validación
-        self.validation_text = tk.Text(self.validation_frame, height=4, width=60, 
+        self.validation_text = tk.Text(self.validation_frame, height=2, width=60, 
                                       wrap=tk.WORD, state=tk.DISABLED,
                                       font=('TkDefaultFont', 8))
         self.validation_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
@@ -361,11 +380,11 @@ class CompanyConfigForm:
         ttk.Separator(button_frame, orient='vertical').pack(side=tk.LEFT, fill=tk.Y, padx=10)
         
         # Botones de importar/exportar
-        ttk.Button(button_frame, text="Exportar...", 
-                  command=self._export_config).pack(side=tk.LEFT, padx=5)
+        # ttk.Button(button_frame, text="Exportar...", 
+        #           command=self._export_config).pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(button_frame, text="Importar...", 
-                  command=self._import_config).pack(side=tk.LEFT, padx=5)
+        # ttk.Button(button_frame, text="Importar...", 
+        #          command=self._import_config).pack(side=tk.LEFT, padx=5)
         
         # Botón cerrar
         ttk.Button(button_frame, text="Cerrar", 
@@ -411,14 +430,19 @@ class CompanyConfigForm:
             self._validate_config()
             
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo cargar la configuración:\n{str(e)}")
+            messagebox.showerror("Error", f"No se pudo cargar la configuración:\n{str(e)}", parent=self.window)
     
     def _on_field_change(self, *args):
         """
         Callback para cambios en campos del formulario.
+        CORRECCIÓN APLICADA: Opcional refuerzo de foco modal tras actualizaciones
         """
         # Validar después de un pequeño delay para evitar validación constante
         self.window.after(500, self._validate_config)
+        
+        # OPCIONAL: Reforzar foco modal tras actualización si se detecta pérdida
+        # Descomentear la siguiente línea solo si persiste problema de foco:
+        # self.window.after(100, self._reinforce_modal_focus)
     
     def _update_currency_symbol(self, event=None):
         """
@@ -544,12 +568,12 @@ class CompanyConfigForm:
             errores = temp_config.validar_datos()
             if errores:
                 messagebox.showerror("Error de Validación", 
-                                   f"No se puede guardar. Errores:\n\n" + "\n".join(errores))
+                                   f"No se puede guardar. Errores:\n\n" + "\n".join(errores), parent=self.window)
                 return
             
             # Confirmar guardado
             if not messagebox.askyesno("Confirmar Guardado", 
-                                     "¿Está seguro de guardar los cambios en la configuración?"):
+                                     "¿Está seguro de guardar los cambios en la configuración?", parent=self.window):
                 return
             
             # Guardar configuración
@@ -566,15 +590,15 @@ class CompanyConfigForm:
             
             self.current_config = config_actualizada
             
-            messagebox.showinfo("Éxito", "Configuración guardada exitosamente")
+            messagebox.showinfo("Éxito", "Configuración guardada exitosamente", parent=self.window)
             
             # Revalidar
             self._validate_config()
             
         except ValueError as e:
-            messagebox.showerror("Error", f"Error en los datos:\n{str(e)}")
+            messagebox.showerror("Error", f"Error en los datos:\n{str(e)}", parent=self.window)
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo guardar la configuración:\n{str(e)}")
+            messagebox.showerror("Error", f"No se pudo guardar la configuración:\n{str(e)}", parent=self.window)
     
     def _reset_to_default(self):
         """
@@ -582,7 +606,7 @@ class CompanyConfigForm:
         """
         if not messagebox.askyesno("Confirmar Restablecimiento", 
                                  "¿Está seguro de restablecer la configuración a los valores por defecto?\n\n"
-                                 "Esta acción no se puede deshacer."):
+                                 "Esta acción no se puede deshacer.", parent=self.window):
             return
         
         try:
@@ -592,10 +616,10 @@ class CompanyConfigForm:
             # Recargar formulario
             self._load_current_config()
             
-            messagebox.showinfo("Éxito", "Configuración restablecida a valores por defecto")
+            messagebox.showinfo("Éxito", "Configuración restablecida a valores por defecto", parent=self.window)
             
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo restablecer la configuración:\n{str(e)}")
+            messagebox.showerror("Error", f"No se pudo restablecer la configuración:\n{str(e)}", parent=self.window)
     
     def _export_config(self):
         """
@@ -619,10 +643,10 @@ class CompanyConfigForm:
             with open(filename, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f, indent=2, ensure_ascii=False, default=str)
             
-            messagebox.showinfo("Éxito", f"Configuración exportada a:\n{filename}")
+            messagebox.showinfo("Éxito", f"Configuración exportada a:\n{filename}", parent=self.window)
             
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo exportar la configuración:\n{str(e)}")
+            messagebox.showerror("Error", f"No se pudo exportar la configuración:\n{str(e)}", parent=self.window)
     
     def _import_config(self):
         """
@@ -640,7 +664,7 @@ class CompanyConfigForm:
             # Confirmar importación
             if not messagebox.askyesno("Confirmar Importación", 
                                      "¿Está seguro de importar la configuración?\n\n"
-                                     "Esto sobrescribirá la configuración actual."):
+                                     "Esto sobrescribirá la configuración actual.", parent=self.window):
                 return
             
             # Leer archivo
@@ -654,14 +678,65 @@ class CompanyConfigForm:
             # Recargar formulario
             self._load_current_config()
             
-            messagebox.showinfo("Éxito", "Configuración importada exitosamente")
+            messagebox.showinfo("Éxito", "Configuración importada exitosamente", parent=self.window)
             
         except FileNotFoundError:
-            messagebox.showerror("Error", "Archivo no encontrado")
+            messagebox.showerror("Error", "Archivo no encontrado", parent=self.window)
         except json.JSONDecodeError:
-            messagebox.showerror("Error", "Archivo JSON inválido")
+            messagebox.showerror("Error", "Archivo JSON inválido", parent=self.window)
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo importar la configuración:\n{str(e)}")
+            messagebox.showerror("Error", f"No se pudo importar la configuración:\n{str(e)}", parent=self.window)
+    
+    def _center_window_on_parent(self):
+        """
+        Centrar la ventana respecto al parent.
+        Método agregado para comportamiento modal consistente.
+        """
+        if not self.parent:
+            return
+            
+        # Obtener dimensiones del parent
+        parent_x = self.parent.winfo_x()
+        parent_y = self.parent.winfo_y()
+        parent_width = self.parent.winfo_width()
+        parent_height = self.parent.winfo_height()
+        
+        # Obtener dimensiones de esta ventana
+        self.window.update_idletasks()  # Asegurar que geometry esté disponible
+        window_width = 600  # Ancho definido en geometry
+        window_height = 650  # Alto definido en geometry
+        
+        # Calcular posición centrada
+        x = parent_x + (parent_width - window_width) // 2
+        y = parent_y + (parent_height - window_height) // 2
+        
+        # Asegurar que la ventana esté dentro de la pantalla
+        if x < 0:
+            x = 0
+        if y < 0:
+            y = 0
+            
+        # Aplicar posición
+        self.window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+    
+    def _reinforce_modal_focus(self):
+        """
+        Reforzar comportamiento modal si se pierde el foco.
+        
+        Método adicional para casos donde actualizaciones de campos
+        podrían interferir con el comportamiento modal.
+        Usar con moderación, solo cuando sea necesario.
+        """
+        try:
+            if self.parent and hasattr(self, 'window') and self.window.winfo_exists():
+                # Reforzar configuración modal siguiendo patrón MovementEntryForm
+                self.window.transient(self.parent)
+                self.window.grab_set()
+                self.window.focus_force()
+                self.window.lift()  # Traer al frente
+        except Exception as e:
+            # Manejo silencioso para evitar interrumpir flujo de usuario
+            pass
     
     def _close_window(self):
         """
