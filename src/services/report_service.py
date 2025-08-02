@@ -338,6 +338,7 @@ class ReportService:
                 rows = cursor.fetchall()
                 
                 # Convertir a lista de diccionarios
+                
                 data = []
                 total_ventas = 0
                 subtotal_acumulado = Decimal('0')
@@ -357,10 +358,14 @@ class ReportService:
                     data.append(item)
                     
                     total_ventas += 1
-                    subtotal_acumulado += row['subtotal']
-                    impuestos_acumulados += row['impuestos']
-                    total_acumulado += row['total']
-                
+                    # subtotal_acumulado += row['subtotal']
+                    # impuestos_acumulados += row['impuestos']
+                    # total_acumulado += row['total']
+
+                    subtotal_acumulado   += Decimal(str(row['subtotal']))
+                    impuestos_acumulados += Decimal(str(row['impuestos']))
+                    total_acumulado      += Decimal(str(row['total']))
+
                 # Preparar totales y resumen
                 totals = {
                     'subtotal_total': float(subtotal_acumulado),

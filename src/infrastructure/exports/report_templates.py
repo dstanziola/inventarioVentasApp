@@ -401,14 +401,32 @@ class ReportTemplates:
         }
     
     def _get_movements_pdf_config(self) -> Dict[str, Any]:
-        """Configuración específica PDF para movimientos."""
+        """VERSIÓN MEJORADA: Configuración específica PDF para movimientos con landscape."""
         return {
-            'table_style': 'detailed',
+            'table_style': 'detailed_landscape',        # Nuevo estilo
             'include_summary': True,
-            'page_orientation': 'landscape',
-            'font_size': 8,
-            'row_height': 0.3,
-            'show_page_numbers': True
+            'page_orientation': 'landscape',             # LANDSCAPE por defecto
+            'font_size': 8,                             # Font size optimizado
+            'header_font_size': 9,                      # Headers ligeramente más grandes
+            'row_height': 'auto',                       # Altura automática para word wrap
+            'word_wrap': True,                          # Word wrapping habilitado
+            'show_page_numbers': True,
+            'optimized_columns': {                      # Anchos específicos
+                'fecha': 3.2,
+                'producto': 4.5,
+                'observaciones': 4.0,
+                'id': 0.8,
+                'tipo': 1.8,
+                'ticket': 1.5,
+                'cantidad': 1.5,
+                'responsable': 2.2
+            },
+            'margins': {                                # Márgenes reducidos para landscape
+                'top': 1.5,
+                'bottom': 1.5,
+                'left': 1.5,
+                'right': 1.5
+            }
         }
     
     def _get_stock_pdf_config(self) -> Dict[str, Any]:

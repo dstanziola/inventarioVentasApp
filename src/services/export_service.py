@@ -395,22 +395,69 @@ class ExportService:
     
     def _format_movements_for_pdf(self, movements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Formatear movimientos para exportación PDF.
+        VERSIÓN MEJORADA: Formatear movimientos para exportación PDF landscape.
+        
+        MEJORAS:
+        - Preservar más contenido en campos críticos
+        - Formateo optimizado para columnas anchas
+        - Truncado inteligente para observaciones muy largas
         
         Args:
             movements: Movimientos originales
         
         Returns:
-            List[Dict[str, Any]]: Movimientos formateados para PDF
+            List[Dict[str, Any]]: Movimientos formateados para landscape
         """
-        # Formato similar a Excel pero optimizado para PDF
-        formatted = self._format_movements_for_excel(movements)
+        formatted = []
         
-        # Ajustes específicos para PDF (campos más compactos)
-        for mov in formatted:
-            # Truncar observaciones largas para PDF
-            if mov['Observaciones'] and len(mov['Observaciones']) > 50:
-                mov['Observaciones'] = mov['Observaciones'][:47] + "..."
+        for mov in movements:
+            # MEJORA 1: Formatear fecha completa (más espacio en landscape)
+            fecha_str = mov.get('fecha_movimiento', '')
+            try:
+                if isinstance(fecha_str, str):
+                    fecha_dt = datetime.fromisoformat(fecha_str.replace('Z', '+00:00'))
+                    fecha_formatted = fecha_dt.strftime('%d/%m/%Y\n%H:%M')  # Multilinea
+                else:
+                    fecha_formatted = str(fecha_str)
+            except:
+                fecha_formatted = fecha_str
+            
+            # MEJORA 2: Preservar nombres de producto completos (columna más ancha)
+            producto_nombre = mov.get('producto_nombre', '')
+            if len(producto_nombre) > 35:  # Límite aumentado para landscape
+                producto_formatted = producto_nombre[:32] + "..."
+            else:
+                producto_formatted = producto_nombre
+            
+            # MEJORA 3: Observaciones con truncado inteligente
+            observaciones = mov.get('observaciones', '')
+            if len(observaciones) > 40:  # Límite aumentado
+                observaciones_formatted = observaciones[:37] + "..."
+            else:
+                observaciones_formatted = observaciones
+            
+            # MEJORA 4: Formatear cantidad con signo para mejor visualización
+            cantidad = mov.get('cantidad', 0)
+            tipo = mov.get('tipo_movimiento', '')
+            
+            if tipo == 'ENTRADA':
+                cantidad_formatted = f"+{cantidad}"
+            elif tipo == 'AJUSTE':
+                cantidad_formatted = f"{cantidad:+d}"
+            else:
+                cantidad_formatted = str(cantidad)
+            
+            formatted_movement = {
+                'ID': mov.get('id_movimiento', ''),
+                'Fecha/Hora': fecha_formatted,
+                'Producto': producto_formatted,
+                'Tipo': tipo,
+                'Cantidad': cantidad_formatted,
+                'Responsable': mov.get('responsable', ''),
+                'Observaciones': observaciones_formatted
+            }
+            
+            formatted.append(formatted_movement)
         
         return formatted
     

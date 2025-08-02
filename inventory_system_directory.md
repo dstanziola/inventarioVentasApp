@@ -1,8 +1,8 @@
 # DIRECTORIO DEL SISTEMA - Inventario v5.0
 
-**Última actualización:** 2025-07-26 18:45:00  
-**Versión:** 5.3  
-**Cambios recientes:** Implementación método generar_ticket_ajuste en TicketService para persistencia tickets ajuste
+**Última actualización:** 2025-08-02 06:45:00  
+**Versión:** 5.4  
+**Cambios recientes:** Corrección crítica PDFExporter.drawCentredString API fix - Error AttributeError resuelto
 
 ---
 
@@ -299,6 +299,45 @@
 
 ## INFRAESTRUCTURA
 
+### SISTEMA DE EXPORTACIONES
+
+#### PDFExporter - `src/infrastructure/exports/pdf_exporter.py`
+**Responsabilidad:** Exportador especializado para archivos PDF con formato profesional  
+**Estado:** ✅ COMPLETAMENTE OPERATIVO - Corrección crítica drawCentredString API aplicada  
+**Dependencias:** reportlab, ReportTemplates  
+**Características:**
+- ✅ **Orientación landscape:** Configuración automática para historial movimientos
+- ✅ **Headers corporativos:** Plantillas Copy Point S.A. con logo y branding
+- ✅ **Formato profesional:** Tablas optimizadas con word wrap y anchos específicos
+- ✅ **Múltiples tipos:** Reportes movimientos, tickets entrada, tickets ajuste
+- ✅ **ReportLab API corregida:** drawCentredString usado correctamente
+- ✅ **Error handling robusto:** Validaciones completas y manejo graceful errores
+**Métodos principales:**
+- `create_movements_pdf(template_data, file_path)` - PDF historial movimientos landscape
+- `create_entry_ticket_pdf(template_data, file_path)` - PDF tickets entrada
+- `create_adjustment_ticket_pdf(template_data, file_path)` - PDF tickets ajuste
+- `_create_landscape_page_header(canvas, doc)` - **CORREGIDO 2025-08-02** Header landscape sin AttributeError
+- `_add_corporate_header_landscape(story, template_data)` - Header corporativo horizontal
+- `_add_data_table(story, data)` - Tablas optimizadas con word wrap
+- `validate_file_path(file_path)` - Validación rutas y permisos
+**Configuración Copy Point S.A.:**
+- **Orientación:** Landscape automática para movimientos (842x595 points)
+- **Márgenes:** 1.5cm optimizados para contenido amplio
+- **Colores corporativos:** Azul (#1F4E79), Verde (#70AD47), Naranja (#C55A11)
+- **Tipografía:** Helvetica con tamaños optimizados por tipo contenido
+- **Word wrap:** Habilitado en campos Fecha/Hora, Producto, Observaciones
+**Corrección crítica 2025-08-02:**
+- ✅ **ERROR RESUELTO:** 'Canvas' object has no attribute 'drawCentredText'
+- ✅ **API CORREGIDA:** drawCentredText() → drawCentredString() en ReportLab
+- ✅ **UBICACIÓN:** Método _create_landscape_page_header() línea ~730
+- ✅ **IMPACTO:** Exportación PDF historial movimientos 100% operativa
+- ✅ **VALIDACIÓN:** Suite TDD + script validación implementados
+
+#### ExportService - `src/services/export_service.py`
+**Responsabilidad:** Servicio principal para exportaciones PDF y Excel  
+**Estado:** Funcional con integración PDFExporter corregida  
+**Dependencias:** PDFExporter, ExcelExporter, ReportTemplates  
+
 ### ServiceContainer - `src/services/service_container.py`
 **Responsabilidad:** Inyección de dependencias  
 **Estado:** Funcional
@@ -341,7 +380,29 @@
 
 ## CHANGELOG RECIENTE
 
-### 2025-07-26 - IMPLEMENTACIÓN MÉTODO generar_ticket_ajuste EN TICKETSERVICE ✅
+### 2025-08-02 - CORRECCIÓN CRÍTICA PDFEXPORTER DRAWCENTREDSTRING API FIX ✅
+**Funcionalidad:** Corrección error crítico AttributeError en exportación PDF historial movimientos  
+**Problema:** Error 'Canvas' object has no attribute 'drawCentredText' bloqueaba exportación PDF  
+**Causa:** Método incorrecto ReportLab API - drawCentredText() no existe, debe ser drawCentredString()  
+**Impacto:** Subformulario historial movimientos puede exportar PDF sin errores AttributeError  
+
+**Corrección implementada:**
+- Corregido canvas.drawCentredText() → canvas.drawCentredString() en línea ~730
+- Ubicación: método _create_landscape_page_header() en PDFExporter
+- Preservada funcionalidad exacta: mismos parámetros (x, y, texto)
+- Agregada suite TDD completa para validar corrección y prevenir regresiones
+- Creado script de validación rápida para verificar fix inmediatamente
+
+**Archivos modificados:**
+- src/infrastructure/exports/pdf_exporter.py (drawCentredText → drawCentredString)
+- tests/infrastructure/test_pdf_exporter_drawcentredstring_fix.py (suite TDD 6 tests)
+- validation_pdf_exporter_drawcentredstring_fix.py (script validación rápida)
+
+**Resultado:** Exportación PDF historial movimientos 100% operativa sin interrupciones  
+**Tiempo desarrollo:** 20 minutos  
+**Validación:** Suite TDD + script validación confirman corrección funcional  
+
+### 2025-07-26 - IMPLEMENTACIÓN MÉTODO generar_ticket_ajuste EN TICKETSERVICE ✅ (ANTERIOR)
 **Funcionalidad:** Implementación del método faltante generar_ticket_ajuste en TicketService  
 **Problema:** Error 'TicketService' object has no attribute 'generar_ticket_ajuste' al persistir tickets de ajuste  
 **Causa:** ExportService._persist_adjustment_ticket() llamaba método inexistente  

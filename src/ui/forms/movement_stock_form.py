@@ -242,7 +242,7 @@ class MovementStockForm(BaseForm):
         
         # Subtítulo con fecha y usuario
         current_user = self.session_manager.get_current_user()
-        subtitle_text = f"Productos MATERIALES con inventario crítico - {datetime.now().strftime('%d/%m/%Y %H:%M')} - Usuario: {current_user.get('username', 'N/A')}"
+        subtitle_text = f"Productos MATERIALES con inventario crítico - {datetime.now().strftime('%d/%m/%Y %H:%M')} - Usuario: {current_user.username if current_user else 'N/A'}"
         subtitle_label = ttk.Label(
             title_frame,
             text=subtitle_text,
@@ -259,17 +259,18 @@ class MovementStockForm(BaseForm):
         ttk.Label(filter_frame, text="Filtrar por categoría:").grid(row=0, column=0, padx=(0, 5))
         
         self.category_filter_var = tk.StringVar()
-        category_combo = ttk.Combobox(
+        # CORRECCIÓN CRÍTICA: Guardar referencia directa al combobox
+        self.category_combo = ttk.Combobox(
             filter_frame,
             textvariable=self.category_filter_var,
             state="readonly",
             width=20
         )
-        category_combo.grid(row=0, column=1, padx=(0, 10))
-        category_combo.bind('<<ComboboxSelected>>', self._on_category_filter_changed)
+        self.category_combo.grid(row=0, column=1, padx=(0, 10))
+        self.category_combo.bind('<<ComboboxSelected>>', self._on_category_filter_changed_fixed)
         
         # Cargar categorías
-        self._load_categories(category_combo)
+        self._load_categories(self.category_combo)
         
         # Botones filtro
         ttk.Button(
@@ -467,32 +468,249 @@ class MovementStockForm(BaseForm):
             return 0
 
     def _load_categories(self, combo: ttk.Combobox) -> None:
-        """Cargar categorías en combobox"""
+        """
+        Cargar categorías en combobox con diagnóstico robusto
+        
+        CORRECCIÓN CRÍTICA 2025-08-02:
+        - Agregado diagnóstico detallado para identificar causa exacta
+        - Validación ServiceContainer y CategoryService
+        - Logging específico para troubleshooting
+        - Fallback inteligente según tipo de error
+        """
         # Inicializar category_mapping siempre para evitar AttributeError
-        self.category_mapping = {0: None}  # Mapping para "Todas las categorías"
+        self._ensure_category_mapping_initialized()
         
         try:
-            # Obtener solo categorías tipo MATERIAL
+            # DIAGNÓSTICO PASO 1: Validar CategoryService disponible
+            if self.category_service is None:
+                self.logger.error("❌ CategoryService no disponible - ServiceContainer fallo")
+                combo['values'] = ["Todas las categorías", "Error: Servicio no disponible"]
+                combo.current(0)
+                return
+            
+            self.logger.debug("✅ CategoryService obtenido correctamente del ServiceContainer")
+            
+            # DIAGNÓSTICO PASO 2: Validar conexión base de datos
+            try:
+                # Test básico de conexión
+                cursor = self.db.get_connection().cursor()
+                cursor.execute("SELECT COUNT(*) FROM categorias")
+                total_categories = cursor.fetchone()[0]
+                self.logger.debug(f"✅ Conexión BD exitosa - Total categorías: {total_categories}")
+            except Exception as db_error:
+                self.logger.error(f"❌ Error conexión base de datos: {db_error}")
+                combo['values'] = ["Todas las categorías", "Error: Base de datos inaccesible"]
+                combo.current(0)
+                return
+            
+            # DIAGNÓSTICO PASO 3: Obtener categorías MATERIAL con logging detallado
+            self.logger.debug("🔍 Ejecutando get_material_categories()...")
             material_categories = self.category_service.get_material_categories()
+            
+            # DIAGNÓSTICO PASO 4: Analizar resultado
+            if not material_categories:
+                # Lista vacía - verificar si existen categorías MATERIAL en BD
+                cursor = self.db.get_connection().cursor()
+                cursor.execute("SELECT COUNT(*) FROM categorias WHERE tipo = 'MATERIAL'")
+                material_count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM categorias WHERE tipo = 'MATERIAL' AND activo = 1")
+                active_material_count = cursor.fetchone()[0]
+                
+                self.logger.warning(
+                    f"⚠️ get_material_categories() retornó lista vacía. "
+                    f"BD: {material_count} categorías MATERIAL total, "
+                    f"{active_material_count} activas"
+                )
+                
+                if material_count == 0:
+                    # No hay categorías MATERIAL en BD
+                    combo['values'] = ["Todas las categorías", "Sin categorías MATERIAL configuradas"]
+                    self.logger.info("ℹ️ Solución: Agregar categorías tipo MATERIAL en configuración")
+                elif active_material_count == 0:
+                    # Hay categorías pero están inactivas
+                    combo['values'] = ["Todas las categorías", "Categorías MATERIAL inactivas"]
+                    self.logger.info("ℹ️ Solución: Activar categorías MATERIAL existentes")
+                else:
+                    # Error inesperado - categorías existen pero get_material_categories() falla
+                    combo['values'] = ["Todas las categorías", "Error método get_material_categories"]
+                    self.logger.error("❌ Error inesperado: categorías existen pero método falla")
+                
+                combo.current(0)
+                return
+            
+            # ÉXITO: Procesar categorías obtenidas
+            self.logger.info(f"✅ get_material_categories() exitoso: {len(material_categories)} categorías")
             
             # Preparar valores combobox
             category_values = ["Todas las categorías"]
             
             for i, category in enumerate(material_categories, 1):
-                category_values.append(category['name'])
-                self.category_mapping[i] = category['id']
+                category_name = category.get('name', category.get('nombre', f'Categoría {i}'))
+                category_id = category.get('id', category.get('id_categoria'))
+                
+                category_values.append(category_name)
+                self.category_mapping[i] = category_id
+                
+                self.logger.debug(f"  📁 {i}: {category_name} (ID: {category_id})")
             
             combo['values'] = category_values
             combo.current(0)  # Seleccionar "Todas las categorías"
             
-            self.logger.info(f"Cargadas {len(material_categories)} categorías MATERIAL")
+            self.logger.info(f"✅ Cargadas {len(material_categories)} categorías MATERIAL exitosamente")
             
         except Exception as e:
-            self.logger.error(f"Error cargando categorías: {e}")
-            # Valores de fallback
-            combo['values'] = ["Todas las categorías", "Error cargando categorías"]
+            # MANEJO ERROR GENERAL con logging detallado
+            error_type = type(e).__name__
+            self.logger.error(f"❌ Error cargando categorías [{error_type}]: {e}")
+            
+            # Valores de fallback según tipo de error
+            if "ServiceContainer" in str(e) or "container" in str(e).lower():
+                combo['values'] = ["Todas las categorías", "Error: ServiceContainer no disponible"]
+            elif "database" in str(e).lower() or "db" in str(e).lower():
+                combo['values'] = ["Todas las categorías", "Error: Conexión base de datos"]
+            elif "get_material_categories" in str(e):
+                combo['values'] = ["Todas las categorías", "Error: Método get_material_categories"]
+            else:
+                combo['values'] = ["Todas las categorías", f"Error: {error_type}"]
+            
             combo.current(0)
             # category_mapping ya está inicializado con valor por defecto
+
+    def validate_category_service_manually(self) -> dict:
+        """
+        Método auxiliar para validación manual del CategoryService
+        
+        Returns:
+            dict: Resultado detallado de la validación
+        """
+        validation_result = {
+            'service_available': False,
+            'db_connection': False,
+            'total_categories': 0,
+            'material_categories': 0,
+            'active_material_categories': 0,
+            'get_material_categories_result': None,
+            'errors': []
+        }
+        
+        try:
+            # Validar servicio disponible
+            if self.category_service is not None:
+                validation_result['service_available'] = True
+                self.logger.debug("✅ CategoryService disponible")
+            else:
+                validation_result['errors'].append("CategoryService no disponible")
+                return validation_result
+            
+            # Validar conexión BD
+            try:
+                cursor = self.db.get_connection().cursor()
+                cursor.execute("SELECT COUNT(*) FROM categorias")
+                validation_result['total_categories'] = cursor.fetchone()[0]
+                validation_result['db_connection'] = True
+                self.logger.debug(f"✅ BD conectada - {validation_result['total_categories']} categorías total")
+            except Exception as db_error:
+                validation_result['errors'].append(f"Error BD: {db_error}")
+                return validation_result
+            
+            # Contar categorías MATERIAL
+            cursor.execute("SELECT COUNT(*) FROM categorias WHERE tipo = 'MATERIAL'")
+            validation_result['material_categories'] = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM categorias WHERE tipo = 'MATERIAL' AND activo = 1")
+            validation_result['active_material_categories'] = cursor.fetchone()[0]
+            
+            # Probar get_material_categories()
+            try:
+                result = self.category_service.get_material_categories()
+                validation_result['get_material_categories_result'] = len(result)
+                self.logger.debug(f"✅ get_material_categories() retornó {len(result)} elementos")
+            except Exception as method_error:
+                validation_result['errors'].append(f"Error get_material_categories(): {method_error}")
+            
+            return validation_result
+            
+        except Exception as e:
+            validation_result['errors'].append(f"Error general: {e}")
+            return validation_result
+
+    def debug_category_loading(self) -> None:
+        """
+        Comando de debugging para troubleshooting manual del problema categorías
+        """
+        self.logger.info("🔍 INICIANDO DEBUG CATEGORÍAS - MovementStockForm")
+        
+        # Ejecutar validación completa
+        validation = self.validate_category_service_manually()
+        
+        # Reportar resultados
+        print("\n" + "="*60)
+        print("📊 REPORTE DIAGNÓSTICO CATEGORÍAS")
+        print("="*60)
+        print(f"✅ CategoryService disponible: {validation['service_available']}")
+        print(f"✅ Conexión BD: {validation['db_connection']}")
+        print(f"📁 Total categorías en BD: {validation['total_categories']}")
+        print(f"📁 Categorías MATERIAL: {validation['material_categories']}")
+        print(f"📁 Categorías MATERIAL activas: {validation['active_material_categories']}")
+        print(f"🔧 get_material_categories() resultado: {validation['get_material_categories_result']}")
+        
+        if validation['errors']:
+            print(f"\n❌ ERRORES DETECTADOS:")
+            for error in validation['errors']:
+                print(f"   • {error}")
+        else:
+            print(f"\n✅ SIN ERRORES DETECTADOS")
+        
+        # Recomendaciones según resultado
+        print(f"\n💡 RECOMENDACIONES:")
+        
+        if not validation['service_available']:
+            print("   • Verificar configuración ServiceContainer")
+            print("   • Revisar inicialización CategoryService")
+        elif not validation['db_connection']:
+            print("   • Verificar conexión base de datos")
+            print("   • Revisar archivo de configuración BD")
+        elif validation['material_categories'] == 0:
+            print("   • Agregar categorías tipo MATERIAL en configuración")
+            print("   • Ejecutar script inicialización datos básicos")
+        elif validation['active_material_categories'] == 0:
+            print("   • Activar categorías MATERIAL existentes")
+            print("   • Revisar campo 'activo' en tabla categorias")
+        elif validation['get_material_categories_result'] == 0:
+            print("   • Revisar implementación get_material_categories()")
+            print("   • Verificar query SQL en método")
+        else:
+            print("   • Problema resuelto - categorías disponibles")
+            print("   • Intentar recargar formulario")
+        
+        print("="*60 + "\n")
+    
+    def _ensure_category_mapping_initialized(self) -> None:
+        """Asegurar que category_mapping esté inicializado para evitar AttributeError"""
+        if not hasattr(self, 'category_mapping') or self.category_mapping is None:
+            self.category_mapping = {0: None}  # Valor por defecto: "Todas las categorías"
+            self.logger.debug("🔄 category_mapping inicializado con valor por defecto")
+    
+    def _on_category_filter_changed_fixed(self, event) -> None:
+        """Handler corregido para cambio filtro categoría - usa referencia directa widget"""
+        try:
+            # Asegurar category_mapping inicializado
+            self._ensure_category_mapping_initialized()
+            
+            selected_index = self.category_combo.current()
+            category_id = self.category_mapping.get(selected_index)
+            self.apply_category_filter(category_id)
+            
+            self.logger.debug(f"🔧 Filtro categoría aplicado: índice={selected_index}, categoria_id={category_id}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error en cambio filtro categoría: {e}")
+            # Fallback graceful
+            try:
+                self.apply_category_filter(None)  # Mostrar todas las categorías
+            except Exception as fallback_error:
+                self.logger.error(f"❌ Error en fallback filtro categoría: {fallback_error}")
 
     def _update_data_grid(self) -> None:
         """Actualizar DataGrid con datos filtrados"""
@@ -517,38 +735,50 @@ class MovementStockForm(BaseForm):
     # ========== EVENT HANDLERS ==========
     
     def _on_category_filter_changed(self, event) -> None:
-        """Handler cambio filtro categoría"""
+        """Handler cambio filtro categoría - DEPRECADO: usar _on_category_filter_changed_fixed"""
+        # Delegar al método corregido
+        self._on_category_filter_changed_fixed(event)
+
+    def _apply_filter(self) -> None:
+        """Aplicar filtro categoría - CORREGIDO: usa referencia directa widget"""
         try:
-            # Asegurar que category_mapping existe
-            if not hasattr(self, 'category_mapping') or self.category_mapping is None:
-                self.logger.warning("category_mapping no inicializado, inicializando con valor por defecto")
-                self.category_mapping = {0: None}
+            # Asegurar category_mapping inicializado
+            self._ensure_category_mapping_initialized()
             
-            selected_index = event.widget.current()
+            # Usar referencia directa al combobox (NO nametowidget)
+            selected_index = self.category_combo.current()
             category_id = self.category_mapping.get(selected_index)
             self.apply_category_filter(category_id)
             
+            self.logger.debug(f"✅ Filtro aplicado exitosamente: índice={selected_index}, categoria_id={category_id}")
+            
         except Exception as e:
-            self.logger.error(f"Error en cambio filtro categoría: {e}")
-
-    def _apply_filter(self) -> None:
-        """Aplicar filtro categoría"""
-        try:
-            selected_index = self.category_filter_var.get()
-            combo = self.window.nametowidget(str(self.window) + ".!frame.!labelframe2.!combobox")
-            category_id = self.category_mapping.get(combo.current())
-            self.apply_category_filter(category_id)
-        except Exception as e:
-            self.logger.error(f"Error aplicando filtro: {e}")
+            self.logger.error(f"❌ Error aplicando filtro: {e}")
+            # Fallback graceful
+            try:
+                self.apply_category_filter(None)
+            except Exception:
+                pass  # Fallar silenciosamente para evitar crash UI
 
     def _clear_filter(self) -> None:
-        """Limpiar filtro categoría"""
+        """Limpiar filtro categoría - CORREGIDO: usa referencia directa widget"""
         try:
-            combo = self.window.nametowidget(str(self.window) + ".!frame.!labelframe2.!combobox")
-            combo.current(0)  # "Todas las categorías"
+            # Asegurar category_mapping inicializado
+            self._ensure_category_mapping_initialized()
+            
+            # Usar referencia directa al combobox (NO nametowidget)
+            self.category_combo.current(0)  # "Todas las categorías"
             self.apply_category_filter(None)
+            
+            self.logger.debug("✅ Filtro limpiado exitosamente - mostrando todas las categorías")
+            
         except Exception as e:
-            self.logger.error(f"Error limpiando filtro: {e}")
+            self.logger.error(f"❌ Error limpiando filtro: {e}")
+            # Fallback graceful
+            try:
+                self.apply_category_filter(None)
+            except Exception:
+                pass  # Fallar silenciosamente para evitar crash UI
 
     def _close_form(self) -> None:
         """Cerrar formulario"""

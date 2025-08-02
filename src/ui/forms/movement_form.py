@@ -155,8 +155,8 @@ class MovementForm:
         self.btn_history = ttk.Button(
             buttons_frame,
             text="HISTORIAL DE\nMOVIMIENTOS",
-            # command=self._open_history_form,
-            command=self._feature_under_construction,
+            command=self._open_history_form,
+            # command=self._feature_under_construction,
             width=20
         )
         self.btn_history.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
@@ -165,8 +165,8 @@ class MovementForm:
         self.btn_stock_low = ttk.Button(
             buttons_frame,
             text="STOCK BAJO",
-            #command=self._open_stock_low_form,
-            command=self._feature_under_construction,
+            command=self._open_stock_low_form,
+            # command=self._feature_under_construction,
             width=20
         )
         self.btn_stock_low.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")

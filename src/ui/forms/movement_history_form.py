@@ -15,6 +15,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime, timedelta
 import re
+import shutil  # NUEVO: Para manejo de archivos cross-drive
 from typing import List, Dict, Optional, Any
 import logging
 
@@ -56,36 +57,93 @@ class MovementHistoryForm:
         self.current_movements = []
         self.selected_movement = None
         
-        # Validar permisos antes de crear UI
-        if not self._validate_permissions():
-            return
-            
+        # Configurar ventana y UI primero
         self._setup_window()
         self._create_ui_components()
         self._setup_bindings()
         self._setup_styles()
         
+        # CORRECCIÓN CRÍTICA: Validar permisos DESPUÉS de que UI esté configurada
+        # Esto permite que lazy loading esté disponible antes de validar permisos
+        try:
+            if not self._validate_permissions():
+                self._close_form()
+                return
+        except Exception as perm_error:
+            logger.error(f"Error crítico validando permisos durante inicialización: {perm_error}")
+            messagebox.showerror(
+                "Error de Inicialización",
+                f"No se pudo inicializar el formulario: {perm_error}"
+            )
+            self._close_form()
+            return
+        
         logger.info("MovementHistoryForm inicializado correctamente")
     
     def _validate_permissions(self) -> bool:
         """
-        Validar que el usuario tenga permisos de administrador
+        CORRECCIÓN CRÍTICA: Validar permisos con lazy loading robusto.
+        
+        Problema original: session_manager no estaba disponible durante __init__
+        Solución: Validación robusta con lazy loading y manejo de errores
         
         Returns:
             bool: True si tiene permisos, False caso contrario
         """
         try:
-            if not self.session_manager.has_permission('admin'):
+            # PASO 1: Asegurar que ServiceContainer esté disponible
+            try:
+                container = self.container
+                if not container:
+                    raise RuntimeError("ServiceContainer no disponible")
+            except Exception as container_error:
+                logger.error(f"Error accediendo ServiceContainer: {container_error}")
                 messagebox.showerror(
-                    "Acceso Denegado",
-                    "Solo los administradores pueden acceder al historial de movimientos"
+                    "Error de Sistema", 
+                    "Sistema de servicios no disponible. No se puede validar permisos."
                 )
                 return False
-            return True
+            
+            # PASO 2: Cargar session_manager via lazy loading property
+            try:
+                session_mgr = self.session_manager
+                if not session_mgr:
+                    raise RuntimeError("SessionManager no disponible después de lazy loading")
+            except Exception as sm_error:
+                logger.error(f"Error cargando SessionManager via lazy loading: {sm_error}")
+                messagebox.showerror(
+                    "Error de Autenticación",
+                    "No se pudo acceder al sistema de autenticación. Verifique que esté logueado correctamente."
+                )
+                return False
+            
+            # PASO 3: Validar permisos de administrador
+            try:
+                has_admin_permission = session_mgr.has_permission('admin')
+                if not has_admin_permission:
+                    messagebox.showerror(
+                        "Acceso Denegado",
+                        "Solo los administradores pueden acceder al historial de movimientos."
+                    )
+                    return False
+                
+                logger.info("Validación de permisos exitosa: usuario administrador confirmado")
+                return True
+                
+            except Exception as perm_error:
+                logger.error(f"Error validando permisos administrativos: {perm_error}")
+                messagebox.showerror(
+                    "Error de Permisos",
+                    f"No se pudo validar permisos administrativos: {perm_error}"
+                )
+                return False
             
         except Exception as e:
-            logger.error(f"Error validando permisos: {e}")
-            messagebox.showerror("Error", "Error validando permisos de usuario")
+            logger.error(f"Error general en validación de permisos: {e}")
+            messagebox.showerror(
+                "Error Crítico", 
+                f"Error validando permisos de usuario: {str(e)}"
+            )
             return False
     
     def _setup_window(self):
@@ -367,6 +425,87 @@ class MovementHistoryForm:
         return self._export_service
     
     # ===============================
+    # MÉTODOS UTILITARIOS
+    # ===============================
+    
+    def _get_movement_field(self, movement: Any, field_names: List[str]) -> Any:
+        """
+        Obtener campo de movimiento con soporte para múltiples nombres.
+        
+        Problema: MovementService puede devolver objetos con diferentes nombres de campos:
+        - Formato A: {'id', 'movement_date', 'product_name', ...}
+        - Formato B: {'id_movimiento', 'fecha_movimiento', 'producto_nombre', ...}
+        
+        Esta función intenta obtener el valor usando los nombres alternativos
+        hasta encontrar uno que exista.
+        
+        Args:
+            movement: Objeto o diccionario con datos del movimiento
+            field_names: Lista de nombres posibles para el campo (en orden de preferencia)
+            
+        Returns:
+            Any: Valor del campo encontrado, o None si ningún nombre funciona
+            
+        Example:
+            >>> movement = {'id_movimiento': 123, 'fecha_movimiento': '2025-08-01'}
+            >>> self._get_movement_field(movement, ['id', 'id_movimiento'])
+            123
+        """
+        try:
+            # Si movement es None, retornar None inmediatamente
+            if movement is None:
+                return None
+            
+            # Intentar acceso como diccionario primero
+            if isinstance(movement, dict):
+                for field_name in field_names:
+                    if field_name in movement:
+                        return movement[field_name]
+            
+            # Intentar acceso como objeto con atributos
+            else:
+                for field_name in field_names:
+                    if hasattr(movement, field_name):
+                        return getattr(movement, field_name)
+            
+            # Si no se encontró ningún campo, loggear para debugging
+            logger.debug(
+                f"Campo no encontrado en movimiento. "
+                f"Nombres intentados: {field_names}, "
+                f"Tipo objeto: {type(movement)}, "
+                f"Campos disponibles: {self._get_available_fields(movement)}"
+            )
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo campo de movimiento: {e}")
+            return None
+    
+    def _get_available_fields(self, movement: Any) -> List[str]:
+        """
+        Obtener lista de campos disponibles en objeto movimiento para debugging.
+        
+        Args:
+            movement: Objeto movimiento
+            
+        Returns:
+            List[str]: Lista de nombres de campos disponibles
+        """
+        try:
+            if movement is None:
+                return []
+            
+            if isinstance(movement, dict):
+                return list(movement.keys())
+            else:
+                # Obtener atributos que no empiecen con _ (privados)
+                return [attr for attr in dir(movement) 
+                       if not attr.startswith('_') and not callable(getattr(movement, attr))]
+        except Exception:
+            return []
+    
+    # ===============================
     # MÉTODOS DE BÚSQUEDA Y FILTROS
     # ===============================
     
@@ -497,17 +636,31 @@ class MovementHistoryForm:
             ))
             return
         
-        # Insertar movimientos
+        # Insertar movimientos con mapeo correcto de campos
         for movement in movements:
+            # CORRECCIÓN CRÍTICA: Mapear nombres de campos MovementService → UI
+            movement_id = self._get_movement_field(movement, ['id', 'id_movimiento'])
+            movement_date = self._get_movement_field(movement, ['movement_date', 'fecha_movimiento'])
+            movement_type = self._get_movement_field(movement, ['movement_type', 'tipo_movimiento'])
+            ticket_number = self._get_movement_field(movement, ['ticket_number', 'id_venta'])
+            product_name = self._get_movement_field(movement, ['product_name', 'producto_nombre'])
+            quantity = self._get_movement_field(movement, ['quantity', 'cantidad'])
+            responsible = self._get_movement_field(movement, ['responsible', 'responsable'])
+            observations = self._get_movement_field(movement, ['observations', 'observaciones'])
+            
+            # Truncar observaciones si son muy largas
+            if observations and len(str(observations)) > 50:
+                observations = str(observations)[:50] + '...'
+            
             self.results_tree.insert('', 'end', values=(
-                getattr(movement, 'id', ''),
-                getattr(movement, 'movement_date', ''),
-                getattr(movement, 'movement_type', ''),
-                getattr(movement, 'ticket_number', ''),
-                getattr(movement, 'product_name', ''),
-                getattr(movement, 'quantity', ''),
-                getattr(movement, 'responsible', ''),
-                getattr(movement, 'observations', '')[:50] + '...' if len(getattr(movement, 'observations', '')) > 50 else getattr(movement, 'observations', '')
+                movement_id or '',
+                movement_date or '',
+                movement_type or '', 
+                ticket_number or '',
+                product_name or '',
+                quantity or '',
+                responsible or '',
+                observations or ''
             ))
         
         # Mostrar contador de resultados
@@ -550,7 +703,9 @@ class MovementHistoryForm:
     def _find_movement_by_id(self, movement_id: Any) -> Optional[Any]:
         """Buscar movimiento por ID en resultados actuales"""
         for movement in self.current_movements:
-            if str(getattr(movement, 'id', '')) == str(movement_id):
+            # CORRECCIÓN: Buscar por ambos nombres de campo posibles
+            current_id = self._get_movement_field(movement, ['id', 'id_movimiento'])
+            if str(current_id) == str(movement_id):
                 return movement
         return None
     
@@ -558,12 +713,17 @@ class MovementHistoryForm:
         """Mostrar detalles del movimiento seleccionado"""
         self.selected_movement = movement
         
-        # Actualizar panel de detalles
-        self.detail_id_var.set(getattr(movement, 'id', ''))
-        self.detail_product_id_var.set(getattr(movement, 'product_id', ''))
-        self.detail_obs_var.set(getattr(movement, 'observations', ''))
+        # CORRECCIÓN: Mapear campos para detalles
+        movement_id = self._get_movement_field(movement, ['id', 'id_movimiento'])
+        product_id = self._get_movement_field(movement, ['product_id', 'id_producto'])
+        observations = self._get_movement_field(movement, ['observations', 'observaciones'])
         
-        logger.info(f"Movimiento seleccionado: ID {getattr(movement, 'id', '')}")
+        # Actualizar panel de detalles
+        self.detail_id_var.set(movement_id or '')
+        self.detail_product_id_var.set(product_id or '')
+        self.detail_obs_var.set(observations or '')
+        
+        logger.info(f"Movimiento seleccionado: ID {movement_id}")
     
     # ===============================
     # MÉTODOS DE EXPORTACIÓN
@@ -584,19 +744,43 @@ class MovementHistoryForm:
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".pdf",
                 filetypes=[("PDF files", "*.pdf")],
-                initialname=filename,
+                initialfile=filename,
                 title="Guardar reporte PDF"
             )
             
             if not file_path:
                 return
             
-            # Exportar usando servicio
-            pdf_data = self.export_service.export_movements_to_pdf(self.current_movements)
+            # CORRECCIÓN CRÍTICA: Obtener filtros y pasarlos al export_service
+            filters = self._get_search_filters()
             
-            # Guardar archivo
-            with open(file_path, 'wb') as f:
-                f.write(pdf_data)
+            # Exportar usando servicio con filtros requeridos
+            generated_pdf_path = self.export_service.export_movements_to_pdf(self.current_movements, filters)
+            
+            # CORRECCIÓN CRÍTICA: Usar shutil.move() para manejo cross-drive
+            # shutil.move() maneja movimientos entre unidades diferentes
+            try:
+                shutil.move(generated_pdf_path, file_path)
+                logger.info(f"Archivo PDF movido exitosamente: {generated_pdf_path} -> {file_path}")
+                
+            except (OSError, shutil.Error) as move_error:
+                logger.warning(f"shutil.move() falló: {move_error}. Intentando método alternativo...")
+                
+                # FALLBACK: Método alternativo con copy + remove
+                try:
+                    # Copiar archivo a destino
+                    shutil.copy2(generated_pdf_path, file_path)
+                    logger.info(f"Archivo copiado exitosamente: {file_path}")
+                    
+                    # Eliminar archivo temporal original
+                    import os
+                    if os.path.exists(generated_pdf_path):
+                        os.remove(generated_pdf_path)
+                        logger.info(f"Archivo temporal eliminado: {generated_pdf_path}")
+                        
+                except Exception as fallback_error:
+                    logger.error(f"Método fallback falló: {fallback_error}")
+                    raise Exception(f"No se pudo mover archivo PDF. Error principal: {move_error}, Error fallback: {fallback_error}")
             
             messagebox.showinfo("Exportación Exitosa", f"Reporte PDF guardado en:\n{file_path}")
             logger.info(f"Exportación PDF exitosa: {file_path}")
@@ -620,19 +804,43 @@ class MovementHistoryForm:
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".xlsx",
                 filetypes=[("Excel files", "*.xlsx")],
-                initialname=filename,
+                initialfile=filename,
                 title="Guardar reporte Excel"
             )
             
             if not file_path:
                 return
             
-            # Exportar usando servicio
-            excel_data = self.export_service.export_movements_to_excel(self.current_movements)
+            # CORRECCIÓN: Obtener filtros y pasarlos al export_service
+            filters = self._get_search_filters()
             
-            # Guardar archivo
-            with open(file_path, 'wb') as f:
-                f.write(excel_data)
+            # Exportar usando servicio con filtros requeridos
+            generated_excel_path = self.export_service.export_movements_to_excel(self.current_movements, filters)
+            
+            # CORRECCIÓN CRÍTICA: Usar shutil.move() para manejo cross-drive
+            # shutil.move() maneja movimientos entre unidades diferentes
+            try:
+                shutil.move(generated_excel_path, file_path)
+                logger.info(f"Archivo Excel movido exitosamente: {generated_excel_path} -> {file_path}")
+                
+            except (OSError, shutil.Error) as move_error:
+                logger.warning(f"shutil.move() falló: {move_error}. Intentando método alternativo...")
+                
+                # FALLBACK: Método alternativo con copy + remove
+                try:
+                    # Copiar archivo a destino
+                    shutil.copy2(generated_excel_path, file_path)
+                    logger.info(f"Archivo copiado exitosamente: {file_path}")
+                    
+                    # Eliminar archivo temporal original
+                    import os
+                    if os.path.exists(generated_excel_path):
+                        os.remove(generated_excel_path)
+                        logger.info(f"Archivo temporal eliminado: {generated_excel_path}")
+                        
+                except Exception as fallback_error:
+                    logger.error(f"Método fallback falló: {fallback_error}")
+                    raise Exception(f"No se pudo mover archivo Excel. Error principal: {move_error}, Error fallback: {fallback_error}")
             
             messagebox.showinfo("Exportación Exitosa", f"Reporte Excel guardado en:\n{file_path}")
             logger.info(f"Exportación Excel exitosa: {file_path}")

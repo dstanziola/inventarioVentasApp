@@ -174,7 +174,13 @@ class PDFExporter:
     
     def create_movements_pdf(self, template_data: Dict[str, Any], file_path: str) -> None:
         """
-        Crear documento PDF para movimientos de inventario.
+        VERSIÓN MEJORADA: Crear documento PDF para movimientos con orientación landscape.
+        
+        MEJORAS IMPLEMENTADAS:
+        - Orientación landscape automática
+        - Configuración de página optimizada para contenido amplio
+        - Márgenes ajustados para landscape
+        - Page size configurado específicamente para historial de movimientos
         
         Args:
             template_data: Datos formateados con plantilla aplicada
@@ -189,21 +195,33 @@ class PDFExporter:
             # Validar datos de entrada
             self._validate_pdf_data(template_data)
             
-            # Crear documento PDF
+            # MEJORA 1: Configurar orientación landscape específicamente para movimientos
+            from reportlab.lib.pagesizes import landscape, A4
+            
+            # MEJORA 2: Configuración landscape con márgenes optimizados
+            landscape_config = {
+                'pagesize': landscape(A4),      # 842 x 595 points
+                'topMargin': 1.5*cm,            # Márgenes reducidos para más espacio
+                'bottomMargin': 1.5*cm,
+                'leftMargin': 1.5*cm,
+                'rightMargin': 1.5*cm
+            }
+            
+            # MEJORA 3: Crear documento PDF con configuración landscape
             doc = SimpleDocTemplate(
                 file_path,
-                pagesize=self.page_config['pagesize'],
-                topMargin=self.page_config['topMargin'],
-                bottomMargin=self.page_config['bottomMargin'],
-                leftMargin=self.page_config['leftMargin'],
-                rightMargin=self.page_config['rightMargin']
+                pagesize=landscape_config['pagesize'],
+                topMargin=landscape_config['topMargin'],
+                bottomMargin=landscape_config['bottomMargin'],
+                leftMargin=landscape_config['leftMargin'],
+                rightMargin=landscape_config['rightMargin']
             )
             
             # Construir contenido del documento
             story = []
             
-            # Header corporativo
-            self._add_corporate_header(story, template_data)
+            # MEJORA 4: Header corporativo adaptado para landscape
+            self._add_corporate_header_landscape(story, template_data)
             
             # Resumen ejecutivo
             if template_data.get('summary'):
@@ -218,9 +236,9 @@ class PDFExporter:
             # Footer con información adicional
             self._add_document_footer(story, template_data)
             
-            # Generar PDF
-            doc.build(story, onFirstPage=self._create_page_header, 
-                     onLaterPages=self._create_page_header)
+            # MEJORA 5: Generar PDF con header optimizado para landscape
+            doc.build(story, onFirstPage=self._create_landscape_page_header, 
+                     onLaterPages=self._create_landscape_page_header)
             
             logger.info(f"PDF creado exitosamente: {file_path}")
             
@@ -364,7 +382,14 @@ class PDFExporter:
     
     def _add_data_table(self, story: List, data: List[Dict[str, Any]]) -> None:
         """
-        Agregar tabla principal de datos al documento.
+        VERSIÓN MEJORADA: Agregar tabla principal de datos con formato optimizado landscape.
+        
+        MEJORAS IMPLEMENTADAS:
+        - Orientación landscape automática para historial de movimientos
+        - Anchos de columna específicos para campos problemáticos
+        - Word wrapping en celdas para evitar traslapes
+        - Altura de filas dinámica
+        - Configuración optimizada para legibilidad
         
         Args:
             story: Lista de elementos del documento
@@ -381,58 +406,113 @@ class PDFExporter:
         story.append(table_title)
         
         # Preparar datos para la tabla
-        # Headers
         headers = list(data[0].keys())
         table_data = [headers]
         
-        # Datos
+        # MEJORA 1: Preparar datos con Paragraph para word wrapping
         for record in data:
             row = []
             for header in headers:
                 value = record.get(header, '')
-                # Truncar valores muy largos para PDF
-                if isinstance(value, str) and len(value) > 30:
-                    value = value[:27] + "..."
-                row.append(str(value))
+                
+                # MEJORA 2: Crear Paragraph objects para campos de texto largo
+                if header in ['Observaciones', 'Producto', 'Fecha/Hora']:
+                    # Usar Paragraph para permitir word wrapping
+                    if isinstance(value, str) and len(value) > 20:
+                        # Para campos largos, crear Paragraph con word wrap
+                        cell_paragraph = Paragraph(
+                            str(value),
+                            ParagraphStyle(
+                                'CellStyle',
+                                parent=self.styles['CorporateNormal'],
+                                fontSize=8,
+                                leading=10,  # Espaciado entre líneas
+                                wordWrap='CJK',  # Word wrap habilitado
+                                alignment=TA_LEFT
+                            )
+                        )
+                        row.append(cell_paragraph)
+                    else:
+                        row.append(str(value))
+                else:
+                    # Para campos cortos, usar string simple
+                    row.append(str(value) if value else '')
+            
             table_data.append(row)
         
-        # Calcular anchos de columna dinámicamente
-        page_width = self.page_config['pagesize'][0] - (self.page_config['leftMargin'] + self.page_config['rightMargin'])
-        col_count = len(headers)
-        col_width = page_width / col_count
-        col_widths = [col_width] * col_count
+        # MEJORA 3: Calcular anchos específicos para orientación landscape
+        # Landscape A4: ~25cm ancho disponible (842 points - márgenes)
+        from reportlab.lib.pagesizes import landscape, A4
+        landscape_width = landscape(A4)[0] - (self.page_config['leftMargin'] + self.page_config['rightMargin'])
         
-        # Crear tabla
-        data_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        # MEJORA 4: Anchos específicos por columna según contenido esperado
+        column_widths_config = {
+            'ID': 0.8*cm,                    # Campo corto
+            'Fecha/Hora': 3.2*cm,            # Timestamp completo
+            'Tipo': 1.8*cm,                  # ENTRADA/AJUSTE
+            'Ticket': 1.5*cm,                # Número ticket
+            'Producto': 4.5*cm,              # Nombre producto (MÁS ANCHO)
+            'Cantidad': 1.5*cm,              # Número
+            'Responsable': 2.2*cm,           # Usuario
+            'Observaciones': 4.0*cm          # Texto libre (MÁS ANCHO)
+        }
         
-        # Aplicar estilo a la tabla
+        # Calcular anchos dinámicamente
+        col_widths = []
+        for header in headers:
+            if header in column_widths_config:
+                col_widths.append(column_widths_config[header])
+            else:
+                # Ancho por defecto para columnas no especificadas
+                col_widths.append(2.0*cm)
+        
+        # MEJORA 5: Crear tabla con configuración optimizada
+        data_table = Table(
+            table_data, 
+            colWidths=col_widths, 
+            repeatRows=1,
+            splitByRow=True,        # Permitir división de filas entre páginas
+            spaceBefore=6,
+            spaceAfter=6
+        )
+        
+        # MEJORA 6: Estilo de tabla optimizado para landscape + word wrap
         data_table.setStyle(TableStyle([
-            # Header
+            # Header styling
             ('BACKGROUND', (0, 0), (-1, 0), self.colors['primary']),
             ('TEXTCOLOR', (0, 0), (-1, 0), self.colors['white']),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),           # Slightly larger for headers
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             
-            # Data rows
+            # Data rows styling
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
             
-            # Alternating row colors
+            # MEJORA 7: Alineación específica por tipo de columna
+            ('ALIGN', (2, 1), (2, -1), 'CENTER'),      # Tipo - centrado
+            ('ALIGN', (3, 1), (3, -1), 'CENTER'),      # Ticket - centrado
+            ('ALIGN', (5, 1), (5, -1), 'CENTER'),      # Cantidad - centrado
+            
+            # MEJORA 8: Altura mínima de filas para acomodar word wrap
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [self.colors['white'], self.colors['light_gray']]),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),       # Alineación vertical superior
             
-            # Borders
+            # MEJORA 9: Bordes y espaciado optimizados
             ('GRID', (0, 0), (-1, -1), 0.5, self.colors['dark_gray']),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),      # Padding izquierdo
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),     # Padding derecho
+            ('TOPPADDING', (0, 0), (-1, -1), 6),       # Padding superior
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),    # Padding inferior
             
-            # Ajustar alineación para columnas numéricas
-            ('ALIGN', (4, 1), (4, -1), 'RIGHT'),  # Cantidad
-            ('ALIGN', (5, 1), (5, -1), 'RIGHT'),  # Stock Anterior
-            ('ALIGN', (6, 1), (6, -1), 'RIGHT'),  # Stock Nuevo
+            # MEJORA 10: Configuración especial para columnas problemáticas
+            ('FONTSIZE', (1, 1), (1, -1), 7),          # Fecha/Hora - fuente menor
+            ('FONTSIZE', (4, 1), (4, -1), 7),          # Producto - fuente menor
+            ('FONTSIZE', (7, 1), (7, -1), 7),          # Observaciones - fuente menor
         ]))
         
-        # Envolver tabla para mantener unida si es posible
+        # MEJORA 11: Envolver tabla para mantener unida si es posible
         story.append(KeepTogether(data_table))
         story.append(Spacer(1, 0.2*inch))
     
@@ -1301,6 +1381,122 @@ class PDFExporter:
             'A4': A4,
             'Letter': letter
         }
+    
+    def _add_corporate_header_landscape(self, story: List, template_data: Dict[str, Any]) -> None:
+        """
+        NUEVO MÉTODO: Agregar header corporativo optimizado para orientación landscape.
+        
+        MEJORAS:
+        - Layout horizontal optimizado
+        - Información más compacta
+        - Aprovechamiento del espacio horizontal disponible
+        
+        Args:
+            story: Lista de elementos del documento
+            template_data: Datos del reporte
+        """
+        # MEJORA 1: Crear tabla horizontal para header landscape
+        header_data = [
+            [
+                f"<b>{self.company_info['nombre']}</b>",
+                f"<b>{template_data.get('title', 'Reporte de Inventario')}</b>",
+                f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            ]
+        ]
+        
+        # MEJORA 2: Anchos optimizados para layout horizontal
+        header_table = Table(header_data, colWidths=[6*cm, 10*cm, 5*cm])
+        header_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),      # Empresa - izquierda
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),    # Título - centro
+            ('ALIGN', (2, 0), (2, 0), 'RIGHT'),     # Fecha - derecha
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TEXTCOLOR', (0, 0), (-1, -1), self.colors['primary']),
+        ]))
+        
+        story.append(header_table)
+        
+        # MEJORA 3: Información corporativa compacta
+        company_details = Paragraph(
+            f"RUC: {self.company_info['ruc']} | "
+            f"Tel: {self.company_info['telefono']} | "
+            f"Email: {self.company_info['email']}",
+            ParagraphStyle(
+                'CompactInfo',
+                parent=self.styles['CompanyInfo'],
+                fontSize=8,
+                alignment=TA_CENTER
+            )
+        )
+        story.append(company_details)
+        story.append(Spacer(1, 0.2*inch))
+        
+        # MEJORA 4: Información de filtros más compacta para landscape
+        filters_info = self._format_filters_for_pdf(template_data.get('filters', {}))
+        if filters_info:
+            filters_para = Paragraph(
+                f"<b>Filtros:</b> {filters_info}",
+                ParagraphStyle(
+                    'FiltersLandscape',
+                    parent=self.styles['CorporateNormal'],
+                    fontSize=9,
+                    alignment=TA_LEFT
+                )
+            )
+            story.append(filters_para)
+        
+        story.append(Spacer(1, 0.15*inch))
+    
+    def _create_landscape_page_header(self, canvas, doc) -> None:
+        """
+        NUEVO MÉTODO: Crear header de página optimizado para orientación landscape.
+        
+        MEJORAS:
+        - Líneas decorativas adaptadas para ancho landscape
+        - Información de pie de página optimizada
+        - Aprovechamiento del espacio horizontal
+        
+        Args:
+            canvas: Canvas de ReportLab
+            doc: Documento
+        """
+        canvas.saveState()
+        
+        # MEJORA 1: Línea superior decorativa para ancho landscape
+        canvas.setStrokeColor(self.colors['primary'])
+        canvas.setLineWidth(2)
+        canvas.line(doc.leftMargin, doc.height + doc.topMargin - 10,
+                   doc.width + doc.leftMargin, doc.height + doc.topMargin - 10)
+        
+        # MEJORA 2: Footer optimizado para landscape
+        page_num = canvas.getPageNumber()
+        canvas.setFont('Helvetica', 9)
+        canvas.setFillColor(self.colors['dark_gray'])
+        
+        # Número de página - derecha
+        canvas.drawRightString(
+            doc.width + doc.leftMargin,
+            doc.bottomMargin - 20,
+            f"Página {page_num}"
+        )
+        
+        # Información de empresa - izquierda
+        canvas.drawString(
+            doc.leftMargin,
+            doc.bottomMargin - 20,
+            f"{self.company_info['nombre']} - Historial de Movimientos"
+        )
+        
+        # MEJORA 3: Información central para landscape
+        canvas.drawCentredString(
+            doc.width / 2 + doc.leftMargin,
+            doc.bottomMargin - 20,
+            f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        )
+        
+        canvas.restoreState()
     
     def set_page_size(self, size_name: str) -> None:
         """
